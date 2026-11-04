@@ -1,0 +1,36 @@
+# Datos personales: nunca al repositorio
+/data/
+/datos/
+/analisis/
+/Backups/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.xlsx
+*.csv
+!app/backend/tests/fixtures/*.csv
+.env
+.env.*
+!.env.example
+
+# Logos de marcas propios (ver app/frontend/README.md)
+app/frontend/public/cuentas/
+
+# Herramientas locales
+.claude/
+CLAUDE.md
+graphify-out/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Node
+node_modules/
+dist/

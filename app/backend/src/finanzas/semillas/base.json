@@ -1,0 +1,25 @@
+{
+ "_nota": "Parámetros públicos de Colombia para una instalación nueva.",
+ "cuentas": [],
+ "parametros": [
+  {
+   "clave": "uvt",
+   "vigencia_desde": "2026-01-01",
+   "valor": 52374,
+   "fuente": "DIAN, UVT 2026"
+  },
+  {
+   "clave": "usura_consumo",
+   "vigencia_desde": "2026-10-01",
+   "valor": 0.2859,
+   "fuente": "Superfinanciera, Resolución 1472 de 2026"
+  },
+  {
+   "clave": "usura_consumo_bajo_monto",
+   "vigencia_desde": "2026-10-01",
+   "valor": 0.6666,
+   "fuente": "Superfinanciera, Resolución 1472 de 2026"
+  }
+ ],
+ "creditos": []
+}

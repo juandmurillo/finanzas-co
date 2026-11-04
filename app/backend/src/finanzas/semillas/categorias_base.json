@@ -1,0 +1,29 @@
+{
+  "_nota": "Árbol inicial de una instalación nueva. Cada persona lo edita en Categorías.",
+  "ingreso": {
+    "Salario": [],
+    "Trabajo independiente": ["Proyectos", "Consultoría"],
+    "Otros ingresos": ["Devoluciones", "Rendimientos", "Regalos", "Varios"]
+  },
+  "gasto_vida": {
+    "Hogar": ["Arriendo", "Servicios públicos", "Mantenimiento"],
+    "Comida": ["Mercado", "Restaurantes", "Comida y snacks"],
+    "Transporte": ["Transporte público", "Taxi y apps", "Gasolina"],
+    "Factura": ["Internet hogar", "Celular", "Streaming", "Otras facturas"],
+    "IAs": ["Suscripciones IA"],
+    "Salud": ["Consultas", "Medicamentos"],
+    "Salud física": ["Gimnasio", "Deportes"],
+    "Universidad": ["Matrícula", "Cursos", "Trámites y certificados"],
+    "Compras": ["Ropa", "Tecnología", "Hogar y otros"],
+    "Relaciones sociales": ["Salidas y celebraciones"],
+    "Regalo": ["Cumpleaños", "Otros regalos"],
+    "Otros": ["Trámites", "Peluquería", "Varios"]
+  },
+  "apuestas": {
+    "Apuestas": ["Sin detalle"]
+  },
+  "ahorro_inversion": {
+    "Ahorro": ["Fondo de emergencia", "Metas"],
+    "Inversiones": ["Aportes"]
+  }
+}

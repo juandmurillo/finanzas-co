@@ -1,0 +1,99 @@
+{
+ "_nota": "Datos ficticios para las pruebas.",
+ "cuentas": [
+  {
+   "nombre": "Nequi",
+   "tipo": "billetera",
+   "institucion": "Bancolombia",
+   "color": "chart-3",
+   "orden": 1
+  },
+  {
+   "nombre": "Daviplata",
+   "tipo": "billetera",
+   "institucion": "Davivienda",
+   "color": "chart-6",
+   "orden": 2
+  },
+  {
+   "nombre": "Ahorro",
+   "tipo": "ahorro",
+   "institucion": null,
+   "color": "chart-1",
+   "orden": 3
+  },
+  {
+   "nombre": "Efectivo",
+   "tipo": "efectivo",
+   "institucion": null,
+   "color": "chart-5",
+   "orden": 4
+  }
+ ],
+ "parametros": [
+  {
+   "clave": "uvt",
+   "vigencia_desde": "2026-01-01",
+   "valor": 52374,
+   "fuente": "DIAN, UVT 2026"
+  },
+  {
+   "clave": "usura_consumo",
+   "vigencia_desde": "2026-10-01",
+   "valor": 0.2859,
+   "fuente": "Superfinanciera, Resolución 1472 de 2026"
+  },
+  {
+   "clave": "usura_consumo_bajo_monto",
+   "vigencia_desde": "2026-10-01",
+   "valor": 0.6666,
+   "fuente": "Superfinanciera, Resolución 1472 de 2026"
+  }
+ ],
+ "creditos": [
+  {
+   "nombre": "Crédito A",
+   "entidad": "Banco Ejemplo",
+   "numero": "0000-1",
+   "fecha_desembolso": "2026-01-10",
+   "capital_inicial": 100000000,
+   "monto_recibido": 95000000,
+   "tasa_ea": 0.45,
+   "plazo_meses": 12,
+   "cuota": 9500000,
+   "seguro_mensual": 200000,
+   "dia_pago": 10,
+   "extracto": {
+    "fecha_corte": "2026-10-10",
+    "saldo": 30000000,
+    "intereses": 1000000,
+    "abono_capital": 8300000,
+    "seguros": 200000,
+    "cuotas_pendientes": 3
+   },
+   "cuenta_pago": "Daviplata"
+  },
+  {
+   "nombre": "Crédito B",
+   "entidad": "Banco Ejemplo",
+   "numero": "0000-2",
+   "fecha_desembolso": "2026-05-20",
+   "capital_inicial": 50000000,
+   "monto_recibido": 50000000,
+   "tasa_ea": 0.25,
+   "plazo_meses": 12,
+   "cuota": 4700000,
+   "seguro_mensual": 0,
+   "dia_pago": 20,
+   "extracto": {
+    "fecha_corte": "2026-10-20",
+    "saldo": 32000000,
+    "intereses": 600000,
+    "abono_capital": 4100000,
+    "seguros": 0,
+    "cuotas_pendientes": 7
+   },
+   "cuenta_pago": "Daviplata"
+  }
+ ]
+}

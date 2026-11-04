@@ -1,0 +1,6 @@
+{
+  "acreedores": [["banco a 2", "Crédito A2"], ["banco a", "Crédito A1"]],
+  "clientes": ["acme"],
+  "claves_reclamo": ["seguro"],
+  "fuentes_ingreso": {"padre": ["Familia", ""]}
+}

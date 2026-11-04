@@ -1,0 +1,132 @@
+/* Caudal — variables CSS generadas a mano desde project/ds/caudal/tokens.json (el sistema no publica tokens.css).
+   Tema claro por defecto; oscuro con data-theme="dark" en cualquier ancestro. */
+:root,
+[data-theme="light"] {
+  --bg: #e9efea;
+  --surface: #f4f7f3;
+  --card: #ffffff;
+  --card-raised: #f1f4f0;
+  --border: #e3e9e4;
+  --border-strong: #c9d3cc;
+  --ink: #0f1a15;
+  --ink-muted: #56655d;
+  --ink-subtle: #7e8b84;
+  --brand: #1e4d3b;
+  --on-brand: #ffffff;
+  --brand-soft: #dcefd8;
+  --on-brand-soft: #1e4d3b;
+  --accent: #b9f046;
+  --on-accent: #0f1a15;
+  --link: #1e6b4e;
+  --positive: #177a43;
+  --positive-soft: #e0f3e6;
+  --negative: #b8352f;
+  --negative-soft: #fbe6e4;
+  --warning: #97620f;
+  --warning-soft: #fcf0da;
+  --info: #26669e;
+  --info-soft: #e2eef9;
+  --chart-1: #1e4d3b;
+  --chart-2: #a8e05f;
+  --chart-3: #6c5ce7;
+  --chart-4: #3b9edb;
+  --chart-5: #f2a93b;
+  --chart-6: #ef6f6c;
+  --chart-track: #e6ece7;
+  --chart-grid: #edf1ed;
+  --tooltip: #0f1a15;
+  --on-tooltip: #ffffff;
+  --sidebar: #ffffff;
+  --nav-active: #1e4d3b;
+  --on-nav-active: #ffffff;
+  --focus-ring: #1e4d3b;
+  --shadow-card: 0 1px 2px rgba(15, 26, 21, 0.04), 0 8px 24px rgba(15, 26, 21, 0.05);
+  --shadow-pop: 0 12px 32px rgba(15, 26, 21, 0.14);
+  --shadow-frame: 0 30px 80px rgba(30, 77, 59, 0.18);
+  --scrim: rgba(15, 26, 21, 0.45);
+  --font-sans: "Plus Jakarta Sans", "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+  --sidebar-width: 248px;
+  --sidebar-collapsed: 80px;
+  --topbar-height: 72px;
+  --control-height: 40px;
+  --content-max: 1440px;
+}
+[data-theme="dark"] {
+  --bg: #080b0a;
+  --surface: #0c100e;
+  --card: #171d1a;
+  --card-raised: #1f2723;
+  --border: #26302b;
+  --border-strong: #3a4740;
+  --ink: #eef3ef;
+  --ink-muted: #9daba3;
+  --ink-subtle: #74827a;
+  --brand: #245c46;
+  --on-brand: #f2f7f3;
+  --brand-soft: #1c2e25;
+  --on-brand-soft: #bfeaa0;
+  --accent: #b9f046;
+  --on-accent: #0f1a15;
+  --link: #b9f046;
+  --positive: #5fd68b;
+  --positive-soft: #15301f;
+  --negative: #ff7f78;
+  --negative-soft: #3a1b1a;
+  --warning: #f5b85a;
+  --warning-soft: #352914;
+  --info: #6cb6ee;
+  --info-soft: #14283a;
+  --chart-1: #b9f046;
+  --chart-2: #3f8a66;
+  --chart-3: #8e80f7;
+  --chart-4: #5bb4ea;
+  --chart-5: #f5b85a;
+  --chart-6: #f2837f;
+  --chart-track: #26302b;
+  --chart-grid: #1e2622;
+  --tooltip: #eef3ef;
+  --on-tooltip: #0f1a15;
+  --sidebar: #101512;
+  --nav-active: #b9f046;
+  --on-nav-active: #0f1a15;
+  --focus-ring: #b9f046;
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-frame: 0 30px 80px rgba(0, 0, 0, 0.6);
+  --scrim: rgba(0, 0, 0, 0.6);
+}
+/* Ajustes de lienzo: el shell se adapta al ancho y el bento pasa a una columna en pantallas estrechas */
+.cd-app {
+  flex-wrap: wrap;
+}
+.cd-app > .cd-sidebar {
+  flex: 1 1 248px;
+  max-width: 248px;
+}
+.cd-app > .cd-main {
+  flex: 999 1 560px;
+}
+@media (max-width: 1100px) {
+  .cd-bento > [class^="span-"] {
+    grid-column: span 12;
+  }
+}
+@media (max-width: 760px) {
+  .cd-app > .cd-sidebar {
+    max-width: none;
+  }
+}

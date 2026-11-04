@@ -1,0 +1,6054 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Finanzas · API local",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/api/v1/salud": {
+   "get": {
+    "tags": [
+     "sistema"
+    ],
+    "summary": "Salud",
+    "operationId": "salud_api_v1_salud_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object",
+         "title": "Response Salud Api V1 Salud Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/cuentas": {
+   "get": {
+    "tags": [
+     "cuentas"
+    ],
+    "summary": "Listar Cuentas",
+    "description": "Cuentas de dinero. Con `todas=true` incluye las cuentas puente (por cobrar/pagar) y de crédito.",
+    "operationId": "listar_cuentas_api_v1_cuentas_get",
+    "parameters": [
+     {
+      "name": "todas",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Todas"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/CuentaOut"
+         },
+         "title": "Response Listar Cuentas Api V1 Cuentas Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "cuentas"
+    ],
+    "summary": "Crear Cuenta",
+    "operationId": "crear_cuenta_api_v1_cuentas_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CuentaIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CuentaOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/cuentas/{cuenta_id}": {
+   "patch": {
+    "tags": [
+     "cuentas"
+    ],
+    "summary": "Editar Cuenta",
+    "description": "Nombre, tipo, institución, logo, si suma al total y archivar. El saldo no se edita: se registra un ajuste.",
+    "operationId": "editar_cuenta_api_v1_cuentas__cuenta_id__patch",
+    "parameters": [
+     {
+      "name": "cuenta_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Cuenta Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CuentaCambios"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/transacciones": {
+   "get": {
+    "tags": [
+     "transacciones"
+    ],
+    "summary": "Listar Transacciones",
+    "operationId": "listar_transacciones_api_v1_transacciones_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Desde"
+      }
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Hasta"
+      }
+     },
+     {
+      "name": "cuenta_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cuenta Id"
+      }
+     },
+     {
+      "name": "grupo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Grupo"
+      }
+     },
+     {
+      "name": "categoria_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Categoria Id"
+      }
+     },
+     {
+      "name": "texto",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Texto"
+      }
+     },
+     {
+      "name": "estado",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Estado"
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cursor"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 500,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PaginaTransacciones"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "transacciones"
+    ],
+    "summary": "Crear Transaccion",
+    "operationId": "crear_transaccion_api_v1_transacciones_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransaccionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TransaccionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/transacciones/{tx_id}": {
+   "get": {
+    "tags": [
+     "transacciones"
+    ],
+    "summary": "Leer Transaccion",
+    "description": "Un movimiento con todos sus datos, para abrir el editor desde cualquier vista.",
+    "operationId": "leer_transaccion_api_v1_transacciones__tx_id__get",
+    "parameters": [
+     {
+      "name": "tx_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tx Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TransaccionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "transacciones"
+    ],
+    "summary": "Editar Transaccion",
+    "operationId": "editar_transaccion_api_v1_transacciones__tx_id__patch",
+    "parameters": [
+     {
+      "name": "tx_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tx Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransaccionCambios"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TransaccionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "transacciones"
+    ],
+    "summary": "Eliminar Transaccion",
+    "operationId": "eliminar_transaccion_api_v1_transacciones__tx_id__delete",
+    "parameters": [
+     {
+      "name": "tx_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tx Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/transferencias": {
+   "post": {
+    "tags": [
+     "transacciones"
+    ],
+    "summary": "Crear Transferencia",
+    "operationId": "crear_transferencia_api_v1_transferencias_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TransferenciaIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/TransaccionOut"
+         },
+         "type": "array",
+         "title": "Response Crear Transferencia Api V1 Transferencias Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/categorias": {
+   "get": {
+    "tags": [
+     "categorias"
+    ],
+    "summary": "Listar Categorias",
+    "operationId": "listar_categorias_api_v1_categorias_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/CategoriaNodo"
+         },
+         "type": "array",
+         "title": "Response Listar Categorias Api V1 Categorias Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "categorias"
+    ],
+    "summary": "Crear Categoria",
+    "operationId": "crear_categoria_api_v1_categorias_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CategoriaNueva"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "type": "object",
+         "title": "Response Crear Categoria Api V1 Categorias Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/importar/cashew": {
+   "post": {
+    "tags": [
+     "importar"
+    ],
+    "summary": "Importar Cashew",
+    "operationId": "importar_cashew_api_v1_importar_cashew_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_importar_cashew_api_v1_importar_cashew_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ResultadoImportacionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sugerencias": {
+   "get": {
+    "tags": [
+     "transacciones"
+    ],
+    "summary": "Sugerir",
+    "description": "Autocompletado de la captura rápida: descripción → categoría, cuenta y monto habituales.",
+    "operationId": "sugerir_api_v1_sugerencias_get",
+    "parameters": [
+     {
+      "name": "texto",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "",
+       "title": "Texto"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 20,
+       "minimum": 1,
+       "default": 6,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Sugerir Api V1 Sugerencias Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sugerencias/categorias": {
+   "get": {
+    "tags": [
+     "transacciones"
+    ],
+    "summary": "Categorias Frecuentes",
+    "operationId": "categorias_frecuentes_api_v1_sugerencias_categorias_get",
+    "parameters": [
+     {
+      "name": "tipo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(gasto|ingreso)$",
+       "default": "gasto",
+       "title": "Tipo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Categorias Frecuentes Api V1 Sugerencias Categorias Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/dashboard": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Dashboard",
+    "operationId": "reporte_dashboard_api_v1_reportes_dashboard_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Reporte Dashboard Api V1 Reportes Dashboard Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/flujo": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Flujo",
+    "operationId": "reporte_flujo_api_v1_reportes_flujo_get",
+    "parameters": [
+     {
+      "name": "meses",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 36,
+       "minimum": 1,
+       "default": 6,
+       "title": "Meses"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Reporte Flujo Api V1 Reportes Flujo Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/events": {
+   "get": {
+    "tags": [
+     "eventos"
+    ],
+    "summary": "Eventos",
+    "description": "Server-Sent Events: cada cambio de dominio llega como `event: cambio`.",
+    "operationId": "eventos_api_v1_events_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/presupuestos-historico": {
+   "get": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Historico Presupuesto",
+    "description": "Asignado vs gastado por mes de un presupuesto o de todos.",
+    "operationId": "historico_presupuesto_api_v1_presupuestos_historico_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+       "title": "Desde"
+      }
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+       "title": "Hasta"
+      }
+     },
+     {
+      "name": "grupo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Grupo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Historico Presupuesto Api V1 Presupuestos Historico Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/presupuestos/{mes}/acumulado": {
+   "get": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Acumulado Presupuesto",
+    "description": "Gasto acumulado por día del mes y del anterior, con el límite vigente.",
+    "operationId": "acumulado_presupuesto_api_v1_presupuestos__mes__acumulado_get",
+    "parameters": [
+     {
+      "name": "mes",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+       "title": "Mes"
+      }
+     },
+     {
+      "name": "grupo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Grupo"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Acumulado Presupuesto Api V1 Presupuestos  Mes  Acumulado Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/presupuestos/{mes}": {
+   "get": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Ver Presupuesto",
+    "operationId": "ver_presupuesto_api_v1_presupuestos__mes__get",
+    "parameters": [
+     {
+      "name": "mes",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+       "title": "Mes"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ver Presupuesto Api V1 Presupuestos  Mes  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/presupuestos-grupos": {
+   "post": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Crear Grupo",
+    "operationId": "crear_grupo_api_v1_presupuestos_grupos_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/GrupoIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "type": "object",
+         "title": "Response Crear Grupo Api V1 Presupuestos Grupos Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/presupuestos-grupos/{grupo_id}": {
+   "put": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Editar Grupo",
+    "operationId": "editar_grupo_api_v1_presupuestos_grupos__grupo_id__put",
+    "parameters": [
+     {
+      "name": "grupo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Grupo Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/GrupoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Eliminar Grupo",
+    "operationId": "eliminar_grupo_api_v1_presupuestos_grupos__grupo_id__delete",
+    "parameters": [
+     {
+      "name": "grupo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Grupo Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/presupuestos/{mes}/grupos/{grupo_id}": {
+   "put": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Asignar",
+    "operationId": "asignar_api_v1_presupuestos__mes__grupos__grupo_id__put",
+    "parameters": [
+     {
+      "name": "mes",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+       "title": "Mes"
+      }
+     },
+     {
+      "name": "grupo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Grupo Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AsignacionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Quitar",
+    "operationId": "quitar_api_v1_presupuestos__mes__grupos__grupo_id__delete",
+    "parameters": [
+     {
+      "name": "mes",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+       "title": "Mes"
+      }
+     },
+     {
+      "name": "grupo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Grupo Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/presupuestos/{mes}/copiar": {
+   "post": {
+    "tags": [
+     "presupuesto"
+    ],
+    "summary": "Copiar",
+    "operationId": "copiar_api_v1_presupuestos__mes__copiar_post",
+    "parameters": [
+     {
+      "name": "mes",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Mes"
+      }
+     },
+     {
+      "name": "desde",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+       "title": "Desde"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Copiar Api V1 Presupuestos  Mes  Copiar Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos": {
+   "get": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Listar Creditos",
+    "operationId": "listar_creditos_api_v1_creditos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Listar Creditos Api V1 Creditos Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Crear Credito",
+    "description": "Crea el crédito, su categoría y programa sus cuotas.",
+    "operationId": "crear_credito_api_v1_creditos_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreditoIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "type": "object",
+         "title": "Response Crear Credito Api V1 Creditos Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos/cerrados": {
+   "get": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Listar Creditos Cerrados",
+    "operationId": "listar_creditos_cerrados_api_v1_creditos_cerrados_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Listar Creditos Cerrados Api V1 Creditos Cerrados Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos/simulacion": {
+   "get": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Simular Abonos",
+    "operationId": "simular_abonos_api_v1_creditos_simulacion_get",
+    "parameters": [
+     {
+      "name": "abono_extra",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Abono Extra"
+      }
+     },
+     {
+      "name": "estrategia",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "avalancha",
+        "bola_de_nieve"
+       ],
+       "type": "string",
+       "default": "avalancha",
+       "title": "Estrategia"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Simular Abonos Api V1 Creditos Simulacion Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos/{credito_id}/amortizacion": {
+   "get": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Amortizacion",
+    "operationId": "amortizacion_api_v1_creditos__credito_id__amortizacion_get",
+    "parameters": [
+     {
+      "name": "credito_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Credito Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Amortizacion Api V1 Creditos  Credito Id  Amortizacion Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos/{credito_id}/extractos": {
+   "post": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Cargar Extracto",
+    "operationId": "cargar_extracto_api_v1_creditos__credito_id__extractos_post",
+    "parameters": [
+     {
+      "name": "credito_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Credito Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ExtractoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Cargar Extracto Api V1 Creditos  Credito Id  Extractos Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/parametros/usura": {
+   "get": {
+    "tags": [
+     "parametros"
+    ],
+    "summary": "Usura",
+    "operationId": "usura_api_v1_parametros_usura_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "anyOf": [
+           {
+            "type": "number"
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "type": "object",
+         "title": "Response Usura Api V1 Parametros Usura Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prestamos": {
+   "get": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Listar Prestamos",
+    "operationId": "listar_prestamos_api_v1_prestamos_get",
+    "parameters": [
+     {
+      "name": "estado",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Estado"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Listar Prestamos Api V1 Prestamos Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Crear Prestamo",
+    "operationId": "crear_prestamo_api_v1_prestamos_post",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PrestamoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Crear Prestamo Api V1 Prestamos Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prestamos/resumen": {
+   "get": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Resumen Prestamos",
+    "operationId": "resumen_prestamos_api_v1_prestamos_resumen_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Resumen Prestamos Api V1 Prestamos Resumen Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prestamos/simular": {
+   "post": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Simular Prestamo",
+    "description": "Vista previa sin guardar: interés, cuotas, E.A. equivalente y alerta de costo.",
+    "operationId": "simular_prestamo_api_v1_prestamos_simular_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PrestamoIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Simular Prestamo Api V1 Prestamos Simular Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prestamos/{prestamo_id}": {
+   "get": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Ver Prestamo",
+    "operationId": "ver_prestamo_api_v1_prestamos__prestamo_id__get",
+    "parameters": [
+     {
+      "name": "prestamo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Prestamo Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ver Prestamo Api V1 Prestamos  Prestamo Id  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prestamos/{prestamo_id}/abonos": {
+   "post": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Abonar",
+    "operationId": "abonar_api_v1_prestamos__prestamo_id__abonos_post",
+    "parameters": [
+     {
+      "name": "prestamo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Prestamo Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AbonoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Abonar Api V1 Prestamos  Prestamo Id  Abonos Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prestamos/{prestamo_id}/condonar": {
+   "post": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Condonar",
+    "operationId": "condonar_api_v1_prestamos__prestamo_id__condonar_post",
+    "parameters": [
+     {
+      "name": "prestamo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Prestamo Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/mensual": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Mensual",
+    "operationId": "reporte_mensual_api_v1_reportes_mensual_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes inicial AAAA-MM (incluido)",
+       "title": "Desde"
+      },
+      "description": "Mes inicial AAAA-MM (incluido)"
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes final AAAA-MM (incluido)",
+       "title": "Hasta"
+      },
+      "description": "Mes final AAAA-MM (incluido)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Reporte Mensual Api V1 Reportes Mensual Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/sankey": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Sankey",
+    "operationId": "reporte_sankey_api_v1_reportes_sankey_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes inicial AAAA-MM (incluido)",
+       "title": "Desde"
+      },
+      "description": "Mes inicial AAAA-MM (incluido)"
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes final AAAA-MM (incluido)",
+       "title": "Hasta"
+      },
+      "description": "Mes final AAAA-MM (incluido)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Reporte Sankey Api V1 Reportes Sankey Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/categorias": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Categorias",
+    "operationId": "reporte_categorias_api_v1_reportes_categorias_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes inicial AAAA-MM (incluido)",
+       "title": "Desde"
+      },
+      "description": "Mes inicial AAAA-MM (incluido)"
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes final AAAA-MM (incluido)",
+       "title": "Hasta"
+      },
+      "description": "Mes final AAAA-MM (incluido)"
+     },
+     {
+      "name": "grupo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "$ref": "#/components/schemas/Grupo",
+       "default": "gasto_vida"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Reporte Categorias Api V1 Reportes Categorias Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/descripciones": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Descripciones",
+    "operationId": "reporte_descripciones_api_v1_reportes_descripciones_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes inicial AAAA-MM (incluido)",
+       "title": "Desde"
+      },
+      "description": "Mes inicial AAAA-MM (incluido)"
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes final AAAA-MM (incluido)",
+       "title": "Hasta"
+      },
+      "description": "Mes final AAAA-MM (incluido)"
+     },
+     {
+      "name": "grupo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "$ref": "#/components/schemas/Grupo"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Grupo"
+      }
+     },
+     {
+      "name": "limite",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 30,
+       "title": "Limite"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Reporte Descripciones Api V1 Reportes Descripciones Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/apuestas": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Apuestas",
+    "operationId": "reporte_apuestas_api_v1_reportes_apuestas_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes inicial AAAA-MM (incluido)",
+       "title": "Desde"
+      },
+      "description": "Mes inicial AAAA-MM (incluido)"
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes final AAAA-MM (incluido)",
+       "title": "Hasta"
+      },
+      "description": "Mes final AAAA-MM (incluido)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Reporte Apuestas Api V1 Reportes Apuestas Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/valor-neto": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Valor Neto",
+    "description": "Saldo de las cuentas incluidas en el total, al cierre de cada mes o día.",
+    "operationId": "reporte_valor_neto_api_v1_reportes_valor_neto_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes inicial AAAA-MM (incluido)",
+       "title": "Desde"
+      },
+      "description": "Mes inicial AAAA-MM (incluido)"
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes final AAAA-MM (incluido)",
+       "title": "Hasta"
+      },
+      "description": "Mes final AAAA-MM (incluido)"
+     },
+     {
+      "name": "escala",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "mes",
+        "dia",
+        "movimiento"
+       ],
+       "type": "string",
+       "default": "mes",
+       "title": "Escala"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Reporte Valor Neto Api V1 Reportes Valor Neto Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/calor": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Calor",
+    "description": "Gasto e ingreso por día (mapa de calor).",
+    "operationId": "reporte_calor_api_v1_reportes_calor_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes inicial AAAA-MM (incluido)",
+       "title": "Desde"
+      },
+      "description": "Mes inicial AAAA-MM (incluido)"
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes final AAAA-MM (incluido)",
+       "title": "Hasta"
+      },
+      "description": "Mes final AAAA-MM (incluido)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Reporte Calor Api V1 Reportes Calor Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reportes/revision/{mes}": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Reporte Revision",
+    "operationId": "reporte_revision_api_v1_reportes_revision__mes__get",
+    "parameters": [
+     {
+      "name": "mes",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+       "title": "Mes"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Reporte Revision Api V1 Reportes Revision  Mes  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/exportar/excel": {
+   "get": {
+    "tags": [
+     "reportes"
+    ],
+    "summary": "Exportar Excel",
+    "operationId": "exportar_excel_api_v1_exportar_excel_get",
+    "parameters": [
+     {
+      "name": "desde",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes inicial AAAA-MM (incluido)",
+       "title": "Desde"
+      },
+      "description": "Mes inicial AAAA-MM (incluido)"
+     },
+     {
+      "name": "hasta",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mes final AAAA-MM (incluido)",
+       "title": "Hasta"
+      },
+      "description": "Mes final AAAA-MM (incluido)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sugerencias/clasificar": {
+   "get": {
+    "tags": [
+     "sugerencias"
+    ],
+    "summary": "Clasificar",
+    "description": "Hasta 3 categorías probables para un movimiento nuevo, la primera es la recomendada.",
+    "operationId": "clasificar_api_v1_sugerencias_clasificar_get",
+    "parameters": [
+     {
+      "name": "monto",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Monto"
+      }
+     },
+     {
+      "name": "descripcion",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "maxLength": 200,
+       "default": "",
+       "title": "Descripcion"
+      }
+     },
+     {
+      "name": "cuenta_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Cuenta Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Clasificar Api V1 Sugerencias Clasificar Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sugerencias/precision": {
+   "get": {
+    "tags": [
+     "sugerencias"
+    ],
+    "summary": "Precision",
+    "operationId": "precision_api_v1_sugerencias_precision_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Precision Api V1 Sugerencias Precision Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reglas": {
+   "get": {
+    "tags": [
+     "reglas"
+    ],
+    "summary": "Listar Reglas",
+    "operationId": "listar_reglas_api_v1_reglas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Listar Reglas Api V1 Reglas Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "reglas"
+    ],
+    "summary": "Crear Regla",
+    "operationId": "crear_regla_api_v1_reglas_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReglaIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "type": "object",
+         "title": "Response Crear Regla Api V1 Reglas Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reglas/{regla_id}": {
+   "put": {
+    "tags": [
+     "reglas"
+    ],
+    "summary": "Editar Regla",
+    "operationId": "editar_regla_api_v1_reglas__regla_id__put",
+    "parameters": [
+     {
+      "name": "regla_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Regla Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReglaIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "reglas"
+    ],
+    "summary": "Eliminar Regla",
+    "operationId": "eliminar_regla_api_v1_reglas__regla_id__delete",
+    "parameters": [
+     {
+      "name": "regla_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Regla Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/reglas/probar": {
+   "post": {
+    "tags": [
+     "reglas"
+    ],
+    "summary": "Probar Regla",
+    "description": "Cuántos movimientos del historial cumplen estas condiciones (sin guardar nada).",
+    "operationId": "probar_regla_api_v1_reglas_probar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "items": {
+         "$ref": "#/components/schemas/CondicionIn"
+        },
+        "type": "array",
+        "title": "Datos"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Probar Regla Api V1 Reglas Probar Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/recurrentes": {
+   "get": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Listar Recurrentes",
+    "operationId": "listar_recurrentes_api_v1_recurrentes_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Listar Recurrentes Api V1 Recurrentes Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Crear Recurrente",
+    "operationId": "crear_recurrente_api_v1_recurrentes_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RecurrenteIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "type": "object",
+         "title": "Response Crear Recurrente Api V1 Recurrentes Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/recurrentes/detectar": {
+   "get": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Detectar Recurrentes",
+    "operationId": "detectar_recurrentes_api_v1_recurrentes_detectar_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Detectar Recurrentes Api V1 Recurrentes Detectar Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/recurrentes/{recurrente_id}": {
+   "put": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Editar Recurrente",
+    "operationId": "editar_recurrente_api_v1_recurrentes__recurrente_id__put",
+    "parameters": [
+     {
+      "name": "recurrente_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Recurrente Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RecurrenteIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Eliminar Recurrente",
+    "operationId": "eliminar_recurrente_api_v1_recurrentes__recurrente_id__delete",
+    "parameters": [
+     {
+      "name": "recurrente_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Recurrente Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/recurrentes/{recurrente_id}/estado": {
+   "post": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Estado Recurrente",
+    "description": "Pausar (se puede reactivar), cancelar o reactivar; lo programado sin pagar se borra.",
+    "operationId": "estado_recurrente_api_v1_recurrentes__recurrente_id__estado_post",
+    "parameters": [
+     {
+      "name": "recurrente_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Recurrente Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EstadoRecurrenteIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/programadas/{tx_id}/omitir": {
+   "post": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Omitir Programada",
+    "description": "Salta este pago: no se cobra, no vuelve a programarse y se programa el periodo siguiente.",
+    "operationId": "omitir_programada_api_v1_programadas__tx_id__omitir_post",
+    "parameters": [
+     {
+      "name": "tx_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tx Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/programadas/{tx_id}/pagar": {
+   "post": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Pagar Programada",
+    "description": "Confirma un pago programado (hoy y por su monto, salvo que se indique otro).",
+    "operationId": "pagar_programada_api_v1_programadas__tx_id__pagar_post",
+    "parameters": [
+     {
+      "name": "tx_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Tx Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PagoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/calendario": {
+   "get": {
+    "tags": [
+     "recurrentes"
+    ],
+    "summary": "Ver Calendario",
+    "operationId": "ver_calendario_api_v1_calendario_get",
+    "parameters": [
+     {
+      "name": "dias",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 120,
+       "minimum": 1,
+       "default": 45,
+       "title": "Dias"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ver Calendario Api V1 Calendario Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/metas": {
+   "get": {
+    "tags": [
+     "metas"
+    ],
+    "summary": "Listar Metas",
+    "operationId": "listar_metas_api_v1_metas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Listar Metas Api V1 Metas Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "metas"
+    ],
+    "summary": "Crear Meta",
+    "operationId": "crear_meta_api_v1_metas_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MetaIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "type": "object",
+         "title": "Response Crear Meta Api V1 Metas Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/metas/{meta_id}": {
+   "put": {
+    "tags": [
+     "metas"
+    ],
+    "summary": "Editar Meta",
+    "operationId": "editar_meta_api_v1_metas__meta_id__put",
+    "parameters": [
+     {
+      "name": "meta_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Meta Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MetaIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "metas"
+    ],
+    "summary": "Eliminar Meta",
+    "operationId": "eliminar_meta_api_v1_metas__meta_id__delete",
+    "parameters": [
+     {
+      "name": "meta_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Meta Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "metas"
+    ],
+    "summary": "Cambiar Meta",
+    "operationId": "cambiar_meta_api_v1_metas__meta_id__patch",
+    "parameters": [
+     {
+      "name": "meta_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Meta Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EstadoMetaIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/alertas": {
+   "get": {
+    "tags": [
+     "alertas"
+    ],
+    "summary": "Ver Alertas",
+    "operationId": "ver_alertas_api_v1_alertas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Ver Alertas Api V1 Alertas Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/respaldos": {
+   "get": {
+    "tags": [
+     "respaldos"
+    ],
+    "summary": "Listar Respaldos",
+    "operationId": "listar_respaldos_api_v1_respaldos_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Listar Respaldos Api V1 Respaldos Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "respaldos"
+    ],
+    "summary": "Crear Respaldo",
+    "operationId": "crear_respaldo_api_v1_respaldos_post",
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Crear Respaldo Api V1 Respaldos Post"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos/{credito_id}/abono-unico": {
+   "get": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Abono Unico",
+    "description": "Compara reducir plazo vs. reducir cuota con un abono a capital hoy.",
+    "operationId": "abono_unico_api_v1_creditos__credito_id__abono_unico_get",
+    "parameters": [
+     {
+      "name": "credito_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Credito Id"
+      }
+     },
+     {
+      "name": "abono",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "exclusiveMinimum": 0,
+       "title": "Abono"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Abono Unico Api V1 Creditos  Credito Id  Abono Unico Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos/compra-cartera": {
+   "post": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Compra Cartera",
+    "description": "¿Conviene recoger los créditos en uno nuevo? Compara lo que falta pagar, no solo la cuota.",
+    "operationId": "compra_cartera_api_v1_creditos_compra_cartera_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CompraCarteraIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Compra Cartera Api V1 Creditos Compra Cartera Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/parametros": {
+   "get": {
+    "tags": [
+     "parametros"
+    ],
+    "summary": "Listar Parametros",
+    "operationId": "listar_parametros_api_v1_parametros_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Listar Parametros Api V1 Parametros Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "parametros"
+    ],
+    "summary": "Guardar Parametro",
+    "operationId": "guardar_parametro_api_v1_parametros_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ParametroIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/parametros/trm": {
+   "get": {
+    "tags": [
+     "parametros"
+    ],
+    "summary": "Ver Trm",
+    "description": "TRM oficial del día (Superfinanciera). Sin red, la última conocida marcada como aproximada.",
+    "operationId": "ver_trm_api_v1_parametros_trm_get",
+    "parameters": [
+     {
+      "name": "fecha",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Fecha"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Ver Trm Api V1 Parametros Trm Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/impuestos/termometro": {
+   "get": {
+    "tags": [
+     "impuestos"
+    ],
+    "summary": "Termometro",
+    "operationId": "termometro_api_v1_impuestos_termometro_get",
+    "parameters": [
+     {
+      "name": "anio",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 2100,
+         "minimum": 2020
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Anio"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Termometro Api V1 Impuestos Termometro Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/asistente/estado": {
+   "get": {
+    "tags": [
+     "asistente"
+    ],
+    "summary": "Estado Asistente",
+    "operationId": "estado_asistente_api_v1_asistente_estado_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Estado Asistente Api V1 Asistente Estado Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/asistente/consentimiento": {
+   "put": {
+    "tags": [
+     "asistente"
+    ],
+    "summary": "Consentir",
+    "operationId": "consentir_api_v1_asistente_consentimiento_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConsentimientoIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/asistente/preguntar": {
+   "post": {
+    "tags": [
+     "asistente"
+    ],
+    "summary": "Preguntar",
+    "operationId": "preguntar_api_v1_asistente_preguntar_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PreguntaIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Preguntar Api V1 Asistente Preguntar Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos/{credito_id}": {
+   "delete": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Eliminar Credito",
+    "description": "Borra el crédito con todos sus movimientos. Antes se hace un respaldo de la base.",
+    "operationId": "eliminar_credito_api_v1_creditos__credito_id__delete",
+    "parameters": [
+     {
+      "name": "credito_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Credito Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Eliminar Credito Api V1 Creditos  Credito Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Editar Credito",
+    "operationId": "editar_credito_api_v1_creditos__credito_id__put",
+    "parameters": [
+     {
+      "name": "credito_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Credito Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreditoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/creditos/{credito_id}/pagado": {
+   "post": {
+    "tags": [
+     "creditos"
+    ],
+    "summary": "Marcar Credito Pagado",
+    "description": "Cierra el crédito: conserva los pagos hechos y quita las cuotas programadas.",
+    "operationId": "marcar_credito_pagado_api_v1_creditos__credito_id__pagado_post",
+    "parameters": [
+     {
+      "name": "credito_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Credito Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Marcar Credito Pagado Api V1 Creditos  Credito Id  Pagado Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/categorias/{categoria_id}": {
+   "patch": {
+    "tags": [
+     "categorias"
+    ],
+    "summary": "Editar Categoria",
+    "description": "Solo cambia lo que se envía (nombre, ícono, color o si es gasto fijo).",
+    "operationId": "editar_categoria_api_v1_categorias__categoria_id__patch",
+    "parameters": [
+     {
+      "name": "categoria_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Categoria Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CategoriaCambios"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "categorias"
+    ],
+    "summary": "Eliminar Categoria",
+    "description": "Elimina la categoría pasando sus movimientos, reglas, presupuestos y metas a `destino`.",
+    "operationId": "eliminar_categoria_api_v1_categorias__categoria_id__delete",
+    "parameters": [
+     {
+      "name": "categoria_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Categoria Id"
+      }
+     },
+     {
+      "name": "destino",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Destino"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Eliminar Categoria Api V1 Categorias  Categoria Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sistema": {
+   "get": {
+    "tags": [
+     "sistema"
+    ],
+    "summary": "Ver Sistema",
+    "operationId": "ver_sistema_api_v1_sistema_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Ver Sistema Api V1 Sistema Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "sistema"
+    ],
+    "summary": "Ajustar",
+    "operationId": "ajustar_api_v1_sistema_patch",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AjustesIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sistema/primer-uso": {
+   "post": {
+    "tags": [
+     "sistema"
+    ],
+    "summary": "Primer Uso",
+    "operationId": "primer_uso_api_v1_sistema_primer_uso_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PrimerUsoIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AbonoIn": {
+    "properties": {
+     "monto": {
+      "type": "integer",
+      "exclusiveMinimum": 0.0,
+      "title": "Monto"
+     },
+     "cuenta_id": {
+      "type": "integer",
+      "title": "Cuenta Id"
+     },
+     "fecha": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha"
+     }
+    },
+    "type": "object",
+    "required": [
+     "monto",
+     "cuenta_id"
+    ],
+    "title": "AbonoIn"
+   },
+   "AjustesIn": {
+    "properties": {
+     "nombre": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 60
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nombre"
+     },
+     "perfil": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Perfil"
+     },
+     "modulo_apuestas": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "auto",
+         "si",
+         "no"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Modulo Apuestas"
+     }
+    },
+    "type": "object",
+    "title": "AjustesIn"
+   },
+   "AsignacionIn": {
+    "properties": {
+     "asignado": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Asignado",
+      "description": "Centavos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "asignado"
+    ],
+    "title": "AsignacionIn"
+   },
+   "Body_importar_cashew_api_v1_importar_cashew_post": {
+    "properties": {
+     "archivo": {
+      "type": "string",
+      "contentMediaType": "application/octet-stream",
+      "title": "Archivo"
+     }
+    },
+    "type": "object",
+    "required": [
+     "archivo"
+    ],
+    "title": "Body_importar_cashew_api_v1_importar_cashew_post"
+   },
+   "CategoriaCambios": {
+    "properties": {
+     "nombre": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nombre"
+     },
+     "icono": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Icono"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "es_fijo": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Es Fijo"
+     },
+     "padre_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Padre Id",
+      "description": "Nuevo padre: el grupo (queda como categoría) o una categoría (subcategoría)"
+     }
+    },
+    "type": "object",
+    "title": "CategoriaCambios"
+   },
+   "CategoriaNodo": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "nombre": {
+      "type": "string",
+      "title": "Nombre"
+     },
+     "nivel": {
+      "type": "integer",
+      "title": "Nivel"
+     },
+     "grupo": {
+      "type": "string",
+      "title": "Grupo"
+     },
+     "es_fijo": {
+      "type": "boolean",
+      "title": "Es Fijo"
+     },
+     "icono": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Icono"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "hijos": {
+      "items": {
+       "$ref": "#/components/schemas/CategoriaNodo"
+      },
+      "type": "array",
+      "title": "Hijos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nombre",
+     "nivel",
+     "grupo",
+     "es_fijo",
+     "hijos"
+    ],
+    "title": "CategoriaNodo"
+   },
+   "CategoriaNueva": {
+    "properties": {
+     "padre_id": {
+      "type": "integer",
+      "title": "Padre Id",
+      "description": "Grupo (nivel 1) para una categoría, o categoría para una subcategoría"
+     },
+     "nombre": {
+      "type": "string",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Nombre"
+     },
+     "icono": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Icono"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     }
+    },
+    "type": "object",
+    "required": [
+     "padre_id",
+     "nombre"
+    ],
+    "title": "CategoriaNueva"
+   },
+   "CompraCarteraIn": {
+    "properties": {
+     "tasa_ea": {
+      "type": "number",
+      "exclusiveMaximum": 3.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Tasa Ea",
+      "description": "Tasa efectiva anual ofrecida, p. ej. 0.24"
+     },
+     "plazo_meses": {
+      "type": "integer",
+      "maximum": 120.0,
+      "minimum": 1.0,
+      "title": "Plazo Meses"
+     },
+     "costos_iniciales": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Costos Iniciales",
+      "description": "Centavos: estudio de crédito, comisión, etc.",
+      "default": 0
+     },
+     "seguro_mensual": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Seguro Mensual",
+      "description": "Centavos",
+      "default": 0
+     },
+     "financiar_costos": {
+      "type": "boolean",
+      "title": "Financiar Costos",
+      "default": true
+     },
+     "credito_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Credito Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "tasa_ea",
+     "plazo_meses"
+    ],
+    "title": "CompraCarteraIn"
+   },
+   "CondicionIn": {
+    "properties": {
+     "campo": {
+      "type": "string",
+      "enum": [
+       "descripcion",
+       "monto",
+       "cuenta_id",
+       "tipo"
+      ],
+      "title": "Campo"
+     },
+     "op": {
+      "type": "string",
+      "enum": [
+       "contiene",
+       "empieza",
+       "igual",
+       "mayor",
+       "menor",
+       "entre"
+      ],
+      "title": "Op"
+     },
+     "valor": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "integer"
+       }
+      ],
+      "title": "Valor"
+     },
+     "valor2": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valor2"
+     }
+    },
+    "type": "object",
+    "required": [
+     "campo",
+     "op",
+     "valor"
+    ],
+    "title": "CondicionIn"
+   },
+   "ConsentimientoIn": {
+    "properties": {
+     "activo": {
+      "type": "boolean",
+      "title": "Activo"
+     }
+    },
+    "type": "object",
+    "required": [
+     "activo"
+    ],
+    "title": "ConsentimientoIn"
+   },
+   "CreditoIn": {
+    "properties": {
+     "nombre": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Nombre"
+     },
+     "entidad": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Entidad"
+     },
+     "fecha_desembolso": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Fecha Desembolso"
+     },
+     "capital_inicial": {
+      "type": "integer",
+      "exclusiveMinimum": 0.0,
+      "title": "Capital Inicial",
+      "description": "Centavos: lo que debes al inicio (con seguros financiados)"
+     },
+     "monto_recibido": {
+      "type": "integer",
+      "exclusiveMinimum": 0.0,
+      "title": "Monto Recibido",
+      "description": "Centavos: lo que llegó a tu cuenta"
+     },
+     "tasa_ea": {
+      "type": "number",
+      "exclusiveMaximum": 3.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Tasa Ea"
+     },
+     "plazo_meses": {
+      "type": "integer",
+      "maximum": 600.0,
+      "minimum": 1.0,
+      "title": "Plazo Meses"
+     },
+     "cuota": {
+      "type": "integer",
+      "exclusiveMinimum": 0.0,
+      "title": "Cuota",
+      "description": "Centavos, incluye el seguro"
+     },
+     "dia_pago": {
+      "type": "integer",
+      "maximum": 31.0,
+      "minimum": 1.0,
+      "title": "Dia Pago"
+     },
+     "seguro_mensual": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Seguro Mensual",
+      "default": 0
+     },
+     "cuenta_pago_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cuenta Pago Id"
+     },
+     "numero": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Numero"
+     },
+     "cuenta_desembolso_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cuenta Desembolso Id",
+      "description": "Cuenta donde llegó el dinero: crea o mueve el movimiento de desembolso"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nombre",
+     "entidad",
+     "fecha_desembolso",
+     "capital_inicial",
+     "monto_recibido",
+     "tasa_ea",
+     "plazo_meses",
+     "cuota",
+     "dia_pago"
+    ],
+    "title": "CreditoIn"
+   },
+   "CuentaCambios": {
+    "properties": {
+     "nombre": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nombre"
+     },
+     "tipo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "efectivo",
+         "ahorro",
+         "billetera",
+         "tarjeta_credito",
+         "inversion"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo"
+     },
+     "institucion": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Institucion"
+     },
+     "icono": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Icono"
+     },
+     "incluir_en_total": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Incluir En Total"
+     },
+     "archivada": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Archivada"
+     }
+    },
+    "type": "object",
+    "title": "CuentaCambios",
+    "description": "Edición parcial: solo cambia lo que se envía. El saldo nunca se edita (se registra un ajuste)."
+   },
+   "CuentaIn": {
+    "properties": {
+     "nombre": {
+      "type": "string",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Nombre"
+     },
+     "tipo": {
+      "type": "string",
+      "enum": [
+       "efectivo",
+       "ahorro",
+       "billetera",
+       "tarjeta_credito",
+       "inversion"
+      ],
+      "title": "Tipo",
+      "default": "billetera"
+     },
+     "institucion": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Institucion"
+     },
+     "saldo_inicial": {
+      "type": "integer",
+      "title": "Saldo Inicial",
+      "description": "Centavos: saldo el día que empiezas a registrarla",
+      "default": 0
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "icono": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Icono"
+     },
+     "incluir_en_total": {
+      "type": "boolean",
+      "title": "Incluir En Total",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "nombre"
+    ],
+    "title": "CuentaIn"
+   },
+   "CuentaOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "nombre": {
+      "type": "string",
+      "title": "Nombre"
+     },
+     "tipo": {
+      "type": "string",
+      "title": "Tipo"
+     },
+     "saldo": {
+      "type": "integer",
+      "title": "Saldo"
+     },
+     "institucion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Institucion"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "icono": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Icono",
+      "description": "Ruta del logo (/cuentas/x.svg) o nombre de ícono"
+     },
+     "incluir_en_total": {
+      "type": "boolean",
+      "title": "Incluir En Total",
+      "default": true
+     },
+     "saldo_inicial": {
+      "type": "integer",
+      "title": "Saldo Inicial",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "nombre",
+     "tipo",
+     "saldo"
+    ],
+    "title": "CuentaOut"
+   },
+   "EstadoMetaIn": {
+    "properties": {
+     "estado": {
+      "type": "string",
+      "enum": [
+       "activa",
+       "cumplida",
+       "archivada"
+      ],
+      "title": "Estado"
+     }
+    },
+    "type": "object",
+    "required": [
+     "estado"
+    ],
+    "title": "EstadoMetaIn"
+   },
+   "EstadoRecurrenteIn": {
+    "properties": {
+     "estado": {
+      "type": "string",
+      "enum": [
+       "activo",
+       "pausado",
+       "cancelado"
+      ],
+      "title": "Estado"
+     }
+    },
+    "type": "object",
+    "required": [
+     "estado"
+    ],
+    "title": "EstadoRecurrenteIn"
+   },
+   "ExtractoIn": {
+    "properties": {
+     "fecha_corte": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Fecha Corte"
+     },
+     "saldo": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Saldo"
+     },
+     "intereses": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Intereses",
+      "default": 0
+     },
+     "abono_capital": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Abono Capital",
+      "default": 0
+     },
+     "seguros": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Seguros",
+      "default": 0
+     },
+     "cuotas_pendientes": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Cuotas Pendientes",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "fecha_corte",
+     "saldo"
+    ],
+    "title": "ExtractoIn"
+   },
+   "Grupo": {
+    "type": "string",
+    "enum": [
+     "ingreso",
+     "gasto_vida",
+     "servicio_deuda",
+     "apuestas",
+     "ahorro_inversion",
+     "prestamos_personales",
+     "financiacion",
+     "transferencia",
+     "ajuste"
+    ],
+    "title": "Grupo"
+   },
+   "GrupoIn": {
+    "properties": {
+     "nombre": {
+      "type": "string",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Nombre"
+     },
+     "categoria_ids": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Categoria Ids"
+     },
+     "icono": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Icono"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "es_fijo": {
+      "type": "boolean",
+      "title": "Es Fijo",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "nombre",
+     "categoria_ids"
+    ],
+    "title": "GrupoIn"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "MetaIn": {
+    "properties": {
+     "nombre": {
+      "type": "string",
+      "maxLength": 120,
+      "title": "Nombre"
+     },
+     "tipo": {
+      "type": "string",
+      "enum": [
+       "ahorro",
+       "deuda",
+       "tope_gasto",
+       "habito"
+      ],
+      "title": "Tipo"
+     },
+     "objetivo": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Objetivo",
+      "description": "Centavos: monto a ahorrar o tope mensual"
+     },
+     "categoria_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Categoria Id"
+     },
+     "cuenta_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cuenta Id"
+     },
+     "fecha_objetivo": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha Objetivo"
+     },
+     "cuenta_ids": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Cuenta Ids",
+      "default": []
+     },
+     "categoria_ids": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Categoria Ids",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "nombre",
+     "tipo"
+    ],
+    "title": "MetaIn"
+   },
+   "PaginaTransacciones": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/TransaccionOut"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "siguiente": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Siguiente"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "siguiente"
+    ],
+    "title": "PaginaTransacciones"
+   },
+   "PagoIn": {
+    "properties": {
+     "fecha": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}(:\\d{2})?)?$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha"
+     },
+     "monto": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Monto"
+     },
+     "fecha_modo": {
+      "type": "string",
+      "enum": [
+       "hoy",
+       "programada"
+      ],
+      "title": "Fecha Modo",
+      "description": "Un vencido se registra con su fecha programada o con la de hoy",
+      "default": "hoy"
+     }
+    },
+    "type": "object",
+    "title": "PagoIn"
+   },
+   "ParametroIn": {
+    "properties": {
+     "clave": {
+      "type": "string",
+      "title": "Clave"
+     },
+     "vigencia_desde": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Vigencia Desde"
+     },
+     "valor": {
+      "type": "number",
+      "title": "Valor"
+     },
+     "fuente": {
+      "type": "string",
+      "maxLength": 200,
+      "title": "Fuente"
+     }
+    },
+    "type": "object",
+    "required": [
+     "clave",
+     "vigencia_desde",
+     "valor",
+     "fuente"
+    ],
+    "title": "ParametroIn"
+   },
+   "PreguntaIn": {
+    "properties": {
+     "pregunta": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Pregunta"
+     }
+    },
+    "type": "object",
+    "required": [
+     "pregunta"
+    ],
+    "title": "PreguntaIn"
+   },
+   "PrestamoIn": {
+    "properties": {
+     "direccion": {
+      "type": "string",
+      "enum": [
+       "presto_yo",
+       "me_prestaron"
+      ],
+      "title": "Direccion"
+     },
+     "persona": {
+      "type": "string",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Persona"
+     },
+     "monto": {
+      "type": "integer",
+      "exclusiveMinimum": 0.0,
+      "title": "Monto"
+     },
+     "cuenta_id": {
+      "type": "integer",
+      "title": "Cuenta Id"
+     },
+     "fecha": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}",
+      "title": "Fecha"
+     },
+     "origen": {
+      "type": "string",
+      "enum": [
+       "amigo",
+       "familia",
+       "companero",
+       "otra_fuente"
+      ],
+      "title": "Origen",
+      "default": "amigo"
+     },
+     "tipo_interes": {
+      "type": "string",
+      "enum": [
+       "ninguno",
+       "fijo",
+       "simple_mensual"
+      ],
+      "title": "Tipo Interes",
+      "default": "ninguno"
+     },
+     "interes_fijo": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Interes Fijo",
+      "default": 0
+     },
+     "tasa_mensual": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Tasa Mensual",
+      "default": 0
+     },
+     "plan": {
+      "type": "string",
+      "enum": [
+       "fecha_unica",
+       "cuotas",
+       "libre"
+      ],
+      "title": "Plan",
+      "default": "fecha_unica"
+     },
+     "frecuencia": {
+      "type": "string",
+      "enum": [
+       "diaria",
+       "semanal",
+       "quincenal",
+       "mensual"
+      ],
+      "title": "Frecuencia",
+      "default": "mensual"
+     },
+     "num_cuotas": {
+      "type": "integer",
+      "maximum": 120.0,
+      "minimum": 1.0,
+      "title": "Num Cuotas",
+      "default": 1
+     },
+     "fecha_limite": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha Limite"
+     },
+     "nota": {
+      "type": "string",
+      "title": "Nota",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "direccion",
+     "persona",
+     "monto",
+     "cuenta_id",
+     "fecha"
+    ],
+    "title": "PrestamoIn"
+   },
+   "PrimerUsoIn": {
+    "properties": {
+     "nombre": {
+      "type": "string",
+      "maxLength": 60,
+      "title": "Nombre",
+      "default": ""
+     },
+     "modo": {
+      "type": "string",
+      "enum": [
+       "vacio",
+       "demo"
+      ],
+      "title": "Modo",
+      "default": "vacio"
+     }
+    },
+    "type": "object",
+    "title": "PrimerUsoIn"
+   },
+   "RecurrenteIn": {
+    "properties": {
+     "nombre": {
+      "type": "string",
+      "maxLength": 120,
+      "title": "Nombre"
+     },
+     "cuenta_id": {
+      "type": "integer",
+      "title": "Cuenta Id"
+     },
+     "monto": {
+      "type": "integer",
+      "title": "Monto",
+      "description": "Centavos: negativo = pago, positivo = ingreso"
+     },
+     "frecuencia": {
+      "type": "string",
+      "enum": [
+       "semanal",
+       "quincenal",
+       "mensual",
+       "anual"
+      ],
+      "title": "Frecuencia",
+      "default": "mensual"
+     },
+     "dia": {
+      "type": "integer",
+      "maximum": 31.0,
+      "minimum": 1.0,
+      "title": "Dia"
+     },
+     "inicio": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Inicio"
+     },
+     "categoria_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Categoria Id"
+     },
+     "fin": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fin"
+     },
+     "es_suscripcion": {
+      "type": "boolean",
+      "title": "Es Suscripcion",
+      "default": false
+     },
+     "nota": {
+      "type": "string",
+      "title": "Nota",
+      "default": ""
+     },
+     "activo": {
+      "type": "boolean",
+      "title": "Activo",
+      "default": true
+     },
+     "ancla": {
+      "type": "string",
+      "enum": [
+       "calendario",
+       "pago"
+      ],
+      "title": "Ancla",
+      "default": "calendario"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nombre",
+     "cuenta_id",
+     "monto",
+     "dia",
+     "inicio"
+    ],
+    "title": "RecurrenteIn"
+   },
+   "ReglaIn": {
+    "properties": {
+     "nombre": {
+      "type": "string",
+      "maxLength": 80,
+      "title": "Nombre"
+     },
+     "prioridad": {
+      "type": "integer",
+      "maximum": 1000.0,
+      "minimum": 0.0,
+      "title": "Prioridad",
+      "default": 100
+     },
+     "condiciones": {
+      "items": {
+       "$ref": "#/components/schemas/CondicionIn"
+      },
+      "type": "array",
+      "minItems": 1,
+      "title": "Condiciones"
+     },
+     "categoria_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Categoria Id"
+     },
+     "etiquetas": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Etiquetas",
+      "default": []
+     },
+     "activa": {
+      "type": "boolean",
+      "title": "Activa",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "nombre",
+     "condiciones"
+    ],
+    "title": "ReglaIn"
+   },
+   "ResultadoImportacionOut": {
+    "properties": {
+     "filas_leidas": {
+      "type": "integer",
+      "title": "Filas Leidas"
+     },
+     "creadas": {
+      "type": "integer",
+      "title": "Creadas"
+     },
+     "pendientes": {
+      "type": "integer",
+      "title": "Pendientes"
+     },
+     "duplicadas": {
+      "type": "integer",
+      "title": "Duplicadas"
+     },
+     "omitidas": {
+      "type": "integer",
+      "title": "Omitidas"
+     },
+     "transferencias_emparejadas": {
+      "type": "integer",
+      "title": "Transferencias Emparejadas"
+     },
+     "archivo_repetido": {
+      "type": "boolean",
+      "title": "Archivo Repetido"
+     }
+    },
+    "type": "object",
+    "required": [
+     "filas_leidas",
+     "creadas",
+     "pendientes",
+     "duplicadas",
+     "omitidas",
+     "transferencias_emparejadas",
+     "archivo_repetido"
+    ],
+    "title": "ResultadoImportacionOut"
+   },
+   "TransaccionCambios": {
+    "properties": {
+     "cuenta_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cuenta Id"
+     },
+     "monto": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Monto"
+     },
+     "categoria_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Categoria Id"
+     },
+     "fecha": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha"
+     },
+     "descripcion": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descripcion"
+     },
+     "nota": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nota"
+     },
+     "estado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Estado"
+     }
+    },
+    "type": "object",
+    "title": "TransaccionCambios"
+   },
+   "TransaccionIn": {
+    "properties": {
+     "cuenta_id": {
+      "type": "integer",
+      "title": "Cuenta Id"
+     },
+     "monto": {
+      "type": "integer",
+      "title": "Monto",
+      "description": "Centavos: positivo entra, negativo sale"
+     },
+     "categoria_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Categoria Id"
+     },
+     "fecha": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha",
+      "description": "YYYY-MM-DD o ISO; por defecto, ahora"
+     },
+     "descripcion": {
+      "type": "string",
+      "maxLength": 200,
+      "title": "Descripcion",
+      "default": ""
+     },
+     "nota": {
+      "type": "string",
+      "title": "Nota",
+      "default": ""
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado",
+      "default": "confirmada"
+     },
+     "origen_categoria": {
+      "type": "string",
+      "enum": [
+       "usuario",
+       "sugerida"
+      ],
+      "title": "Origen Categoria",
+      "description": "'sugerida' si la categoría es la que propuso el clasificador sin cambios",
+      "default": "usuario"
+     },
+     "moneda_original": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "COP",
+         "USD"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Moneda Original"
+     },
+     "monto_original": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Monto Original",
+      "description": "Centavos de dólar, con signo"
+     },
+     "trm": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Trm",
+      "description": "COP por USD usada para convertir"
+     }
+    },
+    "type": "object",
+    "required": [
+     "cuenta_id",
+     "monto"
+    ],
+    "title": "TransaccionIn"
+   },
+   "TransaccionOut": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "moneda_original": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Moneda Original"
+     },
+     "monto_original": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Monto Original"
+     },
+     "trm": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Trm"
+     },
+     "cuenta_id": {
+      "type": "integer",
+      "title": "Cuenta Id"
+     },
+     "cuenta": {
+      "type": "string",
+      "title": "Cuenta"
+     },
+     "fecha": {
+      "type": "string",
+      "title": "Fecha"
+     },
+     "monto": {
+      "type": "integer",
+      "title": "Monto"
+     },
+     "categoria_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Categoria Id"
+     },
+     "grupo": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Grupo"
+     },
+     "categoria_ruta": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Categoria Ruta"
+     },
+     "descripcion": {
+      "type": "string",
+      "title": "Descripcion"
+     },
+     "nota": {
+      "type": "string",
+      "title": "Nota"
+     },
+     "estado": {
+      "type": "string",
+      "title": "Estado"
+     },
+     "contraparte": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Contraparte"
+     },
+     "transferencia_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Transferencia Id"
+     },
+     "credito_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Credito Id"
+     },
+     "prestamo_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Prestamo Id"
+     },
+     "recurrente_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recurrente Id"
+     },
+     "etiquetas": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Etiquetas"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "cuenta_id",
+     "cuenta",
+     "fecha",
+     "monto",
+     "categoria_id",
+     "grupo",
+     "categoria_ruta",
+     "descripcion",
+     "nota",
+     "estado",
+     "contraparte",
+     "transferencia_id",
+     "etiquetas"
+    ],
+    "title": "TransaccionOut"
+   },
+   "TransferenciaIn": {
+    "properties": {
+     "origen_id": {
+      "type": "integer",
+      "title": "Origen Id"
+     },
+     "destino_id": {
+      "type": "integer",
+      "title": "Destino Id"
+     },
+     "monto": {
+      "type": "integer",
+      "exclusiveMinimum": 0.0,
+      "title": "Monto"
+     },
+     "fecha": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha"
+     },
+     "descripcion": {
+      "type": "string",
+      "title": "Descripcion",
+      "default": "Transferencia"
+     }
+    },
+    "type": "object",
+    "required": [
+     "origen_id",
+     "destino_id",
+     "monto"
+    ],
+    "title": "TransferenciaIn"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  }
+ }
+}
