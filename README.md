@@ -7,9 +7,13 @@ quien tiene ingresos irregulares, créditos caros y quiere ver con claridad a d�
 
 ![Inicio](docs/capturas/inicio.jpg)
 
-| Flujo de caja | Activos |
+| Gráficas de Inicio | Gráficas de flujo de caja |
 |---|---|
-| ![Flujo de caja](docs/capturas/flujo.jpg) | ![Activos e inversiones](docs/capturas/activos.jpg) |
+| ![Gráficas de Inicio](docs/capturas/inicio-graficas.jpg) | ![Gráficas de flujo de caja](docs/capturas/flujo-graficas.jpg) |
+
+| Deudas | Asistente |
+|---|---|
+| ![Deudas con simulador de abonos](docs/capturas/deudas.jpg) | ![Asistente](docs/capturas/agente.jpg) ![Proveedor y privacidad del asistente](docs/capturas/agente-proveedores.jpg) |
 
 <img src="docs/capturas/celular.jpg" alt="Inicio en el celular" width="280">
 

@@ -76,17 +76,16 @@ export function GraficoPatrimonio({ periodo, actual }: { periodo: Periodo; actua
             <text x="40" y={y(max) + 4} textAnchor="end">
               {abreviar(max)}
             </text>
-            {min < 0 && (
-              <>
-                <line className="grid-dash" x1="44" x2={W} y1={y(0)} y2={y(0)} />
-                <text x="40" y={y(0) + 4} textAnchor="end">
-                  0
-                </text>
-              </>
-            )}
-            <text x="40" y={y(min) + 4} textAnchor="end">
-              {abreviar(min)}
+            {min < 0 && <line className="grid-dash" x1="44" x2={W} y1={y(0)} y2={y(0)} />}
+            <text x="40" y={y(0) + 4} textAnchor="end">
+              0
             </text>
+            {/* El mínimo solo se rotula si no se monta sobre el cero. */}
+            {y(min) - y(0) > 14 && (
+              <text x="40" y={y(min) + 4} textAnchor="end">
+                {abreviar(min)}
+              </text>
+            )}
             <path className="area1" d={`${linea} L${xs.at(-1) ?? 0} ${y(min)} L${xs[0] ?? 0} ${y(min)} Z`} />
             <path className="l1" d={linea} strokeWidth="2.5" />
             {marcas.map(([texto, i], k) => (

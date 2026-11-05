@@ -240,7 +240,8 @@ function GraficoFlujo({ periodo }: { periodo: Periodo }) {
           <text x="40" y={y(0) + 4} textAnchor="end">
             0
           </text>
-          {min < 0 && (
+          {/* El mínimo solo se rotula si no se monta sobre el cero. */}
+          {y(min) - y(0) > 14 && (
             <text x="40" y={y(min) + 4} textAnchor="end">
               {abreviar(min)}
             </text>
