@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from finanzas.dominio.grupos import Grupo
 from finanzas.infra import (
+    consultas_activos,
     consultas_automatizacion,
     consultas_creditos,
     consultas_impuestos,
@@ -274,6 +275,33 @@ def prestamos_personales(sesion: Session) -> dict[str, Any]:
     }
 
 
+def activos(sesion: Session) -> dict[str, Any]:
+    """Activos por clase, sin sus nombres (pueden decir más de la cuenta), y patrimonio neto."""
+    reporte = consultas_activos.listar(sesion)
+    patrimonio = consultas_activos.patrimonio(sesion)
+    return {
+        "moneda": "COP",
+        "patrimonio_neto": _pesos(patrimonio["neto"]),
+        "cuentas": _pesos(patrimonio["cuentas"]),
+        "activos": _pesos(patrimonio["activos"]),
+        "creditos": _pesos(patrimonio["creditos"]),
+        "ganancia_total": _pesos(reporte["ganancia"]),
+        "tir_anual": reporte["tir"],
+        "detalle": [
+            {
+                "clase": a["clase_nombre"],
+                "estado": a["estado"],
+                "valor": _pesos(a["valor_cop"]),
+                "aportado": _pesos(a["aportado"]),
+                "ganancia": _pesos(a["ganancia"]),
+                "tir_anual": a["tir"],
+                "dias_para_vencer": a["dias_para_vencer"],
+            }
+            for a in reporte["activos"]
+        ],
+    }
+
+
 def contexto(sesion: Session, mes: str) -> str:
     """Resumen breve para el `system`: situación de hoy en agregados, sin nombres ni números de cuenta."""
     k = consultas_kpis.estrategicos(sesion, mes)
@@ -289,6 +317,8 @@ def contexto(sesion: Session, mes: str) -> str:
             f"cuotas ${_miles(sum(c['cuota'] for c in creditos))} al mes; tasas E.A. "
             + ", ".join(f"{c['tasa_ea']:.1%}" for c in creditos)
         )
+    neto = consultas_activos.patrimonio(sesion)
+    lineas.append(f"- Patrimonio neto: ${_miles(neto['neto'])} (activos ${_miles(neto['activos'])})")
     for m in metas(sesion)["metas"]:
         lineas.append(f"- Meta «{m['nombre']}» ({m['tipo']}): progreso {m['progreso']:.0%}")
     avisos = [a for a in consultas_automatizacion.alertas(sesion) if a["tipo"] in ("saldo", "presupuesto", "meta")]

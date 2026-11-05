@@ -22,7 +22,7 @@ import { ControlPeriodo, usePeriodo } from "@/features/analisis/Periodo";
 import { DonaCategorias } from "./components/DonaCategorias";
 import { FlujoCaja } from "./components/FlujoCaja";
 import { MapaCalor } from "./components/MapaCalor";
-import { ValorNeto } from "./components/ValorNeto";
+import { SaldoPatrimonio } from "./components/SaldoPatrimonio";
 
 /** Cuotas de deuda de los próximos 30 días que el saldo no alcanza a cubrir. */
 function faltanteCuotas(d: Dashboard): { faltante: number; cuotas: number } {
@@ -114,12 +114,9 @@ export function DashboardPage() {
 
   const d = dash.data;
   const mesActual = d.mes_actual;
-  const ingresoPromedio = d.flujo.length ? d.flujo.reduce((t, m) => t + m.ingresos, 0) / d.flujo.length : 0;
+  const promedio = (k: "ingresos_total" | "gastos_total") =>
+    d.flujo.length ? d.flujo.reduce((t, m) => t + m[k], 0) / d.flujo.length : 0;
   const { cuotas, faltante } = faltanteCuotas(d);
-  // Gastos del mes: vida + cuotas + lo perdido en apuestas (sin transferencias ni préstamos)
-  const gastosMes = mesActual
-    ? mesActual.gasto_vida + mesActual.servicio_deuda - Math.min(0, mesActual.apuestas_neto)
-    : 0;
   const mesCorto = nombreMes(d.mes).split(" ")[0];
   const incluidas = d.cuentas.filter((c) => c.incluir_en_total);
   const eventos = (cal.data?.eventos ?? []).filter((e) => e.monto < 0);
@@ -198,10 +195,10 @@ export function DashboardPage() {
           </ul>
         </Link>
         <Kpi
-          etiqueta={`Ingreso de ${mesCorto}`}
+          etiqueta="Ingresos"
           icono="entra"
-          valor={mesActual?.ingresos ?? 0}
-          nota={`Promedio ${formatoCOP(ingresoPromedio)}/mes`}
+          valor={mesActual?.ingresos_total ?? 0}
+          nota={`Promedio ${formatoCOP(promedio("ingresos_total"))}/mes`}
           a="/categorias"
         />
         <Kpi
@@ -220,7 +217,13 @@ export function DashboardPage() {
           nota={(mesActual?.flujo_operativo ?? 0) < 0 ? "Déficit" : "Superávit"}
           a="/flujo"
         />
-        <Kpi etiqueta={`Gasto de ${mesCorto}`} icono="sale" valor={gastosMes} nota="Vida y cuotas" a="/flujo" />
+        <Kpi
+          etiqueta="Gastos"
+          icono="sale"
+          valor={mesActual?.gastos_total ?? 0}
+          nota={`Promedio ${formatoCOP(promedio("gastos_total"))}/mes`}
+          a="/flujo"
+        />
         <Kpi
           etiqueta="En camino"
           icono="calendario"
@@ -237,7 +240,7 @@ export function DashboardPage() {
         />
 
         <FlujoInicio mes={d.mes} />
-        <section className="cd-card span-4">
+        <section className="cd-card span-4 inicio-proximos">
           <div className="cd-card-head">
             <h3 className="cd-card-title">Próximos pagos</h3>
             <Link className="cd-link" to="/recurrentes">
@@ -311,7 +314,7 @@ export function DashboardPage() {
         <DonaCategorias tipo="gasto" />
         <DonaCategorias tipo="ingreso" />
 
-        <ValorNeto />
+        <SaldoPatrimonio patrimonio={d.patrimonio} />
         <MapaCalor />
 
         <section className="cd-card span-12">

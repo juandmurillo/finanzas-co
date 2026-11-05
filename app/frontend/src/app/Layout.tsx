@@ -24,6 +24,7 @@ const MENU: ItemNav[] = [
   { a: "/presupuesto", etiqueta: "Presupuesto", icono: "presupuesto" },
   { a: "/deudas", etiqueta: "Deudas", icono: "deudas" },
   { a: "/prestamos", etiqueta: "Préstamos", icono: "persona" },
+  { a: "/activos", etiqueta: "Activos", icono: "activos" },
   { a: "/recurrentes", etiqueta: "Recurrentes", icono: "recurrentes" },
   { a: "/metas", etiqueta: "Metas y hábitos", icono: "meta" },
 ];

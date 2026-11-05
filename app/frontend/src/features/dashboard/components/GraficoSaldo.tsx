@@ -2,21 +2,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { ControlPeriodo, usePeriodo } from "@/features/analisis/Periodo";
-import { api } from "@/shared/lib/api";
-import { rutaSuave } from "@/shared/lib/curvas";
+import { api, type Periodo } from "@/shared/lib/api";
+import { marcasPorTiempo, rutaSuave } from "@/shared/lib/curvas";
 import { abreviar, fechaCorta, formatoCOP, nombreMes } from "@/shared/lib/formato";
 import { TarjetaCargando } from "@/shared/ui/Estados";
 import { SensorContinuo, TooltipGrafico, ZonaGrafico } from "@/shared/ui/TooltipGrafico";
 
 const DIA = 86_400_000;
 
-export function ValorNeto() {
-  const nav = usePeriodo("12m", "inicio-valor-neto");
-  const { desde, hasta } = nav.periodo;
+export function GraficoSaldo({ periodo }: { periodo: Periodo }) {
+  const { desde, hasta } = periodo;
   const datos = useQuery({
     queryKey: ["reportes", "valor-neto", desde, hasta, "movimiento"],
-    queryFn: () => api.valorNeto(nav.periodo, "movimiento"),
+    queryFn: () => api.valorNeto(periodo, "movimiento"),
   });
   const [activo, setActivo] = useState<number | null>(null);
   const puntos = datos.data?.puntos ?? [];
@@ -39,34 +37,19 @@ export function ValorNeto() {
   const p0 = activo !== null ? puntos[activo] : undefined;
   const corto = tramo <= 120 * DIA;
   const etiqueta = (f: string) => (corto ? fechaCorta(f) : nombreMes(f.slice(0, 7), true));
-  // Marcas repartidas por tiempo, sin repetir etiqueta.
-  const marcas = [
-    ...new Map(
-      Array.from({ length: 6 }, (_, k) => {
-        const objetivo = t0 + (tramo * k) / 5;
-        const i = tiempos.reduce(
-          (m, t, j) => (Math.abs(t - objetivo) < Math.abs((tiempos[m] ?? t) - objetivo) ? j : m),
-          0,
-        );
-        return [etiqueta(puntos[i]?.fecha ?? ""), i] as const;
-      }),
-    ).entries(),
-  ];
+  const marcas = marcasPorTiempo(
+    puntos.map((p) => p.fecha),
+    etiqueta,
+  );
 
   return (
-    <section className="cd-card cd-stack span-12" style={{ gap: 12 }}>
-      <div className="cd-card-head" style={{ flexWrap: "wrap", gap: 8, margin: 0 }}>
-        <div className="cd-stack" style={{ gap: 2 }}>
-          <h3 className="cd-card-title">Saldo disponible</h3>
-          {puntos.length > 1 && (
-            <span className="cd-delta-note cd-num">
-              {formatoCOP(ultimo - primero, { signo: true })} en el periodo · de {formatoCOP(primero)} a{" "}
-              {formatoCOP(ultimo)}
-            </span>
-          )}
-        </div>
-        <ControlPeriodo nav={nav} opciones={["3m", "6m", "12m", "todo", "rango"]} />
-      </div>
+    <>
+      {puntos.length > 1 && (
+        <span className="cd-delta-note cd-num">
+          {formatoCOP(ultimo - primero, { signo: true })} en el periodo · de {formatoCOP(primero)} a{" "}
+          {formatoCOP(ultimo)}
+        </span>
+      )}
       {datos.isPending ? (
         <TarjetaCargando filas={3} />
       ) : puntos.length === 0 ? (
@@ -129,6 +112,6 @@ export function ValorNeto() {
           )}
         </ZonaGrafico>
       )}
-    </section>
+    </>
   );
 }

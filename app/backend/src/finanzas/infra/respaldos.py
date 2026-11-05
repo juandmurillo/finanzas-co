@@ -11,7 +11,7 @@ from typing import Any
 PATRON = "finanzas-*.db"
 
 
-def _copiar(origen: Path, destino: Path) -> None:
+def copiar(origen: Path, destino: Path) -> None:
     fuente = sqlite3.connect(f"file:{origen.as_posix()}?mode=ro", uri=True)
     copia = sqlite3.connect(destino)
     try:
@@ -44,7 +44,7 @@ def respaldar(db_ruta: Path, carpeta: Path, conservar: int = 30) -> Path | None:
         return None
     carpeta.mkdir(parents=True, exist_ok=True)
     destino = carpeta / f"finanzas-{datetime.now():%Y%m%d-%H%M%S}.db"
-    _copiar(db_ruta, destino)
+    copiar(db_ruta, destino)
     rotar(carpeta, conservar)
     return destino
 
@@ -78,7 +78,7 @@ def restaurar(copia: Path, db_ruta: Path) -> None:
     finally:
         integridad.close()
     if db_ruta.exists():
-        _copiar(db_ruta, db_ruta.with_name(f"{db_ruta.stem}-antes-de-restaurar-{datetime.now():%Y%m%d-%H%M%S}.db"))
+        copiar(db_ruta, db_ruta.with_name(f"{db_ruta.stem}-antes-de-restaurar-{datetime.now():%Y%m%d-%H%M%S}.db"))
     for extra in (db_ruta.with_suffix(".db-wal"), db_ruta.with_suffix(".db-shm")):
         extra.unlink(missing_ok=True)
-    _copiar(copia, db_ruta)
+    copiar(copia, db_ruta)

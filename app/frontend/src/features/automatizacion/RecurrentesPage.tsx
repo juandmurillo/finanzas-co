@@ -1,6 +1,7 @@
 /** Recurrentes y suscripciones (RF-RE, fase 8 punto 10): una sola lista con lo programado, sus días restantes y
  * cuánto queda después de cada pago; pagar, editar (y eliminar), pausar y cancelar desde la misma fila. */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRefrescar } from "@/shared/lib/useRefrescar";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -29,14 +30,6 @@ const FRECUENCIAS: Record<FrecuenciaRecurrente, string> = {
   anual: "Anual",
 };
 const PALABRAS_SUSCRIPCION = ["streaming", "suscripciones ia", "nube"];
-
-function useRefrescar() {
-  const cliente = useQueryClient();
-  return () => {
-    for (const k of [["recurrentes"], ["calendario"], ["alertas"], ["cuentas"], ["transacciones"], ["dashboard"]])
-      void cliente.invalidateQueries({ queryKey: k });
-  };
-}
 
 function FilaEvento({ e, vencido }: { e: EventoCalendario; vencido?: boolean }) {
   const refrescar = useRefrescar();

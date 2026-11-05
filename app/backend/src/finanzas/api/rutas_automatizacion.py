@@ -187,6 +187,7 @@ class MetaIn(BaseModel):
     fecha_objetivo: str | None = Field(default=None, pattern=FECHA)
     cuenta_ids: list[int] = []
     categoria_ids: list[int] = []
+    activo_ids: list[int] = []
 
 
 class EstadoMetaIn(BaseModel):

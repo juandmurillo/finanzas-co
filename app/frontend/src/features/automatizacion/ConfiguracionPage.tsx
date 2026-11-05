@@ -10,7 +10,10 @@ import { fechaCorta, formatoCOP, mascaraMonto, parseMonto, porcentaje } from "@/
 import { claves } from "@/shared/lib/queryKeys";
 import { useDebounce } from "@/shared/lib/useDebounce";
 import { TarjetaCargando, Vacio } from "@/shared/ui/Estados";
+import { Hoja } from "@/shared/ui/Hoja";
 import { SelectorCategoria } from "@/shared/ui/SelectorCategoria";
+
+import { TusDatos } from "./TusDatos";
 
 function describir(c: CondicionRegla): string {
   if (c.campo === "descripcion") return `descripción ${c.op} “${c.valor}”`;
@@ -335,6 +338,16 @@ function Respaldos() {
     onError: (e) => toast.error(e.message),
     onSettled: () => void cliente.invalidateQueries({ queryKey: claves.respaldos }),
   });
+  const [restaurando, setRestaurando] = useState<string | null>(null);
+  const restaurar = useMutation({
+    mutationFn: (archivo: string) => api.restaurarRespaldo(archivo),
+    onSuccess: () => {
+      toast.success("Respaldo restaurado. Lo que tenías quedó en otro respaldo.");
+      setRestaurando(null);
+    },
+    onError: (e) => toast.error(e.message),
+    onSettled: () => void cliente.invalidateQueries(),
+  });
   const kb = (b: number) => `${Math.round(b / 1024).toLocaleString("es-CO")} KB`;
   return (
     <section className="cd-card cd-stack" style={{ gap: 12 }}>
@@ -350,7 +363,7 @@ function Respaldos() {
       </div>
       <p className="cd-delta-note" style={{ margin: 0 }}>
         Se hace uno al arrancar y otro cada día en la carpeta de respaldos; se guardan los últimos 30 y uno por día del
-        último mes. Para restaurar, detén la app y ejecuta <code>uv run finanzas restaurar &lt;archivo&gt;</code>.
+        último mes.
       </p>
       {lista.data?.length === 0 && <Vacio titulo="Sin respaldos todavía" />}
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
@@ -359,10 +372,40 @@ function Respaldos() {
             <span className="cd-num" style={{ fontSize: 13 }}>
               {fechaCorta(r.fecha, true)} · {r.fecha.slice(11, 16)}
             </span>
-            <span className="cd-delta-note cd-num">{kb(r.bytes)}</span>
+            <span className="cd-row" style={{ gap: 8, flexWrap: "nowrap" }}>
+              <span className="cd-delta-note cd-num">{kb(r.bytes)}</span>
+              <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setRestaurando(r.archivo)}>
+                Restaurar
+              </button>
+            </span>
           </li>
         ))}
       </ul>
+      {restaurando && (
+        <Hoja
+          titulo="Restaurar este respaldo"
+          onCerrar={() => setRestaurando(null)}
+          pie={
+            <>
+              <button className="cd-btn cd-btn--ghost" onClick={() => setRestaurando(null)}>
+                Cancelar
+              </button>
+              <button
+                className="cd-btn cd-btn--peligro"
+                disabled={restaurar.isPending}
+                onClick={() => restaurar.mutate(restaurando)}
+              >
+                Restaurar
+              </button>
+            </>
+          }
+        >
+          <p className="cd-delta-note" style={{ margin: 0 }}>
+            Tus datos volverán a como estaban en <b>{restaurando}</b>. Lo que tienes ahora se guarda antes en otro
+            respaldo.
+          </p>
+        </Hoja>
+      )}
       {(lista.data?.length ?? 0) > 6 && <span className="cd-delta-note">y {(lista.data?.length ?? 0) - 6} más</span>}
     </section>
   );
@@ -429,13 +472,14 @@ export function ConfiguracionPage() {
       <div className="cd-pagehead">
         <div>
           <h1>Configuración</h1>
-          <p>Reglas de categorización, qué tan bien acierta la app y tus respaldos.</p>
+          <p>Reglas de categorización, qué tan bien acierta la app, tus datos y tus respaldos.</p>
         </div>
       </div>
       <div className="cd-bento">
         <div className="span-8 cd-stack" style={{ gap: 16 }}>
           <Precision />
           <Reglas />
+          <TusDatos />
         </div>
         <div className="span-4 cd-stack" style={{ gap: 16 }}>
           <Perfil />

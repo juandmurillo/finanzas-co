@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from finanzas.infra.consultas import _EN_RECLAMO, saldos_cuentas
+from finanzas.infra.consultas_activos import valor_total
 from finanzas.infra.consultas_creditos import parametro
 from finanzas.servicios.transacciones import hoy_bogota
 
@@ -52,10 +53,11 @@ def termometro(sesion: Session, anio: int | None = None) -> dict[str, Any]:
         anio,
     )
     patrimonio = sum(max(0, c["saldo"]) for c in saldos_cuentas(sesion) if c["tipo"] not in ("credito", "por_pagar"))
+    patrimonio += valor_total(sesion)  # el tope más delicado al declarar: cuentan los activos
     filas: list[dict[str, Any]] = []
     for clave, valor, nombre, proyectable in (
         ("ingresos", ingresos, "Ingresos brutos del año", True),
-        ("patrimonio", patrimonio, "Patrimonio bruto (cuentas y lo que te deben)", False),
+        ("patrimonio", patrimonio, "Patrimonio bruto (cuentas, activos y lo que te deben)", False),
         ("consumos_tarjeta", tarjeta, "Consumos con tarjeta de crédito", True),
         ("compras", compras, "Compras y consumos totales", True),
         ("consignaciones", consignaciones, "Consignaciones y depósitos", True),

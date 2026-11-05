@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { rutaSuave } from "./curvas";
+import { marcasPorTiempo, rutaSuave } from "./curvas";
 
 const yDeControl = (ruta: string) =>
   [...ruta.matchAll(/C[\d.-]+ ([\d.-]+) [\d.-]+ ([\d.-]+) /g)].flatMap((m) => [Number(m[1]), Number(m[2])]);
@@ -31,5 +31,14 @@ describe("curva suave", () => {
   it("tolera listas cortas", () => {
     expect(rutaSuave([])).toBe("");
     expect(rutaSuave([[1, 2]])).toBe("M1.0 2.0");
+  });
+});
+
+describe("marcas por tiempo", () => {
+  it("se reparten por fecha, no por cantidad de puntos", () => {
+    const fechas = ["2026-01-01", "2026-01-02", "2026-01-03", "2026-07-01"];
+    const marcas = marcasPorTiempo(fechas, (f) => f.slice(0, 7), 3);
+    expect(marcas.at(0)).toEqual(["2026-01", 2]);
+    expect(marcas.at(-1)).toEqual(["2026-07", 3]);
   });
 });

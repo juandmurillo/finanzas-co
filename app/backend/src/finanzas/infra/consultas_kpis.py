@@ -113,7 +113,8 @@ def estrategicos(sesion: Session, mes: str, hoy: date | None = None) -> dict[str
             "meta": 1.5,
             "texto_meta": f"ingreso ÷ {consultas_reportes._pesos(fijos)} de fijos al mes · meta ≥ 1,5×",
             "estado": _estado(cobertura, 1.5, margen=2 / 3),
-            "tendencia": [_div(fila[m]["ingresos"], fijos) for m in meses],
+            # Sin tendencia: los meses pasados se medirían con los fijos de hoy y engañaría.
+            "tendencia": None,
         },
         {
             "clave": "meses_colchon",

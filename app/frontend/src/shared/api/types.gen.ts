@@ -245,6 +245,212 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/datos/exportar/json": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Exportar Json */
+    get: operations["exportar_json_api_v1_datos_exportar_json_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/datos/exportar/sqlite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Exportar Sqlite */
+    get: operations["exportar_sqlite_api_v1_datos_exportar_sqlite_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/datos/vista-previa": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Vista Previa */
+    post: operations["vista_previa_api_v1_datos_vista_previa_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/datos/cargar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cargar */
+    post: operations["cargar_api_v1_datos_cargar_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/respaldos/{archivo}/restaurar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Restaurar */
+    post: operations["restaurar_api_v1_respaldos__archivo__restaurar_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/datos/borrar-todo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Borrar Todo */
+    post: operations["borrar_todo_api_v1_datos_borrar_todo_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/activos": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Listar */
+    get: operations["listar_api_v1_activos_get"];
+    put?: never;
+    /** Crear */
+    post: operations["crear_api_v1_activos_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/activos/{activo_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Eliminar */
+    delete: operations["eliminar_api_v1_activos__activo_id__delete"];
+    options?: never;
+    head?: never;
+    /** Editar */
+    patch: operations["editar_api_v1_activos__activo_id__patch"];
+    trace?: never;
+  };
+  "/api/v1/activos/{activo_id}/valoraciones": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Valorar */
+    post: operations["valorar_api_v1_activos__activo_id__valoraciones_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/activos/{activo_id}/movimientos": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mover */
+    post: operations["mover_api_v1_activos__activo_id__movimientos_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/activos/{activo_id}/movimientos/{movimiento_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Eliminar Movimiento */
+    delete: operations["eliminar_movimiento_api_v1_activos__activo_id__movimientos__movimiento_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/reportes/patrimonio": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Patrimonio */
+    get: operations["patrimonio_api_v1_reportes_patrimonio_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/presupuestos-historico": {
     parameters: {
       query?: never;
@@ -1150,6 +1356,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/asistente/config": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Configurar Asistente */
+    put: operations["configurar_asistente_api_v1_asistente_config_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/asistente/consentimiento": {
     parameters: {
       query?: never;
@@ -1297,6 +1520,56 @@ export interface components {
       /** Fecha */
       fecha?: string | null;
     };
+    /** ActivoCambios */
+    ActivoCambios: {
+      /** Nombre */
+      nombre?: string | null;
+      /** Clase */
+      clase?: string | null;
+      /** Tasa Ea */
+      tasa_ea?: number | null;
+      /** Vencimiento */
+      vencimiento?: string | null;
+      /** Nota */
+      nota?: string | null;
+    };
+    /** ActivoIn */
+    ActivoIn: {
+      /** Nombre */
+      nombre: string;
+      /** Clase */
+      clase: string;
+      /** Fecha Compra */
+      fecha_compra: string;
+      /**
+       * Costo
+       * @description Centavos en pesos
+       * @default 0
+       */
+      costo: number;
+      /**
+       * Valor Actual
+       * @description Centavos en la moneda del activo
+       */
+      valor_actual?: number | null;
+      /**
+       * Moneda
+       * @default COP
+       * @enum {string}
+       */
+      moneda: "COP" | "USD";
+      /** Cuenta Id */
+      cuenta_id?: number | null;
+      /** Tasa Ea */
+      tasa_ea?: number | null;
+      /** Vencimiento */
+      vencimiento?: string | null;
+      /**
+       * Nota
+       * @default
+       */
+      nota: string;
+    };
     /** AjustesIn */
     AjustesIn: {
       /** Nombre */
@@ -1314,10 +1587,25 @@ export interface components {
        */
       asignado: number;
     };
+    /** Body_cargar_api_v1_datos_cargar_post */
+    Body_cargar_api_v1_datos_cargar_post: {
+      /** Archivo */
+      archivo: string;
+    };
     /** Body_importar_cashew_api_v1_importar_cashew_post */
     Body_importar_cashew_api_v1_importar_cashew_post: {
       /** Archivo */
       archivo: string;
+    };
+    /** Body_vista_previa_api_v1_datos_vista_previa_post */
+    Body_vista_previa_api_v1_datos_vista_previa_post: {
+      /** Archivo */
+      archivo: string;
+    };
+    /** BorrarIn */
+    BorrarIn: {
+      /** Confirmacion */
+      confirmacion: string;
     };
     /** CategoriaCambios */
     CategoriaCambios: {
@@ -1413,6 +1701,18 @@ export interface components {
       valor: string | number;
       /** Valor2 */
       valor2?: number | null;
+    };
+    /** ConfigIAIn */
+    ConfigIAIn: {
+      /** Proveedor */
+      proveedor: string;
+      /** Modelo */
+      modelo?: string | null;
+      /**
+       * Clave
+       * @description Vacía la borra; nunca se devuelve
+       */
+      clave?: string | null;
     };
     /** ConsentimientoIn */
     ConsentimientoIn: {
@@ -1647,6 +1947,30 @@ export interface components {
        * @default []
        */
       categoria_ids: number[];
+      /**
+       * Activo Ids
+       * @default []
+       */
+      activo_ids: number[];
+    };
+    /** MovimientoIn */
+    MovimientoIn: {
+      /**
+       * Tipo
+       * @enum {string}
+       */
+      tipo: "aporte" | "retiro" | "rendimiento" | "venta";
+      /** Monto */
+      monto: number;
+      /** Fecha */
+      fecha: string;
+      /** Cuenta Id */
+      cuenta_id?: number | null;
+      /**
+       * Nota
+       * @default
+       */
+      nota: string;
     };
     /** PaginaTransacciones */
     PaginaTransacciones: {
@@ -1684,6 +2008,11 @@ export interface components {
     PreguntaIn: {
       /** Pregunta */
       pregunta: string;
+      /**
+       * Historial
+       * @default []
+       */
+      historial: components["schemas"]["TurnoIn"][];
     };
     /** PrestamoIn */
     PrestamoIn: {
@@ -1976,6 +2305,16 @@ export interface components {
        */
       descripcion: string;
     };
+    /** TurnoIn */
+    TurnoIn: {
+      /**
+       * Rol
+       * @enum {string}
+       */
+      rol: "yo" | "asistente";
+      /** Texto */
+      texto: string;
+    };
     /** ValidationError */
     ValidationError: {
       /** Location */
@@ -1988,6 +2327,13 @@ export interface components {
       input?: unknown;
       /** Context */
       ctx?: Record<string, never>;
+    };
+    /** ValoracionIn */
+    ValoracionIn: {
+      /** Fecha */
+      fecha: string;
+      /** Valor */
+      valor: number;
     };
   };
   responses: never;
@@ -2543,6 +2889,434 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
+        };
+      };
+    };
+  };
+  exportar_json_api_v1_datos_exportar_json_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  exportar_sqlite_api_v1_datos_exportar_sqlite_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  vista_previa_api_v1_datos_vista_previa_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_vista_previa_api_v1_datos_vista_previa_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  cargar_api_v1_datos_cargar_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_cargar_api_v1_datos_cargar_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  restaurar_api_v1_respaldos__archivo__restaurar_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        archivo: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  borrar_todo_api_v1_datos_borrar_todo_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BorrarIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  listar_api_v1_activos_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
+  crear_api_v1_activos_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActivoIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: number;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  eliminar_api_v1_activos__activo_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        activo_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  editar_api_v1_activos__activo_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        activo_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActivoCambios"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  valorar_api_v1_activos__activo_id__valoraciones_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        activo_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ValoracionIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  mover_api_v1_activos__activo_id__movimientos_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        activo_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MovimientoIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: number;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  eliminar_movimiento_api_v1_activos__activo_id__movimientos__movimiento_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        activo_id: number;
+        movimiento_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  patrimonio_api_v1_reportes_patrimonio_get: {
+    parameters: {
+      query?: {
+        desde?: string | null;
+        hasta?: string | null;
+        escala?: "mes" | "movimiento";
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -3355,6 +4129,7 @@ export interface operations {
         /** @description Mes final AAAA-MM (incluido) */
         hasta?: string | null;
         grupo?: components["schemas"]["Grupo"];
+        conjunto?: ("gastos" | "ingresos") | null;
       };
       header?: never;
       path?: never;
@@ -3393,6 +4168,7 @@ export interface operations {
         hasta?: string | null;
         grupo?: components["schemas"]["Grupo"] | null;
         limite?: number;
+        conjunto?: ("gastos" | "ingresos") | null;
       };
       header?: never;
       path?: never;
@@ -4501,6 +5277,37 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
+        };
+      };
+    };
+  };
+  configurar_asistente_api_v1_asistente_config_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConfigIAIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

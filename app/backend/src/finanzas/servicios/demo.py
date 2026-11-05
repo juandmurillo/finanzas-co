@@ -15,7 +15,7 @@ from finanzas.dominio.grupos import Grupo
 from finanzas.infra.modelos import Cuenta, Recurrente, Transaccion
 from finanzas.infra.repositorios import categoria_por_ruta
 from finanzas.infra.uow import UnidadDeTrabajo
-from finanzas.servicios import creditos, metas, prestamos, presupuesto, recurrentes, sistema, transacciones
+from finanzas.servicios import activos, creditos, metas, prestamos, presupuesto, recurrentes, sistema, transacciones
 
 MESES = 18
 SEMILLA = 2026
@@ -182,8 +182,6 @@ def generar(uow: UnidadDeTrabajo, hoy: date | None = None) -> dict[str, int]:
         # Para qué se pidieron los créditos: un gasto grande el mes del desembolso.
         if primero == desembolso_a.replace(day=1):
             mov(nomina, -5_000_000, cat(Grupo.GASTO_VIDA, "Hogar"), desembolso_a, "Muebles y arreglos")
-        if primero == desembolso_b.replace(day=1):
-            mov(nomina, -8_800_000, cat(Grupo.GASTO_VIDA, "Transporte"), desembolso_b, "Compra de moto")
         if indice == 6:  # un abono extra a la deuda más cara
             abono = cat(Grupo.SERVICIO_DEUDA, credito_a.nombre, creditos.ABONO)
             mov(nomina, -400_000, abono, primero.replace(day=15), "Abono a capital")
@@ -242,6 +240,45 @@ def generar(uow: UnidadDeTrabajo, hoy: date | None = None) -> dict[str, int]:
             tipo="tope_gasto",
             objetivo=250_000 * PESO,
             categoria_ids=[cat(Grupo.GASTO_VIDA, "Relaciones sociales")],
+        ),
+    )
+
+    # Inversiones ficticias: el aporte sale de una cuenta, no es gasto.
+    compra_cdt = _mes_atras(hoy, 8).replace(day=12).isoformat()
+    activos.crear(
+        uow,
+        activos.DatosActivo(
+            nombre="CDT a 360 días",
+            clase="cdt",
+            fecha_compra=compra_cdt,
+            costo=1_500_000 * PESO,
+            valor_actual=1_590_000 * PESO,
+            cuenta_id=ahorros,
+            tasa_ea=0.095,
+            vencimiento=(_mes_atras(hoy, 8).replace(day=12) + timedelta(days=360)).isoformat(),
+        ),
+    )
+    fondo = activos.crear(
+        uow,
+        activos.DatosActivo(
+            nombre="Fondo de inversión colectiva",
+            clase="fondo",
+            fecha_compra=_mes_atras(hoy, 12).replace(day=5).isoformat(),
+            costo=500_000 * PESO,
+            valor_actual=540_000 * PESO,
+            cuenta_id=nomina,
+        ),
+    )
+    activos.mover(uow, fondo.id, "aporte", 300_000 * PESO, _mes_atras(hoy, 3).replace(day=5).isoformat(), nomina)
+    activos.crear(
+        uow,
+        activos.DatosActivo(
+            nombre="Moto",
+            clase="vehiculo",
+            fecha_compra=desembolso_b.isoformat(),
+            costo=8_800_000 * PESO,
+            valor_actual=7_400_000 * PESO,
+            cuenta_id=nomina,
         ),
     )
 

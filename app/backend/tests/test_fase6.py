@@ -129,7 +129,7 @@ def test_abono_unico_y_compra_de_cartera_por_api(cliente: TestClient) -> None:
 def test_asistente_exige_consentimiento(cliente: TestClient) -> None:
     preguntas: list[str] = []
 
-    def falso(sesion: Session, pregunta: str) -> dict[str, Any]:
+    def falso(sesion: Session, pregunta: str, historial: object = ()) -> dict[str, Any]:
         preguntas.append(pregunta)
         return {"respuesta": "Gastaste $ 0.", "herramientas": ["resumen_mensual"], "modelo": "x", "fin": "end_turn"}
 

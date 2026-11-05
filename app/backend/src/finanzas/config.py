@@ -29,6 +29,9 @@ class Config(BaseSettings):
     tareas_diarias: bool = True
     # Asistente opcional (fase 6): la clave puede ir en app/backend/.env (no versionado) como ANTHROPIC_API_KEY.
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY", repr=False)
+    gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY", repr=False)
+    groq_api_key: str | None = Field(default=None, validation_alias="GROQ_API_KEY", repr=False)
+    openrouter_api_key: str | None = Field(default=None, validation_alias="OPENROUTER_API_KEY", repr=False)
 
     @property
     def db_url(self) -> str:

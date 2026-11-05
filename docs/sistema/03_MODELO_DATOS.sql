@@ -265,3 +265,35 @@ SELECT p.mes, p.categoria_id, p.asignado,
        p.asignado + COALESCE((SELECT SUM(m.total) FROM v_movimiento_mensual m
                   WHERE m.mes = p.mes AND m.categoria_id = p.categoria_id), 0) AS disponible
 FROM presupuesto p;
+
+-- Activos e inversiones (fase 9, migración 0011). Aportar o vender no es gasto: va al grupo Financiación.
+CREATE TABLE activo (
+    id              INTEGER PRIMARY KEY,
+    nombre          TEXT    NOT NULL,
+    clase           TEXT    NOT NULL,                     -- cdt, fondo, acciones, cripto, cesantias_pension, inmueble, vehiculo, negocio, otro
+    moneda          TEXT    NOT NULL DEFAULT 'COP',
+    fecha_compra    TEXT    NOT NULL,
+    tasa_ea         REAL,
+    vencimiento     TEXT,
+    estado          TEXT    NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo','vendido')),
+    nota            TEXT    NOT NULL DEFAULT '',
+    creado_en       TEXT    NOT NULL
+);
+
+CREATE TABLE activo_valoracion (
+    id              INTEGER PRIMARY KEY,
+    activo_id       INTEGER NOT NULL REFERENCES activo(id) ON DELETE CASCADE,
+    fecha           TEXT    NOT NULL,
+    valor           INTEGER NOT NULL,                     -- centavos, en la moneda del activo
+    UNIQUE (activo_id, fecha)
+);
+
+CREATE TABLE activo_movimiento (
+    id              INTEGER PRIMARY KEY,
+    activo_id       INTEGER NOT NULL REFERENCES activo(id) ON DELETE CASCADE,
+    tipo            TEXT    NOT NULL CHECK (tipo IN ('aporte','retiro','rendimiento','venta')),
+    fecha           TEXT    NOT NULL,
+    monto           INTEGER NOT NULL CHECK (monto > 0),   -- centavos, en pesos
+    transaccion_id  INTEGER REFERENCES transaccion(id) ON DELETE CASCADE,
+    nota            TEXT    NOT NULL DEFAULT ''
+);

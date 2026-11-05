@@ -397,15 +397,21 @@ class PresupuestoGrupoMes(Base):
 
 
 class MetaObjetivo(Base):
-    """Qué rastrea una meta: varias cuentas (ahorro) o varias categorías (tope, hábito)."""
+    """Qué rastrea una meta: varias cuentas o activos (ahorro) o varias categorías (tope, hábito)."""
 
     __tablename__ = "meta_objetivo"
-    __table_args__ = (CheckConstraint("(cuenta_id IS NULL) <> (categoria_id IS NULL)", name="ck_meta_objetivo_uno"),)
+    __table_args__ = (
+        CheckConstraint(
+            "(cuenta_id IS NOT NULL) + (categoria_id IS NOT NULL) + (activo_id IS NOT NULL) = 1",
+            name="ck_meta_objetivo_uno",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     meta_id: Mapped[int] = mapped_column(ForeignKey("meta.id", ondelete="CASCADE"))
     cuenta_id: Mapped[int | None] = mapped_column(ForeignKey("cuenta.id", ondelete="CASCADE"))
     categoria_id: Mapped[int | None] = mapped_column(ForeignKey("categoria.id", ondelete="CASCADE"))
+    activo_id: Mapped[int | None] = mapped_column(ForeignKey("activo.id", ondelete="CASCADE"))
 
 
 class RecurrenteOmision(Base):
@@ -425,3 +431,51 @@ class Preferencia(Base):
 
     clave: Mapped[str] = mapped_column(String(40), primary_key=True)
     valor: Mapped[str] = mapped_column(Text)
+
+
+class Activo(Base):
+    """Inmueble, vehículo, CDT, fondo, acciones, cripto, cesantías o negocio. Su valor sale de sus valoraciones."""
+
+    __tablename__ = "activo"
+    __table_args__ = (CheckConstraint("estado IN ('activo','vendido')", name="ck_activo_estado"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(120))
+    clase: Mapped[str] = mapped_column(String(30))
+    moneda: Mapped[str] = mapped_column(String(3), default="COP", server_default="COP")
+    fecha_compra: Mapped[str] = mapped_column(String(10))
+    tasa_ea: Mapped[float | None]
+    vencimiento: Mapped[str | None] = mapped_column(String(10))
+    estado: Mapped[str] = mapped_column(String(10), default="activo", server_default="activo")
+    nota: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    creado_en: Mapped[str] = mapped_column(String(40))
+
+
+class ActivoValoracion(Base):
+    """Cuánto valía un activo en una fecha, en su moneda (historial)."""
+
+    __tablename__ = "activo_valoracion"
+    __table_args__ = (UniqueConstraint("activo_id", "fecha", name="ux_activo_valoracion_fecha"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    activo_id: Mapped[int] = mapped_column(ForeignKey("activo.id", ondelete="CASCADE"))
+    fecha: Mapped[str] = mapped_column(String(10))
+    valor: Mapped[int] = mapped_column(Integer)
+
+
+class ActivoMovimiento(Base):
+    """Aporte, retiro, rendimiento o venta, en pesos. Si tocó una cuenta, queda enlazado a su transacción."""
+
+    __tablename__ = "activo_movimiento"
+    __table_args__ = (
+        CheckConstraint("tipo IN ('aporte','retiro','rendimiento','venta')", name="ck_activo_mov_tipo"),
+        CheckConstraint("monto > 0", name="ck_activo_mov_monto"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    activo_id: Mapped[int] = mapped_column(ForeignKey("activo.id", ondelete="CASCADE"))
+    tipo: Mapped[str] = mapped_column(String(12))
+    fecha: Mapped[str] = mapped_column(String(10))
+    monto: Mapped[int] = mapped_column(Integer)
+    transaccion_id: Mapped[int | None] = mapped_column(ForeignKey("transaccion.id", ondelete="CASCADE"))
+    nota: Mapped[str] = mapped_column(String(300), default="", server_default="")

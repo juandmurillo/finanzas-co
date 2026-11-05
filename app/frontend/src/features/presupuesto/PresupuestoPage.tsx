@@ -1,8 +1,9 @@
 /** Presupuesto por grupos (fase 7): cada presupuesto reúne varias categorías con un monto mensual (p. ej.
  * «Hogar» = arriendo + servicios + internet). El monto se fija al crear o editar y rige desde ese mes (fase 8, 8.1);
  * cada fila compara lo usado con el ritmo ideal del mes, y dos gráficos muestran meses pasados y el ritmo. */
+import { useRefrescar } from "@/shared/lib/useRefrescar";
 import { rutaSuave } from "@/shared/lib/curvas";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -22,14 +23,6 @@ import { ICONOS_ELEGIBLES, SelectorEstilo } from "@/shared/ui/SelectorEstilo";
 import { Sensores, TooltipGrafico, ZonaGrafico } from "@/shared/ui/TooltipGrafico";
 
 const GRUPOS_PRESUPUESTABLES = ["gasto_vida", "servicio_deuda", "apuestas", "ahorro_inversion"];
-
-function useRefrescar() {
-  const cliente = useQueryClient();
-  return () => {
-    void cliente.invalidateQueries({ queryKey: ["presupuesto"] });
-    void cliente.invalidateQueries({ queryKey: claves.alertas });
-  };
-}
 
 function IconoGrupo({ f }: { f: Pick<FilaPresupuesto, "icono" | "color"> }) {
   const c = colorDe(f);

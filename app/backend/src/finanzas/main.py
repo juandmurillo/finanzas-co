@@ -14,7 +14,9 @@ from fastapi.responses import JSONResponse
 
 from finanzas.api.guardia import GuardiaOrigen
 from finanzas.api.rutas import router
+from finanzas.api.rutas_activos import router as router_activos
 from finanzas.api.rutas_automatizacion import router as router_automatizacion
+from finanzas.api.rutas_datos import router as router_datos
 from finanzas.api.rutas_extras import router as router_extras
 from finanzas.api.rutas_planeacion import router as router_planeacion
 from finanzas.api.rutas_reportes import router as router_reportes
@@ -78,6 +80,8 @@ def crear_app(config: Config | None = None, db: BaseDatos | None = None, bus: Bu
         return {"estado": "ok"}
 
     app.include_router(router)
+    app.include_router(router_datos)
+    app.include_router(router_activos)
     app.include_router(router_planeacion)
     app.include_router(router_reportes)
     app.include_router(router_automatizacion)

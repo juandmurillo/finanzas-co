@@ -4,7 +4,7 @@ de renta y asistente opcional con IA."""
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
@@ -95,17 +95,30 @@ class ConsentimientoIn(BaseModel):
     activo: bool
 
 
+class TurnoIn(BaseModel):
+    rol: Literal["yo", "asistente"]
+    texto: str = Field(max_length=4000)
+
+
 class PreguntaIn(BaseModel):
     pregunta: str = Field(min_length=1, max_length=500)
+    historial: list[TurnoIn] = Field(default=[], max_length=40)
+
+
+class ConfigIAIn(BaseModel):
+    proveedor: str
+    modelo: str | None = Field(default=None, max_length=120)
+    clave: str | None = Field(default=None, max_length=400, description="Vacía la borra; nunca se devuelve")
 
 
 @router.get("/asistente/estado", tags=["asistente"])
-def estado_asistente(sesion: Lectura) -> dict[str, Any]:
-    return {
-        "consentimiento": asistente.consentimiento(sesion),
-        "credenciales": asistente.credenciales_disponibles(),
-        "modelo": asistente.MODELO,
-    }
+def estado_asistente(sesion: Lectura, request: Request) -> dict[str, Any]:
+    return asistente.estado(sesion, request.app.state.config)
+
+
+@router.put("/asistente/config", tags=["asistente"], status_code=204)
+def configurar_asistente(datos: ConfigIAIn, sesion: Lectura, request: Request) -> None:
+    asistente.configurar(sesion, request.app.state.config, datos.proveedor, datos.modelo, datos.clave)
 
 
 @router.put("/asistente/consentimiento", tags=["asistente"], status_code=204)
@@ -115,8 +128,10 @@ def consentir(datos: ConsentimientoIn, sesion: Lectura) -> None:
 
 @router.post("/asistente/preguntar", tags=["asistente"])
 def preguntar(datos: PreguntaIn, sesion: Lectura, request: Request) -> dict[str, Any]:
-    ejecutor = getattr(request.app.state, "ejecutor_asistente", None) or asistente.ejecutar
-    return asistente.preguntar(sesion, datos.pregunta, ejecutor)
+    ejecutor = getattr(request.app.state, "ejecutor_asistente", None) or asistente.ejecutar_con(
+        request.app.state.config, getattr(request.app.state, "transporte_ia", None)
+    )
+    return asistente.preguntar(sesion, datos.pregunta, ejecutor, [t.model_dump() for t in datos.historial])
 
 
 # ---------- Créditos: crear y editar (fase 7) ----------

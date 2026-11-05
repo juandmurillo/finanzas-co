@@ -7,9 +7,10 @@ reclamo fuera, y los montos de salida en positivo (gastar $10.000 = 10.000 de ga
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -20,6 +21,11 @@ from finanzas.infra.consultas import _EN_RECLAMO
 
 # Grupos cuyo total se muestra como salida (positivo = dinero que salió).
 _SALIDAS = {Grupo.GASTO_VIDA, Grupo.SERVICIO_DEUDA, Grupo.AHORRO_INVERSION}
+
+
+# Ingresos y Gastos con todo incluido; se cumple siempre Ingresos − Gastos = flujo operativo. Las apuestas van por
+# movimiento (lo apostado a gastos, lo ganado a ingresos) para que los totales sumen igual en cualquier periodo.
+Conjunto = Literal["gastos", "ingresos"]
 
 
 @dataclass(frozen=True)
@@ -80,14 +86,28 @@ def _valor(m: Mov) -> int:
     return -m.monto if m.grupo in _SALIDAS else m.monto
 
 
+def _en_conjunto(m: Mov, conjunto: Conjunto) -> bool:
+    if m.grupo is Grupo.APUESTAS:
+        return m.monto > 0 if conjunto == "ingresos" else m.monto < 0
+    return m.grupo is Grupo.INGRESO if conjunto == "ingresos" else m.grupo in _SALIDAS
+
+
+def _valor_en(m: Mov, conjunto: Conjunto) -> int:
+    return m.monto if conjunto == "ingresos" else -m.monto
+
+
 # ---------- Flujo ----------
 def mensual(sesion: Session, desde: str | None = None, hasta: str | None = None) -> dict[str, Any]:
     movs = _movimientos(sesion, desde, hasta)
     meses = _rango(movs, desde, hasta)
     por_mes: dict[str, dict[Grupo, int]] = {m: defaultdict(int) for m in meses}
+    conjuntos: dict[str, dict[Conjunto, int]] = {m: {"gastos": 0, "ingresos": 0} for m in meses}
     for m in movs:
         if m.mes in por_mes:
             por_mes[m.mes][m.grupo] += m.monto
+            for conjunto in ("gastos", "ingresos"):
+                if _en_conjunto(m, conjunto):
+                    conjuntos[m.mes][conjunto] += _valor_en(m, conjunto)
     filas: list[dict[str, Any]] = []
     for mes in meses:
         g = por_mes[mes]
@@ -96,6 +116,8 @@ def mensual(sesion: Session, desde: str | None = None, hasta: str | None = None)
             {
                 "mes": mes,
                 "ingresos": g[Grupo.INGRESO],
+                "ingresos_total": conjuntos[mes]["ingresos"],
+                "gastos_total": conjuntos[mes]["gastos"],
                 "gasto_vida": -g[Grupo.GASTO_VIDA],
                 "servicio_deuda": -g[Grupo.SERVICIO_DEUDA],
                 "apuestas_neto": g[Grupo.APUESTAS],
@@ -162,19 +184,28 @@ def sankey(sesion: Session, desde: str | None = None, hasta: str | None = None, 
 
 # ---------- Categorías ----------
 def categorias(
-    sesion: Session, desde: str | None = None, hasta: str | None = None, grupo: Grupo = Grupo.GASTO_VIDA
+    sesion: Session,
+    desde: str | None = None,
+    hasta: str | None = None,
+    grupo: Grupo = Grupo.GASTO_VIDA,
+    conjunto: Conjunto | None = None,
 ) -> dict[str, Any]:
-    """Árbol categoría › subcategoría con total, movimientos, promedio mensual, % y tendencia por mes."""
+    """Árbol categoría › subcategoría con total, movimientos, promedio mensual, % y tendencia por mes.
+    Con `conjunto`, reúne todos los gastos o todos los ingresos en lugar de un solo grupo."""
     movs = _movimientos(sesion, desde, hasta)
     meses = _rango(movs, desde, hasta)
     n_meses = len(meses) or 1
-    del_grupo = [m for m in movs if m.grupo is grupo]
-    total_grupo = sum(_valor(m) for m in del_grupo)
+    del_grupo = [m for m in movs if (_en_conjunto(m, conjunto) if conjunto else m.grupo is grupo)]
+
+    def valor(m: Mov) -> int:
+        return _valor_en(m, conjunto) if conjunto else _valor(m)
+
+    total_grupo = sum(valor(m) for m in del_grupo)
 
     cats: dict[str, dict[str, Any]] = {}
     for m in del_grupo:
         c = cats.setdefault(m.categoria, {"total": 0, "n": 0, "por_mes": defaultdict(int), "subs": {}})
-        v = _valor(m)
+        v = valor(m)
         c["total"] += v
         c["n"] += 1
         c["por_mes"][m.mes] += v
@@ -211,9 +242,9 @@ def categorias(
             }
         )
     return {
-        "grupo": grupo.value,
+        "grupo": conjunto or grupo.value,
         "meses": meses,
-        "ranking_subcategorias": _ranking(del_grupo, total_grupo, n_meses),
+        "ranking_subcategorias": _ranking(del_grupo, total_grupo, n_meses, valor),
         "total": total_grupo,
         "n": len(del_grupo),
         "promedio_mensual": round(total_grupo / n_meses),
@@ -221,13 +252,13 @@ def categorias(
     }
 
 
-def _ranking(movs: list[Mov], total_grupo: int, n_meses: int) -> list[dict[str, Any]]:
+def _ranking(movs: list[Mov], total_grupo: int, n_meses: int, valor: Callable[[Mov], int]) -> list[dict[str, Any]]:
     """Cada subcategoría como categoría propia, unida por nombre (Celular de Factura y de Móvil
     suman juntas); lo que no tiene subcategoría cuenta con el nombre de su categoría."""
     nombres: dict[str, dict[str, Any]] = {}
     for m in movs:
         d = nombres.setdefault(m.subcategoria or m.categoria, {"total": 0, "n": 0, "madres": defaultdict(int)})
-        v = _valor(m)
+        v = valor(m)
         d["total"] += v
         d["n"] += 1
         d["madres"][m.categoria] += v
@@ -251,15 +282,18 @@ def descripciones(
     hasta: str | None = None,
     grupo: Grupo | None = None,
     limite: int = 30,
+    conjunto: Conjunto | None = None,
 ) -> list[dict[str, Any]]:
     """Descripciones que más mueven dinero (por valor absoluto), sin transferencias ni ajustes."""
     agregado: dict[tuple[str, Grupo], dict[str, Any]] = {}
     for m in _movimientos(sesion, desde, hasta):
         if m.grupo in (Grupo.TRANSFERENCIA, Grupo.AJUSTE) or (grupo and m.grupo is not grupo):
             continue
+        if conjunto and not _en_conjunto(m, conjunto):
+            continue
         clave = ((m.descripcion or "Sin descripción").strip(), m.grupo)
         d = agregado.setdefault(clave, {"total": 0, "n": 0, "categorias": defaultdict(int)})
-        d["total"] += _valor(m)
+        d["total"] += _valor_en(m, conjunto) if conjunto else _valor(m)
         d["n"] += 1
         d["categorias"][m.subcategoria or m.categoria] += 1
     filas = [
@@ -385,7 +419,7 @@ def _hallazgos(
     if flujo < 0:
         salida.append(f"Saliste {_pesos(flujo)} más de lo que entró (flujo operativo).")
     else:
-        salida.append(f"Te sobraron {_pesos(flujo)} después de gastos y cuotas.")
+        salida.append(f"Te sobraron {_pesos(flujo)} después de todos tus gastos.")
     if subidas:
         s = subidas[0]
         salida.append(
@@ -406,7 +440,7 @@ def _hallazgos(
 
 
 # ---------- Valor neto y mapa de calor (fase 8, punto 1.5) ----------
-def _reducir_puntos(puntos: list[dict[str, Any]], tope: int = 180) -> list[dict[str, Any]]:
+def reducir_puntos(puntos: list[dict[str, Any]], tope: int = 180, campo: str = "saldo") -> list[dict[str, Any]]:
     """Aligera una serie larga por tramos, sin perder el primero, el último ni los extremos de cada tramo."""
     if len(puntos) <= tope:
         return puntos
@@ -414,8 +448,8 @@ def _reducir_puntos(puntos: list[dict[str, Any]], tope: int = 180) -> list[dict[
     elegidos = {0, len(puntos) - 1}
     for inicio in range(0, len(puntos), tam):
         tramo = range(inicio, min(inicio + tam, len(puntos)))
-        elegidos.add(min(tramo, key=lambda i: puntos[i]["saldo"]))
-        elegidos.add(max(tramo, key=lambda i: puntos[i]["saldo"]))
+        elegidos.add(min(tramo, key=lambda i: puntos[i][campo]))
+        elegidos.add(max(tramo, key=lambda i: puntos[i][campo]))
     return [puntos[i] for i in sorted(elegidos)]
 
 
@@ -460,7 +494,7 @@ def valor_neto(
         if (desde is None or mes >= desde) and (hasta is None or mes <= hasta):
             puntos.append({"fecha": k, "saldo": acumulado})
     if escala == "movimiento":
-        puntos = _reducir_puntos(puntos)
+        puntos = reducir_puntos(puntos)
     return {"escala": escala, "puntos": puntos, "cuentas": [c["nombre"] for c in cuentas]}
 
 
@@ -475,16 +509,16 @@ def _dias_entre(desde: str, hasta: str) -> list[str]:
 
 
 def calor(sesion: Session, desde: str | None = None, hasta: str | None = None) -> dict[str, Any]:
-    """Gasto (salidas de vida, cuotas y apuestas) e ingreso por día, para el mapa de calor del Inicio."""
+    """Gastos e ingresos por día, con los mismos totales del resto de la app."""
     dias: dict[str, dict[str, int]] = defaultdict(lambda: {"gasto": 0, "ingreso": 0, "n": 0})
     for m in _movimientos(sesion, desde, hasta):
         if m.grupo in GRUPOS_NEUTROS:
             continue
         d = dias[m.fecha[:10]]
-        if m.monto < 0:
-            d["gasto"] += -m.monto
-        elif m.grupo is Grupo.INGRESO:
-            d["ingreso"] += m.monto
+        if _en_conjunto(m, "gastos"):
+            d["gasto"] += _valor_en(m, "gastos")
+        elif _en_conjunto(m, "ingresos"):
+            d["ingreso"] += _valor_en(m, "ingresos")
         d["n"] += 1
     salida: list[dict[str, Any]] = [{"fecha": k, **v} for k, v in sorted(dias.items())]
     return {

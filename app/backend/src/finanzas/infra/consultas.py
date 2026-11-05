@@ -158,21 +158,43 @@ def resumen_mensual(sesion: Session, meses: int = 6) -> list[dict[str, Any]]:
             "UNION ALL "  # los cobros en reclamo no cuentan como gasto mientras se resuelven
             "SELECT substr(t.fecha, 1, 7), c.grupo, -SUM(t.monto) FROM transaccion t "
             f"JOIN categoria c ON c.id = t.categoria_id WHERE t.estado = 'confirmada' AND {_EN_RECLAMO} "
-            "GROUP BY 1, 2"
+            "GROUP BY 1, 2 "
+            "UNION ALL "  # lo que aún no tiene categoría también cuenta, igual que en los reportes
+            "SELECT substr(fecha, 1, 7), CASE WHEN monto > 0 THEN 'ingreso' ELSE 'gasto_vida' END, SUM(monto) "
+            "FROM transaccion WHERE estado = 'confirmada' AND categoria_id IS NULL GROUP BY 1, 2"
         )
     ).mappings()
     por_mes: dict[str, dict[str, int]] = {}
     for f in filas:
         grupos = por_mes.setdefault(f["mes"], {})
         grupos[f["grupo"]] = grupos.get(f["grupo"], 0) + int(f["total"])
+    # Apuestas por movimiento: lo apostado cuenta en gastos y lo ganado en ingresos.
+    apuestas = {
+        f["mes"]: (int(f["ganado"]), int(f["apostado"]))
+        for f in sesion.execute(
+            text(
+                "SELECT substr(t.fecha, 1, 7) AS mes, "
+                "SUM(CASE WHEN t.monto > 0 THEN t.monto ELSE 0 END) AS ganado, "
+                "SUM(CASE WHEN t.monto < 0 THEN -t.monto ELSE 0 END) AS apostado "
+                "FROM transaccion t JOIN categoria c ON c.id = t.categoria_id "
+                f"WHERE t.estado = 'confirmada' AND c.grupo = 'apuestas' AND NOT {_EN_RECLAMO} GROUP BY 1"
+            )
+        ).mappings()
+    }
     resultado = []
     for mes in sorted(por_mes)[-meses:]:
         g = por_mes[mes]
         operativo = sum(v for k, v in g.items() if Grupo(k) not in GRUPOS_NEUTROS)
+        ganado, apostado = apuestas.get(mes, (0, 0))
         resultado.append(
             {
                 "mes": mes,
                 "ingresos": g.get(Grupo.INGRESO.value, 0),
+                "ingresos_total": g.get(Grupo.INGRESO.value, 0) + ganado,
+                "gastos_total": apostado
+                - g.get(Grupo.GASTO_VIDA.value, 0)
+                - g.get(Grupo.SERVICIO_DEUDA.value, 0)
+                - g.get(Grupo.AHORRO_INVERSION.value, 0),
                 "gasto_vida": -g.get(Grupo.GASTO_VIDA.value, 0),
                 "servicio_deuda": -g.get(Grupo.SERVICIO_DEUDA.value, 0),
                 "apuestas_neto": g.get(Grupo.APUESTAS.value, 0),
@@ -183,6 +205,8 @@ def resumen_mensual(sesion: Session, meses: int = 6) -> list[dict[str, Any]]:
 
 
 def resumen_creditos(sesion: Session) -> list[dict[str, Any]]:
+    from finanzas.infra.consultas_creditos import _saldo_actual
+
     activos = select(Credito).where(Credito.estado == "activo").order_by(Credito.tasa_ea.desc())
     creditos = list(sesion.scalars(activos))
     salida = []
@@ -192,6 +216,7 @@ def resumen_creditos(sesion: Session) -> list[dict[str, Any]]:
             .where(CreditoExtracto.credito_id == c.id)
             .order_by(CreditoExtracto.fecha_corte.desc())
         )
+        saldo, fecha_saldo = _saldo_actual(sesion, c)
         salida.append(
             {
                 "id": c.id,
@@ -202,8 +227,9 @@ def resumen_creditos(sesion: Session) -> list[dict[str, Any]]:
                 "cuota": c.cuota,
                 "seguro_mensual": c.seguro_mensual,
                 "dia_pago": c.dia_pago,
-                "saldo": ultimo.saldo if ultimo else c.capital_inicial,
-                "fecha_saldo": ultimo.fecha_corte if ultimo else c.fecha_desembolso,
+                # El último pago o extracto, lo más reciente: la misma cifra que muestra Deudas.
+                "saldo": saldo,
+                "fecha_saldo": fecha_saldo,
                 "cuotas_pendientes": ultimo.cuotas_pendientes if ultimo else c.plazo_meses,
                 "prioridad_avalancha": prioridad,
             }
@@ -334,6 +360,8 @@ def categorias_frecuentes(sesion: Session, signo: int, limite: int = 8) -> list[
 
 
 def dashboard(sesion: Session) -> dict[str, Any]:
+    from finanzas.infra.consultas_activos import patrimonio
+
     cuentas = saldos_cuentas(sesion)
     creditos = resumen_creditos(sesion)
     mes = mes_referencia(sesion)
@@ -350,4 +378,5 @@ def dashboard(sesion: Session) -> dict[str, Any]:
         "gasto_categorias": gasto_por_categoria(sesion, mes),
         "proximos_pagos": proximos_pagos(sesion),
         "cuotas_proximas": cuotas_proximas(sesion),
+        "patrimonio": patrimonio(sesion),
     }

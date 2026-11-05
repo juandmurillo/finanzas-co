@@ -9,9 +9,11 @@ const ESTADOS: Record<NonNullable<KpiRevision["estado"]>, [string, string]> = {
   sin_datos: ["cd-badge--plain", "Sin datos"],
 };
 
-export function valorKpi(k: Pick<KpiRevision, "valor" | "formato">): string {
+export function valorKpi(k: Pick<KpiRevision, "valor" | "formato"> & { clave?: string }): string {
   const v = k.valor;
   if (v === null) return "—";
+  // Con ingresos muy bajos, «−840 %» no dice nada: mejor cuántas veces salió lo que entró.
+  if (k.clave === "tasa_ahorro" && v < -1) return `Salió ${(1 - v).toFixed(1).replace(".", ",")} veces lo que entró`;
   switch (k.formato) {
     case "pct":
       return porcentaje(v, 0);
@@ -37,7 +39,7 @@ function Tendencia({ k, meses }: { k: KpiRevision; meses: string[] }) {
           key={meses[i]}
           className={v !== null && v < 0 ? "neg" : i === valores.length - 1 ? "on" : ""}
           style={{ height: `${Math.max(8, (Math.abs(v ?? 0) / maximo) * 100)}%`, width: 10 }}
-          title={`${nombreMes(meses[i] ?? "")}: ${valorKpi({ valor: v, formato: k.formato })}`}
+          title={`${nombreMes(meses[i] ?? "")}: ${valorKpi({ valor: v, formato: k.formato, clave: k.clave })}`}
         />
       ))}
     </div>

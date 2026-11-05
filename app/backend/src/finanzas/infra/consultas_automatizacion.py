@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from finanzas.dominio import recurrentes as dom
 from finanzas.dominio.clasificador import normalizar
-from finanzas.infra import consultas, consultas_prestamos, consultas_presupuesto
+from finanzas.infra import consultas, consultas_activos, consultas_prestamos, consultas_presupuesto
 from finanzas.infra.modelos import Categoria, CreditoPago, Meta, MetaObjetivo, Recurrente, Regla, Transaccion
 from finanzas.infra.repositorios import ruta_categoria
 from finanzas.servicios.transacciones import hoy_bogota
@@ -307,6 +307,11 @@ def objetivos(sesion: Session, m: Meta) -> tuple[list[int], list[int]]:
     return cuentas, categorias
 
 
+def activos_de(sesion: Session, m: Meta) -> list[int]:
+    filas = sesion.scalars(select(MetaObjetivo.activo_id).where(MetaObjetivo.meta_id == m.id)).all()
+    return [i for i in filas if i]
+
+
 def deuda_total(sesion: Session) -> int:
     return sum(c["saldo"] for c in consultas.resumen_creditos(sesion))
 
@@ -315,6 +320,7 @@ def metas(sesion: Session) -> list[dict[str, Any]]:
     hoy = _hoy()
     mes = hoy.isoformat()[:7]
     saldos = {c["id"]: c["saldo"] for c in consultas.saldos_cuentas(sesion)}
+    vivos = consultas_activos.listar(sesion, hoy)["activos"]
     salida = []
     for m in sesion.scalars(
         select(Meta)
@@ -339,9 +345,12 @@ def metas(sesion: Session) -> list[dict[str, Any]]:
         }
         cuentas, categorias = objetivos(sesion, m)
         fila["cuenta_ids"], fila["categoria_ids"] = cuentas, categorias
+        activos = activos_de(sesion, m)
+        fila["activo_ids"] = activos
         fila["rastrea"] = [
             *(c["nombre"] for c in consultas.saldos_cuentas(sesion) if c["id"] in cuentas),
             *(" › ".join(ruta_categoria(c)[1:]) for c in (sesion.get(Categoria, i) for i in categorias) if c),
+            *(a["nombre"] for a in vivos if a["id"] in activos),
         ]
         if m.tipo == "ahorro":
             # cuentas: lo que hay en ellas · categorías: lo aportado desde que creaste la meta
@@ -351,7 +360,7 @@ def metas(sesion: Session) -> list[dict[str, Any]]:
                 else _salidas(sesion, categorias, [], m.creado_en[:10])
                 if categorias
                 else 0
-            )
+            ) + sum(x["valor_cop"] for x in vivos if x["id"] in activos and x["estado"] == "activo")
             base = (m.base or 0) if cuentas else 0
             # Con signo: negativo si hoy hay menos que al crear la meta (se está retrocediendo).
             avance = (actual - base) / (m.objetivo - base) if m.objetivo and m.objetivo != base else 0.0
@@ -459,4 +468,5 @@ def alertas(sesion: Session) -> list[dict[str, Any]]:
                 }
             )
     orden = {"critica": 0, "aviso": 1, "info": 2}
+    salida += consultas_activos.alertas(sesion, hoy)
     return sorted(salida, key=lambda a: orden[a["nivel"]])

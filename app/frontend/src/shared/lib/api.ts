@@ -1,5 +1,9 @@
 /** Cliente HTTP de la API local (mismo origen gracias al proxy de Vite). */
 import type {
+  ActivoNuevo,
+  ReporteActivos,
+  SeriePatrimonio,
+  TipoMovimientoActivo,
   Sistema,
   AcumuladoPresupuesto,
   Amortizacion,
@@ -44,6 +48,8 @@ import type {
   Regla,
   ReglaNueva,
   Respaldo,
+  ResultadoImportacion,
+  VistaPreviaDatos,
   SugerenciaCategoria,
   AbonoUnico,
   CompraCartera,
@@ -90,6 +96,12 @@ async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
   return respuesta.status === 204 ? (undefined as T) : ((await respuesta.json()) as T);
 }
 
+function conArchivo(archivo: File): FormData {
+  const cuerpo = new FormData();
+  cuerpo.append("archivo", archivo);
+  return cuerpo;
+}
+
 export interface FiltroTransacciones {
   desde?: string;
   hasta?: string;
@@ -116,6 +128,21 @@ const query = (params: object) => {
 };
 
 export const api = {
+  activos: () => pedir<ReporteActivos>("/activos"),
+  crearActivo: (d: ActivoNuevo) => pedir<{ id: number }>("/activos", { method: "POST", body: JSON.stringify(d) }),
+  editarActivo: (id: number, d: Partial<ActivoNuevo>) =>
+    pedir<undefined>(`/activos/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  eliminarActivo: (id: number) => pedir<undefined>(`/activos/${id}`, { method: "DELETE" }),
+  valorarActivo: (id: number, fecha: string, valor: number) =>
+    pedir<undefined>(`/activos/${id}/valoraciones`, { method: "POST", body: JSON.stringify({ fecha, valor }) }),
+  moverActivo: (
+    id: number,
+    d: { tipo: TipoMovimientoActivo; monto: number; fecha: string; cuenta_id: number | null },
+  ) => pedir<{ id: number }>(`/activos/${id}/movimientos`, { method: "POST", body: JSON.stringify(d) }),
+  deshacerMovimientoActivo: (id: number, movimiento: number) =>
+    pedir<undefined>(`/activos/${id}/movimientos/${movimiento}`, { method: "DELETE" }),
+  patrimonio: (p: Periodo = {}, escala: "mes" | "movimiento" = "mes") =>
+    pedir<SeriePatrimonio>(`/reportes/patrimonio${query({ ...p, escala })}`),
   sistema: () => pedir<Sistema>("/sistema"),
   primerUso: (nombre: string, modo: "vacio" | "demo") =>
     pedir<undefined>("/sistema/primer-uso", { method: "POST", body: JSON.stringify({ nombre, modo }) }),
@@ -205,8 +232,11 @@ export const api = {
   sankey: (p: Periodo) => pedir<Sankey>(`/reportes/sankey${query(p)}`),
   reporteCategorias: (p: Periodo, grupo: Grupo) =>
     pedir<ReporteCategorias>(`/reportes/categorias${query({ ...p, grupo })}`),
-  descripciones: (p: Periodo, grupo?: Grupo) =>
-    pedir<DescripcionReporte[]>(`/reportes/descripciones${query({ ...p, grupo, limite: 15 })}`),
+  /** Todos los gastos o todos los ingresos, por categoría. */
+  reporteConjunto: (p: Periodo, conjunto: "gastos" | "ingresos") =>
+    pedir<ReporteCategorias>(`/reportes/categorias${query({ ...p, conjunto })}`),
+  descripciones: (p: Periodo, grupo?: Grupo, conjunto?: "gastos" | "ingresos") =>
+    pedir<DescripcionReporte[]>(`/reportes/descripciones${query({ ...p, grupo, conjunto, limite: 15 })}`),
   apuestas: (p: Periodo) => pedir<ResumenApuestas>(`/reportes/apuestas${query(p)}`),
   revision: (mes: string) => pedir<RevisionMensual>(`/reportes/revision/${mes}`),
   clasificar: (descripcion: string, monto: number, cuentaId?: number | null) =>
@@ -247,6 +277,19 @@ export const api = {
   alertas: () => pedir<Alerta[]>("/alertas"),
   respaldos: () => pedir<Respaldo[]>("/respaldos"),
   respaldar: () => pedir<{ archivo: string | null }>("/respaldos", { method: "POST" }),
+  restaurarRespaldo: (archivo: string) =>
+    pedir<{ respaldo: string | null }>(`/respaldos/${encodeURIComponent(archivo)}/restaurar`, { method: "POST" }),
+  vistaPreviaDatos: (archivo: File) =>
+    pedir<VistaPreviaDatos>("/datos/vista-previa", { method: "POST", body: conArchivo(archivo) }),
+  cargarDatos: (archivo: File) =>
+    pedir<{ respaldo: string | null }>("/datos/cargar", { method: "POST", body: conArchivo(archivo) }),
+  importarCashew: (archivo: File) =>
+    pedir<ResultadoImportacion>("/importar/cashew", { method: "POST", body: conArchivo(archivo) }),
+  borrarTodo: (confirmacion: string) =>
+    pedir<{ respaldo: string | null }>("/datos/borrar-todo", {
+      method: "POST",
+      body: JSON.stringify({ confirmacion }),
+    }),
   abonoUnico: (id: number, abono: number) => pedir<AbonoUnico>(`/creditos/${id}/abono-unico${query({ abono })}`),
   compraCartera: (datos: CompraCarteraIn) =>
     pedir<CompraCartera>("/creditos/compra-cartera", { method: "POST", body: JSON.stringify(datos) }),
@@ -258,8 +301,13 @@ export const api = {
   estadoAsistente: () => pedir<EstadoAsistente>("/asistente/estado"),
   consentimientoAsistente: (activo: boolean) =>
     pedir<undefined>("/asistente/consentimiento", { method: "PUT", body: JSON.stringify({ activo }) }),
-  preguntar: (pregunta: string) =>
-    pedir<RespuestaAsistente>("/asistente/preguntar", { method: "POST", body: JSON.stringify({ pregunta }) }),
+  configurarAsistente: (d: { proveedor: string; modelo?: string; clave?: string }) =>
+    pedir<undefined>("/asistente/config", { method: "PUT", body: JSON.stringify(d) }),
+  preguntar: (pregunta: string, historial: { rol: "yo" | "asistente"; texto: string }[] = []) =>
+    pedir<RespuestaAsistente>("/asistente/preguntar", {
+      method: "POST",
+      body: JSON.stringify({ pregunta, historial }),
+    }),
   /** URL de descarga directa (el navegador guarda el .xlsx). */
   urlExcel: (p: Periodo) => `${BASE}/exportar/excel${query(p)}`,
 };

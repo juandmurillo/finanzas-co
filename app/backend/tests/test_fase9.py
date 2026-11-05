@@ -92,13 +92,59 @@ def test_movimiento_sin_categoria_aparece_en_reportes(cliente: TestClient) -> No
 
 
 def test_valor_neto_por_movimiento_aligera_sin_perder_extremos() -> None:
-    from finanzas.infra.consultas_reportes import _reducir_puntos
+    from finanzas.infra.consultas_reportes import reducir_puntos
 
     puntos = [{"fecha": f"p{i}", "saldo": i % 97} for i in range(1000)]
     puntos[500]["saldo"] = 10_000
     puntos[700]["saldo"] = -10_000
-    reducidos = _reducir_puntos(puntos)
+    reducidos = reducir_puntos(puntos)
     assert len(reducidos) <= 190
     assert reducidos[0] == puntos[0] and reducidos[-1] == puntos[-1]
     assert {10_000, -10_000} <= {p["saldo"] for p in reducidos}
-    assert _reducir_puntos(puntos[:50]) == puntos[:50]
+    assert reducir_puntos(puntos[:50]) == puntos[:50]
+
+
+def test_ingresos_y_gastos_incluyen_todo_y_cuadran_en_toda_la_app(
+    cliente: TestClient, db_sembrada: BaseDatos, bus: BusEventos
+) -> None:
+    from finanzas.dominio.fechas import hoy_bogota
+    from finanzas.dominio.grupos import Grupo
+    from finanzas.infra.repositorios import categoria_por_ruta
+
+    with UnidadDeTrabajo(db_sembrada.fabrica, bus) as u:
+        ids = {
+            g: categoria_por_ruta(u.sesion, g, nombre, None).id
+            for g, nombre in (
+                (Grupo.INGRESO, "Otros ingresos"),
+                (Grupo.GASTO_VIDA, "Comida"),
+                (Grupo.SERVICIO_DEUDA, "Crédito de prueba"),
+                (Grupo.APUESTAS, "Apuestas de prueba"),
+                (Grupo.AHORRO_INVERSION, "Inversión de prueba"),
+            )
+        }
+    cuenta = cliente.get("/api/v1/cuentas").json()[0]["id"]
+    hoy = hoy_bogota().isoformat()
+    for grupo, monto in (
+        (Grupo.INGRESO, 90_000_00),
+        (Grupo.GASTO_VIDA, -11_000_00),
+        (Grupo.SERVICIO_DEUDA, -12_000_00),
+        (Grupo.AHORRO_INVERSION, -13_000_00),
+        (Grupo.APUESTAS, -14_000_00),  # lo apostado es gasto
+        (Grupo.APUESTAS, 5_000_00),  # lo ganado es ingreso
+    ):
+        cuerpo = {"cuenta_id": cuenta, "monto": monto, "categoria_id": ids[grupo], "fecha": hoy}
+        assert cliente.post("/api/v1/transacciones", json=cuerpo).status_code == 201
+
+    mes = hoy[:7]
+    periodo = f"desde={mes}&hasta={mes}"
+    fila = cliente.get(f"/api/v1/reportes/mensual?{periodo}").json()["meses"][0]
+    assert fila["ingresos_total"] == 95_000_00 and fila["gastos_total"] == 50_000_00
+    assert fila["ingresos_total"] - fila["gastos_total"] == fila["flujo_operativo"]
+    tablero = cliente.get("/api/v1/reportes/dashboard").json()["mes_actual"]
+    assert (tablero["ingresos_total"], tablero["gastos_total"]) == (95_000_00, 50_000_00)
+    for conjunto, total, n_categorias in (("gastos", 50_000_00, 4), ("ingresos", 95_000_00, 2)):
+        r = cliente.get(f"/api/v1/reportes/categorias?{periodo}&conjunto={conjunto}").json()
+        assert r["total"] == total and sum(c["total"] for c in r["categorias"]) == total
+        assert len(r["categorias"]) == n_categorias
+    dias = cliente.get(f"/api/v1/reportes/calor?{periodo}").json()["dias"]
+    assert sum(d["gasto"] for d in dias) == 50_000_00 and sum(d["ingreso"] for d in dias) == 95_000_00

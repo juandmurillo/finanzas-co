@@ -1,7 +1,8 @@
 /** Administrar categorías (RF-CA-03): todas las categorías y subcategorías separadas en ingresos y gastos;
  * crear, editar nombre/ícono/color y eliminar fusionando con otra (los movimientos no se pierden). */
+import { useRefrescar } from "@/shared/lib/useRefrescar";
 import { useApuestasVisibles } from "@/shared/lib/useSistema";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -23,14 +24,6 @@ type Accion =
   | { tipo: "crear"; padre: CategoriaNodo }
   | { tipo: "editar"; cat: CategoriaNodo }
   | { tipo: "eliminar"; cat: CategoriaNodo };
-
-function useRefrescar() {
-  const cliente = useQueryClient();
-  return () => {
-    for (const k of [["categorias"], ["transacciones"], ["presupuesto"], ["reportes"], ["reglas"], ["metas"]])
-      void cliente.invalidateQueries({ queryKey: k });
-  };
-}
 
 function FormCategoria({ accion, arbol, alCerrar }: { accion: Accion; arbol: CategoriaNodo[]; alCerrar: () => void }) {
   const refrescar = useRefrescar();

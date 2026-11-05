@@ -34,9 +34,13 @@ def reporte_sankey(sesion: Lectura, desde: Desde = None, hasta: Hasta = None) ->
 
 @router.get("/reportes/categorias")
 def reporte_categorias(
-    sesion: Lectura, desde: Desde = None, hasta: Hasta = None, grupo: Grupo = Grupo.GASTO_VIDA
+    sesion: Lectura,
+    desde: Desde = None,
+    hasta: Hasta = None,
+    grupo: Grupo = Grupo.GASTO_VIDA,
+    conjunto: Literal["gastos", "ingresos"] | None = None,
 ) -> dict[str, Any]:
-    return rep.categorias(sesion, desde, hasta, grupo)
+    return rep.categorias(sesion, desde, hasta, grupo, conjunto)
 
 
 @router.get("/reportes/descripciones")
@@ -46,8 +50,9 @@ def reporte_descripciones(
     hasta: Hasta = None,
     grupo: Grupo | None = None,
     limite: Annotated[int, Query(ge=1, le=200)] = 30,
+    conjunto: Literal["gastos", "ingresos"] | None = None,
 ) -> list[dict[str, Any]]:
-    return rep.descripciones(sesion, desde, hasta, grupo, limite)
+    return rep.descripciones(sesion, desde, hasta, grupo, limite, conjunto)
 
 
 @router.get("/reportes/apuestas")

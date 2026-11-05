@@ -17,13 +17,14 @@ const VISIBLES = 6;
 
 export function DonaCategorias({ tipo }: { tipo: "gasto" | "ingreso" }) {
   const grupo = tipo === "gasto" ? "gasto_vida" : "ingreso";
+  const conjunto = tipo === "gasto" ? "gastos" : "ingresos";
   const hoy = hoyISO().slice(0, 7);
   const [estado, setEstado] = useFiltroRecordado(`inicio-dona-${tipo}`, { pasos: 0 });
   const mes = moverMes(hoy, -estado.pasos);
   const periodo = { desde: mes, hasta: mes };
   const consulta = useQuery({
-    queryKey: claves.reporteCategorias(periodo, grupo),
-    queryFn: () => api.reporteCategorias(periodo, grupo),
+    queryKey: claves.reporteCategorias(periodo, conjunto),
+    queryFn: () => api.reporteConjunto(periodo, conjunto),
   });
   const [activo, setActivo] = useState<number | null>(null);
   const [todas, setTodas] = useState(false);
@@ -108,7 +109,7 @@ export function DonaCategorias({ tipo }: { tipo: "gasto" | "ingreso" }) {
               })}
             </svg>
             <div className="cd-donut-center" aria-live="polite">
-              <small>{sel ? sel.categoria : tipo === "gasto" ? "Gasto de vida" : "Ingresos"}</small>
+              <small>{sel ? sel.categoria : tipo === "gasto" ? "Gastos" : "Ingresos"}</small>
               <strong>{formatoCOP(sel ? sel.total : total)}</strong>
               {sel && total > 0 && <small>{porcentaje(sel.total / total, 0)}</small>}
             </div>

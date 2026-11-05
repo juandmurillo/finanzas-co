@@ -1246,3 +1246,160 @@ html {
     white-space: nowrap;
   }
 }
+
+/* Próximos pagos toma la altura de la tarjeta de flujo y desplaza su lista por dentro, sin dejar huecos. */
+@media (min-width: 1101px) {
+  .inicio-proximos {
+    display: flex;
+    flex-direction: column;
+    height: 0;
+    min-height: 100%;
+  }
+  .inicio-proximos > .cd-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+/* Tus datos */
+.datos-exportar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+.datos-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.datos-opcion:hover {
+  background: var(--surface);
+}
+.datos-opcion small {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.datos-comparar {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.datos-comparar th,
+.datos-comparar td {
+  padding: 6px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+.datos-comparar th:first-child,
+.datos-comparar td:first-child {
+  text-align: left;
+}
+
+/* Propuesta de la IA: nada se guarda sin revisarlo */
+.chat-propuesta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.chat-propuesta small {
+  display: block;
+  color: var(--ink-muted);
+}
+
+/* Activos y patrimonio */
+.activos-doble {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.activos-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.activo-cifras {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.activo-cifras dt {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.activo-cifras dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.patrimonio-partes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.patrimonio-partes li {
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 520px) {
+  .activos-doble {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Tablas en el celular: cada fila es una tarjeta con su rótulo, sin desplazamiento horizontal. */
+@media (max-width: 480px) {
+  .tabla-apilable,
+  .tabla-apilable tbody,
+  .tabla-apilable tr,
+  .tabla-apilable td {
+    display: block;
+    width: 100%;
+    margin-left: 0 !important;
+  }
+  .tabla-apilable thead {
+    display: none;
+  }
+  .tabla-apilable tr {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tabla-apilable td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 0;
+    border: 0;
+    text-align: right !important;
+  }
+  .tabla-apilable td::before {
+    content: attr(data-etiqueta);
+    color: var(--ink-muted);
+    font-size: 12px;
+    text-align: left;
+  }
+  .tabla-apilable td:first-child {
+    font-weight: 600;
+  }
+  .tabla-apilable td:first-child::before {
+    content: none;
+  }
+}

@@ -6,12 +6,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from alembic import command
-from alembic.config import Config as ConfigAlembic
-
 from finanzas.config import obtener_config
 from finanzas.infra.db import BaseDatos
 from finanzas.infra.eventos import BusEventos
+from finanzas.infra.migraciones import actualizar
 from finanzas.infra.respaldos import respaldar, restaurar
 from finanzas.infra.uow import UnidadDeTrabajo
 
@@ -19,10 +17,7 @@ RAIZ_BACKEND = Path(__file__).resolve().parents[2]
 
 
 def migrar(url: str) -> None:
-    cfg = ConfigAlembic(str(RAIZ_BACKEND / "alembic.ini"))
-    cfg.set_main_option("sqlalchemy.url", url)
-    cfg.attributes["configurar_logs"] = False
-    command.upgrade(cfg, "head")
+    actualizar(url)
 
 
 def _asegurar_parametros(url: str) -> None:

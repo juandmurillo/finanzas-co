@@ -1,5 +1,6 @@
 /** Crear o editar un crédito y registrar abonos a capital (RF-DE, fase 7 bloque E). */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRefrescar } from "@/shared/lib/useRefrescar";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,22 +10,6 @@ import { hoyISO, mascaraMonto, parseMonto } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 import { Hoja } from "@/shared/ui/Hoja";
 import { SelectorCuenta } from "@/shared/ui/SelectorCuenta";
-
-function useRefrescar() {
-  const cliente = useQueryClient();
-  return () => {
-    for (const k of [
-      ["creditos"],
-      ["recurrentes"],
-      ["calendario"],
-      ["transacciones"],
-      ["cuentas"],
-      ["dashboard"],
-      ["categorias"],
-    ])
-      void cliente.invalidateQueries({ queryKey: k });
-  };
-}
 
 const aTexto = (centavos: number) => mascaraMonto(String(centavos / 100));
 

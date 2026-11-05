@@ -90,7 +90,10 @@ function FilaCategoria({ c, grupo, meses, abierta, alternar }: PropsFila) {
         <Tendencia valores={c.tendencia} meses={meses} />
       </button>
       {abierta && (
-        <table className="cd-table cd-num" style={{ marginTop: 10, marginLeft: 48, width: "calc(100% - 48px)" }}>
+        <table
+          className="cd-table cd-num tabla-apilable"
+          style={{ marginTop: 10, marginLeft: 48, width: "calc(100% - 48px)" }}
+        >
           <thead>
             <tr>
               <th>Subcategoría</th>
@@ -103,11 +106,24 @@ function FilaCategoria({ c, grupo, meses, abierta, alternar }: PropsFila) {
           <tbody>
             {c.subcategorias.map((s) => (
               <tr key={s.subcategoria}>
-                <td>{s.subcategoria}</td>
-                <td style={{ textAlign: "right" }}>{formatoCOP(s.total)}</td>
-                <td style={{ textAlign: "right" }}>{s.n}</td>
-                <td style={{ textAlign: "right" }}>{formatoCOP(s.ticket)}</td>
-                <td style={{ textAlign: "right" }}>{porcentaje(s.pct_categoria, 0)}</td>
+                <td
+                  data-etiqueta="<tr>
+              <th>Subcategoría"
+                >
+                  {s.subcategoria}
+                </td>
+                <td data-etiqueta="Total" style={{ textAlign: "right" }}>
+                  {formatoCOP(s.total)}
+                </td>
+                <td data-etiqueta="Mov." style={{ textAlign: "right" }}>
+                  {s.n}
+                </td>
+                <td data-etiqueta="Ticket" style={{ textAlign: "right" }}>
+                  {formatoCOP(s.ticket)}
+                </td>
+                <td data-etiqueta="% de categoría" style={{ textAlign: "right" }}>
+                  {porcentaje(s.pct_categoria, 0)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -140,13 +156,15 @@ export function CategoriasPage() {
     GRUPOS.some(([g]) => g === busqueda.grupo) ? (busqueda.grupo as Grupo) : "gasto_vida",
   );
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
+  // Gastos e Ingresos muestran todo; Deudas es la vista de un solo grupo.
+  const conjunto = grupo === "gasto_vida" ? "gastos" : grupo === "ingreso" ? "ingresos" : undefined;
   const reporte = useQuery({
-    queryKey: claves.reporteCategorias(periodo, grupo),
-    queryFn: () => api.reporteCategorias(periodo, grupo),
+    queryKey: claves.reporteCategorias(periodo, conjunto ?? grupo),
+    queryFn: () => (conjunto ? api.reporteConjunto(periodo, conjunto) : api.reporteCategorias(periodo, grupo)),
   });
   const descripciones = useQuery({
-    queryKey: claves.descripciones(periodo, grupo),
-    queryFn: () => api.descripciones(periodo, grupo),
+    queryKey: claves.descripciones(periodo, conjunto ?? grupo),
+    queryFn: () => (conjunto ? api.descripciones(periodo, undefined, conjunto) : api.descripciones(periodo, grupo)),
   });
   const r = reporte.data;
   const alternar = (nombre: string) =>
@@ -257,7 +275,7 @@ export function CategoriasPage() {
               </section>
               <section className="cd-card" style={{ overflowX: "auto" }}>
                 <h3 className="cd-card-title">Descripciones que más pesan</h3>
-                <table className="cd-table cd-num">
+                <table className="cd-table cd-num tabla-apilable">
                   <thead>
                     <tr>
                       <th>Descripción</th>
@@ -268,12 +286,19 @@ export function CategoriasPage() {
                   <tbody>
                     {(descripciones.data ?? []).map((d) => (
                       <tr key={`${d.descripcion}-${d.grupo}`}>
-                        <td>
+                        <td
+                          data-etiqueta="<tr>
+                      <th>Descripción"
+                        >
                           {d.descripcion}
                           <span className="cd-delta-note"> · {d.categoria}</span>
                         </td>
-                        <td style={{ textAlign: "right" }}>{d.n}</td>
-                        <td style={{ textAlign: "right" }}>{formatoCOP(d.total)}</td>
+                        <td data-etiqueta="Mov." style={{ textAlign: "right" }}>
+                          {d.n}
+                        </td>
+                        <td data-etiqueta="Total" style={{ textAlign: "right" }}>
+                          {formatoCOP(d.total)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

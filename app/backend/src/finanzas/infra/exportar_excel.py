@@ -14,11 +14,17 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from finanzas.dominio.grupos import NOMBRES_GRUPO, Grupo
+from finanzas.infra import consultas_activos
 from finanzas.infra import consultas_reportes as rep
 
 _COP = '"$" #,##0;[Red]-"$" #,##0'
 _PCT = "0.0%"
 _ENCABEZADO = PatternFill("solid", fgColor="1E4D3B")
+
+
+def _texto_seguro(valor: Any) -> Any:
+    """Una descripción que empiece por = + - @ se ejecutaría como fórmula al abrir el libro."""
+    return f"'{valor}" if isinstance(valor, str) and valor[:1] in ("=", "+", "-", "@") else valor
 
 
 def _hoja(
@@ -32,7 +38,10 @@ def _hoja(
         celda.fill = _ENCABEZADO
     for fila in filas:
         hoja.append(
-            [v / 100 if fmt == _COP and isinstance(v, int) else v for v, (_, fmt) in zip(fila, columnas, strict=True)]
+            [
+                v / 100 if fmt == _COP and isinstance(v, int) else _texto_seguro(v)
+                for v, (_, fmt) in zip(fila, columnas, strict=True)
+            ]
         )
     for i, (nombre, fmt) in enumerate(columnas, 1):
         letra = get_column_letter(i)
@@ -181,6 +190,36 @@ def libro(sesion: Session, desde: str | None = None, hasta: str | None = None) -
             for f in movimientos
         ],
     )
+
+    inversiones = consultas_activos.listar(sesion)["activos"]
+    if inversiones:
+        _hoja(
+            wb,
+            "Activos",
+            [
+                ("Activo", None),
+                ("Clase", None),
+                ("Estado", None),
+                ("Moneda", None),
+                ("Valor (COP)", _COP),
+                ("Aportado", _COP),
+                ("Recibido", _COP),
+                ("Ganancia", _COP),
+            ],
+            [
+                [
+                    a["nombre"],
+                    a["clase_nombre"],
+                    a["estado"],
+                    a["moneda"],
+                    a["valor_cop"],
+                    a["aportado"],
+                    a["recibido"],
+                    a["ganancia"],
+                ]
+                for a in inversiones
+            ],
+        )
 
     salida = BytesIO()
     wb.save(salida)

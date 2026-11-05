@@ -68,8 +68,8 @@ function Totales({ periodo }: { periodo: Periodo }) {
   const t = mensual.data?.totales;
   if (mensual.isPending) return <TarjetaCargando filas={4} />;
   if (mensual.isError) return <ErrorVista error={mensual.error} reintentar={() => void mensual.refetch()} />;
-  const gasto = t ? t.gasto_vida + t.servicio_deuda - Math.min(0, t.apuestas_neto) : 0;
-  const ingreso = t?.ingresos ?? 0;
+  const gasto = t?.gastos_total ?? 0;
+  const ingreso = t?.ingresos_total ?? 0;
   const neto = ingreso - gasto;
   const proximos = (cal.data?.eventos ?? []).filter((e) => e.monto < 0);
   const vencidos = (cal.data?.vencidos ?? []).filter((e) => e.monto < 0);
@@ -85,14 +85,7 @@ function Totales({ periodo }: { periodo: Periodo }) {
           color={neto < 0 ? "var(--negative)" : "var(--positive)"}
           a="/movimientos"
         />
-        <FilaTotal
-          icono="sale"
-          texto="Gastos"
-          nota="Gasto de vida y cuotas"
-          valor={gasto}
-          a="/movimientos"
-          grupo="gasto_vida"
-        />
+        <FilaTotal icono="sale" texto="Gastos" valor={gasto} a="/movimientos" />
         <FilaTotal
           icono="entra"
           texto="Ingresos"
@@ -300,9 +293,10 @@ function GraficoFlujo({ periodo }: { periodo: Periodo }) {
 function Desglose({ periodo }: { periodo: Periodo }) {
   const [vista, setVista] = useFiltroRecordado("flujo-desglose", { tipo: "gasto" as "gasto" | "ingreso", subs: false });
   const grupo = vista.tipo === "gasto" ? "gasto_vida" : "ingreso";
+  const conjunto = vista.tipo === "gasto" ? "gastos" : "ingresos";
   const datos = useQuery({
-    queryKey: claves.reporteCategorias(periodo, grupo),
-    queryFn: () => api.reporteCategorias(periodo, grupo),
+    queryKey: claves.reporteCategorias(periodo, conjunto),
+    queryFn: () => api.reporteConjunto(periodo, conjunto),
   });
   const [activo, setActivo] = useState<number | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
@@ -447,9 +441,8 @@ function Historial({ nav }: { nav: NavPeriodo }) {
   const periodo = { desde: moverMes(hoy, -(ajuste.cuantos - 1)), hasta: hoy };
   const datos = useQuery({ queryKey: claves.reporteMensual(periodo), queryFn: () => api.reporteMensual(periodo) });
   const meses = [...(datos.data?.meses ?? [])];
-  const salidas = (m: (typeof meses)[number]) => m.gasto_vida + m.servicio_deuda - Math.min(0, m.apuestas_neto);
   const conAcumulado = meses.reduce<{ m: (typeof meses)[number]; neto: number; acumulado: number }[]>((acc, m) => {
-    const neto = m.ingresos - salidas(m);
+    const neto = m.ingresos_total - m.gastos_total;
     acc.push({ m, neto, acumulado: (acc.at(-1)?.acumulado ?? 0) + neto });
     return acc;
   }, []);
@@ -490,8 +483,8 @@ function Historial({ nav }: { nav: NavPeriodo }) {
                 </b>
               </span>
               <span className="cd-row cd-delta-note cd-num" style={{ gap: 12 }}>
-                <span>↓ {formatoCOP(salidas(m))}</span>
-                <span style={{ color: "var(--positive)" }}>↑ {formatoCOP(m.ingresos)}</span>
+                <span>↓ {formatoCOP(m.gastos_total)}</span>
+                <span style={{ color: "var(--positive)" }}>↑ {formatoCOP(m.ingresos_total)}</span>
               </span>
             </button>
           );

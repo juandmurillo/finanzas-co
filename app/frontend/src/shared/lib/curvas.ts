@@ -27,3 +27,21 @@ export function rutaSuave(puntos: [number, number][]): string {
   }
   return ruta;
 }
+
+/** Marcas de un eje proporcional al tiempo: repartidas por fecha y sin repetir etiqueta. Devuelve [texto, índice]. */
+export function marcasPorTiempo(
+  fechas: string[],
+  etiqueta: (fecha: string) => string,
+  cuantas = 6,
+): [string, number][] {
+  const tiempos = fechas.map((f) => Date.parse(f));
+  const inicio = tiempos[0] ?? 0;
+  const tramo = Math.max(1, (tiempos.at(-1) ?? 0) - inicio);
+  const marcas = new Map<string, number>();
+  for (let k = 0; k < cuantas; k++) {
+    const objetivo = inicio + (tramo * k) / (cuantas - 1);
+    const i = tiempos.reduce((m, t, j) => (Math.abs(t - objetivo) < Math.abs((tiempos[m] ?? t) - objetivo) ? j : m), 0);
+    marcas.set(etiqueta(fechas[i] ?? ""), i);
+  }
+  return [...marcas.entries()];
+}

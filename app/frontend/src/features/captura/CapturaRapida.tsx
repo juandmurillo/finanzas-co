@@ -211,7 +211,17 @@ export function CapturaRapida({
       if (confirmar) await api.pagarProgramada(edicion.tx.id, { fecha: fecha ?? undefined, monto });
     },
     onSuccess: (_, confirmar) => {
-      toast.success(confirmar ? "Pago confirmado" : "Cambios guardados");
+      const moviaFecha =
+        !confirmar &&
+        edicion?.tx.recurrente_id &&
+        edicion.tx.estado === "programada" &&
+        b.fecha.slice(8, 10) !== edicion.tx.fecha.slice(8, 10);
+      if (moviaFecha) {
+        toast.success("Cambió solo este pago", {
+          description: "Los siguientes siguen en su día. Para moverlos todos, edita el recurrente.",
+          action: { label: "Ir a Recurrentes", onClick: () => window.location.assign("/recurrentes") },
+        });
+      } else toast.success(confirmar ? "Pago confirmado" : "Cambios guardados");
       onCerrar();
     },
     onError: (e) => toast.error(e.message),

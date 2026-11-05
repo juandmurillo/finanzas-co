@@ -29,7 +29,12 @@ export type Grupo =
 
 export interface MesFlujo {
   mes: string;
+  /** Solo el grupo de ingresos; para mostrar «Ingresos» usa `ingresos_total`. */
   ingresos: number;
+  /** Todo lo que entró; `ingresos_total − gastos_total = flujo_operativo`. */
+  ingresos_total: number;
+  /** Todo lo que salió. */
+  gastos_total: number;
   gasto_vida: number;
   servicio_deuda: number;
   apuestas_neto: number;
@@ -64,6 +69,7 @@ export interface Dashboard {
   proximos_pagos: (Transaccion & { dias: number })[];
   /** Pagos de deuda programados en los próximos 30 días (centavos, positivo). */
   cuotas_proximas: number;
+  patrimonio: Patrimonio;
 }
 
 export interface Sugerencia {
@@ -580,6 +586,7 @@ export interface Meta {
   actual: number;
   progreso: number;
   cuenta_ids: number[];
+  activo_ids: number[];
   categoria_ids: number[];
   rastrea: string[];
   base?: number;
@@ -605,6 +612,7 @@ export interface MetaNueva {
   cuenta_id?: number | null;
   fecha_objetivo?: string | null;
   cuenta_ids?: number[];
+  activo_ids?: number[];
   categoria_ids?: number[];
 }
 
@@ -614,6 +622,101 @@ export interface Alerta {
   titulo: string;
   monto: number;
   enlace: string;
+}
+
+export interface FilaResumenDatos {
+  tabla: string;
+  nombre: string;
+  filas: number;
+}
+
+export interface VistaPreviaDatos {
+  entra: FilaResumenDatos[];
+  actual: FilaResumenDatos[];
+  tipo: "json" | "sqlite";
+}
+
+export interface ResultadoImportacion {
+  filas_leidas: number;
+  creadas: number;
+  pendientes: number;
+  duplicadas: number;
+  omitidas: number;
+  transferencias_emparejadas: number;
+  archivo_repetido: boolean;
+}
+
+export type TipoMovimientoActivo = "aporte" | "retiro" | "rendimiento" | "venta";
+
+export interface MovimientoActivo {
+  id: number;
+  tipo: TipoMovimientoActivo;
+  fecha: string;
+  monto: number;
+  con_cuenta: boolean;
+  nota: string;
+}
+
+export interface Activo {
+  id: number;
+  nombre: string;
+  clase: string;
+  clase_nombre: string;
+  moneda: "COP" | "USD";
+  estado: "activo" | "vendido";
+  fecha_compra: string;
+  tasa_ea: number | null;
+  vencimiento: string | null;
+  dias_para_vencer: number | null;
+  nota: string;
+  /** En la moneda del activo. */
+  valor: number;
+  valor_cop: number;
+  valorado_en: string | null;
+  aportado: number;
+  recibido: number;
+  ganancia: number;
+  tir: number | null;
+  movimientos: MovimientoActivo[];
+  valoraciones: { fecha: string; valor: number }[];
+}
+
+export interface ReporteActivos {
+  activos: Activo[];
+  total: number;
+  aportado: number;
+  recibido: number;
+  ganancia: number;
+  tir: number | null;
+  trm: number | null;
+  asignacion: { clase: string; nombre: string; valor: number; pct: number }[];
+}
+
+export interface ActivoNuevo {
+  nombre: string;
+  clase: string;
+  fecha_compra: string;
+  costo: number;
+  valor_actual: number | null;
+  moneda: "COP" | "USD";
+  cuenta_id: number | null;
+  tasa_ea: number | null;
+  vencimiento: string | null;
+  nota: string;
+}
+
+export interface Patrimonio {
+  cuentas: number;
+  por_cobrar: number;
+  activos: number;
+  creditos: number;
+  por_pagar: number;
+  neto: number;
+}
+
+export interface SeriePatrimonio {
+  puntos: { fecha: string; neto: number; activos: number; deuda: number }[];
+  actual: Patrimonio;
 }
 
 export interface Respaldo {
@@ -718,17 +821,43 @@ export interface Termometro {
   aviso: string;
 }
 
+export interface ProveedorIA {
+  id: string;
+  nombre: string;
+  modelo: string;
+  modelo_defecto: string;
+  requiere_clave: boolean;
+  tiene_clave: boolean;
+  url_clave: string | null;
+  privacidad: string;
+  local: boolean;
+}
+
 export interface EstadoAsistente {
   consentimiento: { desde: string; detalle: string } | null;
   credenciales: boolean;
   modelo: string;
+  proveedor: string;
+  proveedores: ProveedorIA[];
 }
+
+export type PropuestaIA =
+  | {
+      tipo: "movimiento";
+      movimiento: "gasto" | "ingreso";
+      monto: number;
+      descripcion: string;
+      categoria_id: number | null;
+      fecha: string;
+    }
+  | { tipo: "abrir"; seccion: string; ruta: string };
 
 export interface RespuestaAsistente {
   respuesta: string;
   herramientas: string[];
   modelo: string;
   fin: string;
+  propuestas?: PropuestaIA[];
 }
 
 export interface Sistema {

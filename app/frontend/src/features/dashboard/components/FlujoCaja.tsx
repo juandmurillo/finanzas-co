@@ -8,8 +8,7 @@ import { Sensores, TooltipGrafico, ZonaGrafico } from "@/shared/ui/TooltipGrafic
 const ALTO_MITAD = 90;
 
 export function FlujoCaja({ meses, activo }: { meses: MesFlujo[]; activo: string }) {
-  const salidas = (m: MesFlujo) => m.gasto_vida + m.servicio_deuda - Math.min(0, m.apuestas_neto);
-  const maximo = Math.max(1, ...meses.flatMap((m) => [m.ingresos, salidas(m)]));
+  const maximo = Math.max(1, ...meses.flatMap((m) => [m.ingresos_total, m.gastos_total]));
   const ancho = 640;
   const paso = (ancho - 60) / Math.max(1, meses.length);
   const escala = (v: number) => Math.max(3, Math.round((v / maximo) * ALTO_MITAD));
@@ -38,8 +37,8 @@ export function FlujoCaja({ meses, activo }: { meses: MesFlujo[]; activo: string
           <line className="grid" x1="44" x2={ancho} y1={110 + ALTO_MITAD} y2={110 + ALTO_MITAD} />
           {meses.map((m, i) => {
             const x = 60 + i * paso + paso / 2 - 14;
-            const hIn = escala(m.ingresos);
-            const hOut = escala(salidas(m));
+            const hIn = escala(m.ingresos_total);
+            const hOut = escala(m.gastos_total);
             const esActivo = m.mes === activo;
             return (
               <g key={m.mes}>
@@ -77,14 +76,14 @@ export function FlujoCaja({ meses, activo }: { meses: MesFlujo[]; activo: string
                 <i className="punto" style={{ background: "var(--chart-1)" }} />
                 Entró
               </span>
-              {formatoCOP(m0.ingresos)}
+              {formatoCOP(m0.ingresos_total)}
             </span>
             <span className="fila">
               <span>
                 <i className="punto" style={{ background: "var(--chart-2)" }} />
                 Salió
               </span>
-              {formatoCOP(salidas(m0))}
+              {formatoCOP(m0.gastos_total)}
             </span>
             <span className="fila">
               <span>Flujo</span>
@@ -96,8 +95,8 @@ export function FlujoCaja({ meses, activo }: { meses: MesFlujo[]; activo: string
       {actual && (
         <div className="cd-row" style={{ justifyContent: "space-between", fontSize: 13 }}>
           <span className="cd-delta-note">
-            {nombreMes(actual.mes)}: entró <b style={{ color: "var(--ink)" }}>{formatoCOP(actual.ingresos)}</b> · salió{" "}
-            <b style={{ color: "var(--ink)" }}>{formatoCOP(salidas(actual))}</b>
+            {nombreMes(actual.mes)}: entró <b style={{ color: "var(--ink)" }}>{formatoCOP(actual.ingresos_total)}</b> ·
+            salió <b style={{ color: "var(--ink)" }}>{formatoCOP(actual.gastos_total)}</b>
           </span>
           <span className={`cd-badge ${actual.flujo_operativo < 0 ? "cd-badge--negative" : "cd-badge--positive"}`}>
             {formatoCOP(actual.flujo_operativo, { signo: true })}
@@ -119,8 +118,8 @@ export function FlujoCaja({ meses, activo }: { meses: MesFlujo[]; activo: string
             {meses.map((m) => (
               <tr key={m.mes}>
                 <td>{nombreMes(m.mes)}</td>
-                <td>{formatoCOP(m.ingresos)}</td>
-                <td>{formatoCOP(salidas(m))}</td>
+                <td>{formatoCOP(m.ingresos_total)}</td>
+                <td>{formatoCOP(m.gastos_total)}</td>
                 <td>{formatoCOP(m.flujo_operativo)}</td>
               </tr>
             ))}

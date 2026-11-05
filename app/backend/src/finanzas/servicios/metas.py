@@ -29,6 +29,7 @@ class DatosMeta:
     fecha_objetivo: str | None = None
     cuenta_ids: list[int] = field(default_factory=list)
     categoria_ids: list[int] = field(default_factory=list)
+    activo_ids: list[int] = field(default_factory=list)
 
 
 def _normalizar(d: DatosMeta) -> None:
@@ -46,7 +47,7 @@ def _validar(uow: UnidadDeTrabajo, d: DatosMeta) -> None:
     if not d.nombre.strip():
         raise ErrorValidacion("La meta necesita un nombre")
     if d.tipo == "ahorro":
-        if not d.objetivo or d.objetivo <= 0 or not (d.cuenta_ids or d.categoria_ids):
+        if not d.objetivo or d.objetivo <= 0 or not (d.cuenta_ids or d.categoria_ids or d.activo_ids):
             raise ErrorValidacion("Una meta de ahorro necesita un monto y las cuentas o categorías que la llevan")
         for c in d.cuenta_ids:
             obtener_cuenta(uow.sesion, c)
@@ -94,6 +95,8 @@ def _guardar_objetivos(uow: UnidadDeTrabajo, m: Meta, d: DatosMeta) -> None:
         uow.sesion.add(MetaObjetivo(meta_id=m.id, cuenta_id=c))
     for c in d.categoria_ids:
         uow.sesion.add(MetaObjetivo(meta_id=m.id, categoria_id=c))
+    for c in d.activo_ids:
+        uow.sesion.add(MetaObjetivo(meta_id=m.id, activo_id=c))
 
 
 def editar(uow: UnidadDeTrabajo, meta_id: int, d: DatosMeta) -> Meta:

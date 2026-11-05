@@ -1,6 +1,7 @@
 /** Cuentas: saldo calculado de cada una (nunca se edita a mano; RF-CU-02), crear, editar, archivar y elegir
  * cuáles suman al saldo total (fase 8, puntos 3 y 15). */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRefrescar } from "@/shared/lib/useRefrescar";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -29,14 +30,6 @@ async function cargarLogos(): Promise<{ ruta: string; nombre: string }[]> {
   } catch {
     return [];
   }
-}
-
-function useRefrescar() {
-  const cliente = useQueryClient();
-  return () => {
-    for (const k of [["cuentas"], ["dashboard"], ["calendario"], ["reportes"]])
-      void cliente.invalidateQueries({ queryKey: k });
-  };
 }
 
 function FormCuenta({ cuenta, alCerrar }: { cuenta: Cuenta | null; alCerrar: () => void }) {

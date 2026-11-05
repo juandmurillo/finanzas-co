@@ -170,9 +170,15 @@ function FormMeta({ meta, alCerrar }: { meta: Meta | null; alCerrar: () => void 
   const [tipo, setTipo] = useState<TipoMeta>(meta?.tipo ?? "ahorro");
   const [nombre, setNombre] = useState(meta?.nombre ?? "");
   const [objetivo, setObjetivo] = useState(meta?.objetivo ? mascaraMonto(String(meta.objetivo / 100)) : "");
-  const [rastreo, setRastreo] = useState<"cuentas" | "categorias">(
-    meta && meta.cuenta_ids.length === 0 && meta.categoria_ids.length > 0 ? "categorias" : "cuentas",
+  const [rastreo, setRastreo] = useState<"cuentas" | "categorias" | "activos">(
+    meta && meta.activo_ids.length > 0
+      ? "activos"
+      : meta && meta.cuenta_ids.length === 0 && meta.categoria_ids.length > 0
+        ? "categorias"
+        : "cuentas",
   );
+  const [activoIds, setActivoIds] = useState<number[]>(meta?.activo_ids ?? []);
+  const activos = useQuery({ queryKey: claves.activos, queryFn: api.activos });
   const [cuentaIds, setCuentaIds] = useState<number[]>(meta?.cuenta_ids ?? []);
   const [categoriaIds, setCategoriaIds] = useState<number[]>(meta?.categoria_ids ?? []);
   const [fecha, setFecha] = useState(meta?.fecha_objetivo ?? "");
@@ -187,6 +193,7 @@ function FormMeta({ meta, alCerrar }: { meta: Meta | null; alCerrar: () => void 
         objetivo: tipo === "habito" ? 0 : parseMonto(objetivo),
         cuenta_ids: rastreo === "cuentas" ? cuentaIds : [],
         categoria_ids: rastreo === "categorias" ? categoriaIds : [],
+        activo_ids: rastreo === "activos" ? activoIds : [],
         fecha_objetivo: (tipo === "ahorro" || tipo === "deuda") && fecha ? fecha : null,
       };
       if (!meta) {
@@ -300,6 +307,7 @@ function FormMeta({ meta, alCerrar }: { meta: Meta | null; alCerrar: () => void 
               [
                 ["cuentas", "Cuentas"],
                 ["categorias", "Categorías"],
+                ...(tipo === "ahorro" ? ([["activos", "Activos"]] as const) : []),
               ] as const
             ).map(([v, t]) => (
               <button
@@ -319,12 +327,36 @@ function FormMeta({ meta, alCerrar }: { meta: Meta | null; alCerrar: () => void 
             {tipo === "ahorro"
               ? rastreo === "cuentas"
                 ? "Cuenta lo que hay en esas cuentas."
-                : "Cuenta lo que aportas a esas categorías desde hoy."
+                : rastreo === "activos"
+                  ? "Cuenta lo que valen esos activos."
+                  : "Cuenta lo que aportas a esas categorías desde hoy."
               : rastreo === "cuentas"
                 ? "Vigila todo lo que gastas desde esas cuentas cada mes."
                 : "Vigila lo que gastas en esas categorías cada mes."}
           </span>
-          {rastreo === "cuentas" ? (
+          {rastreo === "activos" ? (
+            <div className="cd-row" style={{ gap: 6 }}>
+              {(activos.data?.activos ?? [])
+                .filter((a) => a.estado === "activo")
+                .map((a) => {
+                  const activa = activoIds.includes(a.id);
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      aria-pressed={activa}
+                      className="cd-btn cd-btn--sm selector-chip"
+                      onClick={() => setActivoIds((x) => (activa ? x.filter((i) => i !== a.id) : [...x, a.id]))}
+                    >
+                      {a.nombre}
+                    </button>
+                  );
+                })}
+              {activos.data?.activos.length === 0 && (
+                <span className="cd-delta-note">Primero registra un activo en la sección Activos.</span>
+              )}
+            </div>
+          ) : rastreo === "cuentas" ? (
             <div className="cd-row" style={{ gap: 6 }}>
               {(cuentas.data ?? []).map((c) => {
                 const activa = cuentaIds.includes(c.id);

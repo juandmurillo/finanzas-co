@@ -215,7 +215,7 @@ export function RevisionPage() {
           <div className="cd-bento">
             <section className="cd-card span-8" style={{ overflowX: "auto" }}>
               <h3 className="cd-card-title">Comparativo</h3>
-              <table className="cd-table cd-num">
+              <table className="cd-table cd-num tabla-apilable">
                 <thead>
                   <tr>
                     <th>Indicador</th>
@@ -230,11 +230,22 @@ export function RevisionPage() {
                     .filter((i) => apuestas || i.clave !== "apuestas_neto")
                     .map((i) => (
                       <tr key={i.clave}>
-                        <td>{INDICADORES[i.clave]}</td>
-                        <td style={{ textAlign: "right", fontWeight: 700 }}>{formatoCOP(i.actual)}</td>
-                        <td style={{ textAlign: "right" }}>{formatoCOP(i.anterior)}</td>
-                        <td style={{ textAlign: "right" }}>{formatoCOP(i.promedio)}</td>
-                        <td style={{ textAlign: "right" }}>
+                        <td
+                          data-etiqueta="<tr>
+                    <th>Indicador"
+                        >
+                          {INDICADORES[i.clave]}
+                        </td>
+                        <td data-etiqueta="Este mes" style={{ textAlign: "right", fontWeight: 700 }}>
+                          {formatoCOP(i.actual)}
+                        </td>
+                        <td data-etiqueta="Mes anterior" style={{ textAlign: "right" }}>
+                          {formatoCOP(i.anterior)}
+                        </td>
+                        <td data-etiqueta="Promedio 3 meses" style={{ textAlign: "right" }}>
+                          {formatoCOP(i.promedio)}
+                        </td>
+                        <td data-etiqueta="Frente al promedio" style={{ textAlign: "right" }}>
                           <Diferencia actual={i.actual} base={i.promedio} />
                         </td>
                       </tr>

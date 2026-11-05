@@ -83,7 +83,7 @@ function Termometro({ anio }: { anio: number }) {
         {d.seguridad_social.meses.length === 0 ? (
           <span className="cd-delta-note">No hay ingresos de trabajo independiente este año.</span>
         ) : (
-          <table className="cd-table cd-num">
+          <table className="cd-table cd-num tabla-apilable">
             <thead>
               <tr>
                 <th>Mes</th>
@@ -95,10 +95,22 @@ function Termometro({ anio }: { anio: number }) {
             <tbody>
               {d.seguridad_social.meses.map((m) => (
                 <tr key={m.mes}>
-                  <td style={{ textTransform: "capitalize" }}>{nombreMes(m.mes)}</td>
-                  <td style={{ textAlign: "right" }}>{formatoCOP(m.ingreso)}</td>
-                  <td style={{ textAlign: "right" }}>{m.obligado ? formatoCOP(m.ibc) : "no obligado"}</td>
-                  <td style={{ textAlign: "right", fontWeight: 700 }}>{m.obligado ? formatoCOP(m.total) : "—"}</td>
+                  <td
+                    data-etiqueta="<tr>
+                <th>Mes"
+                    style={{ textTransform: "capitalize" }}
+                  >
+                    {nombreMes(m.mes)}
+                  </td>
+                  <td data-etiqueta="Ingreso" style={{ textAlign: "right" }}>
+                    {formatoCOP(m.ingreso)}
+                  </td>
+                  <td data-etiqueta="IBC" style={{ textAlign: "right" }}>
+                    {m.obligado ? formatoCOP(m.ibc) : "no obligado"}
+                  </td>
+                  <td data-etiqueta="Aportes" style={{ textAlign: "right", fontWeight: 700 }}>
+                    {m.obligado ? formatoCOP(m.total) : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

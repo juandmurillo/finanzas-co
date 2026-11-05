@@ -3,6 +3,8 @@ import type { FiltroTransacciones, Periodo } from "./api";
 
 export const claves = {
   sistema: ["sistema"] as const,
+  activos: ["activos"] as const,
+  patrimonio: ["reportes", "patrimonio"] as const,
   cuentas: ["cuentas"] as const,
   transacciones: (f?: FiltroTransacciones) => (f ? (["transacciones", f] as const) : (["transacciones"] as const)),
   categorias: ["categorias"] as const,
@@ -45,6 +47,9 @@ export const INVALIDACIONES: Record<string, readonly (readonly string[])[]> = {
   // Todo movimiento puede cambiar el calendario, las metas y las alertas.
   transacciones: [["transacciones"], ["sugerencias"], ["presupuesto"], ["calendario"], ["metas"], ["alertas"]],
   sistema: [["sistema"]],
+  activos: [["activos"], ["reportes"], ["dashboard"], ["metas"], ["alertas"]],
+  // Se cambió toda la base (cargar, restaurar o borrar): se refresca todo.
+  todo: [[]],
   cuentas: [["cuentas"]],
   dashboard: [["dashboard"]],
   reportes: [["reportes"], ["dashboard"]],
