@@ -7,7 +7,11 @@ quien tiene ingresos irregulares, créditos caros y quiere ver con claridad a d�
 
 ![Registrar un gasto y ver cómo se recalculan el saldo y los gastos](docs/capturas/caudal-demo.gif)
 
-**[Ver la demo completa (49 s, MP4)](docs/capturas/caudal-demo.mp4)**
+
+
+https://github.com/user-attachments/assets/19c2f237-1216-46fd-a10f-8276519e8d2f
+
+
 
 ![Inicio](docs/capturas/inicio.jpg)
 
