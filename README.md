@@ -5,6 +5,10 @@ quien tiene ingresos irregulares, créditos caros y quiere ver con claridad a d�
 
 > Las capturas y la demo usan datos **ficticios**: una persona inventada, generada con semilla fija.
 
+![Registrar un gasto y ver cómo se recalculan el saldo y los gastos](docs/capturas/caudal-demo.gif)
+
+**[Ver la demo completa (49 s, MP4)](docs/capturas/caudal-demo.mp4)**
+
 ![Inicio](docs/capturas/inicio.jpg)
 
 | Gráficas de Inicio | Gráficas de flujo de caja |
