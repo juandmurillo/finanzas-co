@@ -1,0 +1,340 @@
+/* Inicio con el sistema compacto (docs/sistema/10_SISTEMA_DISENO_COMPACTO.md §6). */
+
+/* El héroe ya no es un enlace entero: tiene acciones propias. */
+.cd-balance.inicio-saldo {
+  grid-row: auto;
+  color: var(--on-brand);
+}
+.inicio-saldo-cuentas {
+  color: inherit;
+  text-decoration: none;
+}
+.inicio-saldo-cuentas:hover {
+  background: color-mix(in srgb, var(--on-brand) 18%, transparent);
+}
+.inicio-acciones {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: auto;
+}
+.inicio-acciones .cd-btn {
+  justify-content: center;
+  background: color-mix(in srgb, var(--on-brand) 14%, transparent);
+  color: var(--on-brand);
+  border-color: transparent;
+}
+.inicio-acciones .cd-btn:hover {
+  background: color-mix(in srgb, var(--on-brand) 24%, transparent);
+}
+
+/* Seis KPIs en rejilla de 3 × 2 al lado del héroe */
+.inicio-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: var(--gap-bento);
+}
+
+/* Las dos filas de KPIs solo existen para el celular: en escritorio no ocupan caja y la rejilla 3 × 2 sigue. */
+.inicio-kpis-fila {
+  display: contents;
+}
+
+/* Próximos pagos: monto y días a la derecha */
+.inicio-ico {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  color: var(--on-brand-soft);
+}
+.inicio-ico--alerta {
+  background: var(--negative-soft);
+  color: var(--negative);
+}
+.inicio-monto-dias {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+.inicio-monto-dias b {
+  font-size: var(--texto-cifra-lista);
+}
+
+/* Distribución de gastos e ingresos lado a lado */
+.inicio-donas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-bento);
+}
+.inicio-donas > .cd-card {
+  grid-column: auto;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .inicio-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .inicio-donas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 420px) {
+  .inicio-kpis {
+    gap: 8px;
+  }
+  .inicio-kpis .kpi-c-pie {
+    display: none;
+  }
+}
+
+.patrimonio-desglose {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* Columna izquierda: hallazgo a media altura y gasto diario debajo */
+.inicio-columna {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-bento);
+  min-width: 0;
+}
+.inicio-columna > .cd-card {
+  flex: 1;
+}
+.gasto-diario-pie {
+  margin: 8px 0 0;
+}
+
+/* Gastos e ingresos por categoría en una tarjeta */
+.categorias-mes {
+  height: 100%;
+}
+.categorias-lados {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.categorias-lado {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.categorias-lado + .categorias-lado {
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--border);
+}
+.categorias-lado-cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--texto-etiqueta);
+  font-weight: 650;
+  color: var(--ink-muted);
+}
+.categorias-lado-cabeza b {
+  font-size: 18px;
+  color: var(--ink);
+}
+.categorias-lado-cabeza b.tono-ingreso {
+  color: var(--positive);
+}
+@media (max-width: 700px) {
+  .categorias-lados {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .categorias-lado + .categorias-lado {
+    padding: var(--space-4) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+.categorias-nivel {
+  align-self: flex-start;
+  margin-bottom: 12px;
+}
+
+/* Mapa de calor con el sistema compacto */
+.calor .fila-metricas {
+  margin-bottom: 14px;
+}
+.calor-lienzo {
+  position: relative;
+}
+.calor .mapa-calor-dias {
+  grid-template-rows: 18px repeat(7, 1fr);
+  font-size: var(--texto-eje);
+  color: var(--ink-muted);
+  padding-right: 4px;
+}
+.calor .mapa-calor-dias > span {
+  display: flex;
+  align-items: center;
+}
+.calor .mapa-calor-semana {
+  grid-template-rows: 18px repeat(7, 1fr);
+}
+.calor .mapa-calor-mes {
+  font-size: var(--texto-eje);
+  line-height: 18px;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+.calor .mapa-calor-celda {
+  border-radius: 4px;
+}
+.calor .mapa-calor-celda.futuro {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
+  cursor: default;
+}
+.dia-corto {
+  display: none;
+}
+.calor-globo {
+  min-width: 150px;
+}
+.calor-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: var(--texto-eje);
+  color: var(--ink-muted);
+}
+.calor-leyenda i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.calor-leyenda span {
+  margin: 0 6px;
+}
+.calor-leyenda .futuro-muestra {
+  margin-left: 12px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+@media (max-width: 860px) {
+  .dia-largo {
+    display: none;
+  }
+  .dia-corto {
+    display: inline;
+  }
+}
+
+/* Próximos pagos: toma la altura de la fila y desplaza su lista si no cabe */
+@media (min-width: 1101px) {
+  .inicio-proximos {
+    display: flex;
+    flex-direction: column;
+    height: 0;
+    min-height: 100%;
+    overflow: hidden;
+  }
+  .inicio-proximos .lista-densa {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+  }
+}
+
+/* Gasto por día de la semana */
+.gasto-semana {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.gasto-semana li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 34px minmax(72px, auto);
+  align-items: center;
+  gap: 8px;
+  font-size: var(--texto-etiqueta);
+}
+.gasto-semana-dia {
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+.gasto-semana-pista {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--chart-track);
+  overflow: hidden;
+}
+.gasto-semana-pista i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--chart-1) 25%, transparent), var(--chart-1));
+}
+.gasto-semana li.mayor .gasto-semana-pista i {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent), var(--accent));
+}
+.gasto-semana-pct {
+  color: var(--ink-muted);
+  text-align: right;
+}
+.gasto-semana b {
+  text-align: right;
+  font-size: var(--texto-cuerpo);
+}
+
+/* Celular: dos filas de KPIs (ingresos, gastos y flujo; luego vencido, en camino y deuda), cada una con su
+   propio desplazamiento horizontal y ajuste por tarjeta. La página no se desplaza a los lados. */
+@media (max-width: 860px) {
+  .inicio-kpis {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  /* Una fila que se desplaza recorta lo que sale de su caja, y la máscara del desvanecido también: sin aire, la
+     sombra de las tarjetas acababa en un borde duro (una franja sólida bajo cada fila, muy visible en Android).
+     El relleno deja caber la sombra entera (la más larga, Vidrio, baja 38 px) y el margen negativo lo devuelve,
+     así que la distribución no cambia; el relleno no recibe toques (pasan a lo que hay debajo). */
+  .inicio-kpis-fila {
+    display: flex;
+    gap: 8px;
+    margin: -14px -12px -36px;
+    padding: 16px 12px 40px;
+    pointer-events: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 12px;
+    scrollbar-width: none;
+  }
+  .inicio-kpis-fila::-webkit-scrollbar {
+    display: none;
+  }
+  .inicio-kpis-fila > * {
+    pointer-events: auto;
+  }
+  .inicio-kpis-fila > .kpi-c {
+    flex: 0 0 min(62vw, 232px);
+    scroll-snap-align: start;
+  }
+  .inicio-kpis .kpi-c-pie {
+    display: none;
+  }
+}

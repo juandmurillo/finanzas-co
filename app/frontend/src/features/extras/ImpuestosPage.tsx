@@ -8,7 +8,10 @@ import type { ParametroCO } from "@/shared/api/tipos";
 import { api } from "@/shared/lib/api";
 import { fechaCorta, formatoCOP, hoyISO, nombreMes, porcentaje } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
+import { BarraFiltros } from "@/shared/ui/BarraFiltros";
+import { BarraLimite } from "@/shared/ui/Datos";
 import { ErrorVista, TarjetaCargando } from "@/shared/ui/Estados";
+import { CabeceraTarjeta, KpiCompacto } from "@/shared/ui/Kpi";
 
 const NOMBRES: Record<string, string> = {
   uvt: "UVT",
@@ -23,57 +26,64 @@ function Termometro({ anio }: { anio: number }) {
   if (t.isPending) return <TarjetaCargando />;
   if (t.isError) return <ErrorVista error={t.error} reintentar={() => void t.refetch()} />;
   const d = t.data;
+  const cercano = [...d.filas].sort((a, b) => (b.pct_proyectado ?? 0) - (a.pct_proyectado ?? 0))[0];
   return (
     <>
+      <div className="renta-kpis">
+        <KpiCompacto
+          inversa
+          etiqueta={`Declarar renta ${d.anio}`}
+          icono="documento"
+          valor={d.declara_probable ? "Probablemente sí" : "Por ahora no"}
+          nota="basta con superar un tope"
+        />
+        <KpiCompacto
+          etiqueta="Tope más cercano"
+          icono="alerta"
+          valor={cercano ? porcentaje(Math.min(9.99, cercano.pct_proyectado ?? 0), 0) : "—"}
+          nota={cercano ? cercano.nombre : undefined}
+        />
+        <KpiCompacto
+          etiqueta="Seguridad social"
+          icono="escudo"
+          valor={d.seguridad_social.total_anio}
+          nota={`estimado ${d.anio}`}
+        />
+        <KpiCompacto
+          etiqueta={`UVT ${d.anio}`}
+          icono="ajustes"
+          valor={d.uvt ? formatoCOP(d.uvt * 100) : "sin dato"}
+          nota={`${d.meses_transcurridos} ${d.meses_transcurridos === 1 ? "mes" : "meses"} registrados`}
+        />
+      </div>
       <section className="cd-card cd-stack" style={{ gap: 14 }}>
-        <div className="cd-card-head">
-          <h3 className="cd-card-title">¿Te tocaría declarar renta por {d.anio}?</h3>
-          <span className={`cd-badge ${d.declara_probable ? "cd-badge--warning" : "cd-badge--positive"}`}>
-            {d.declara_probable ? "Probablemente sí" : "Por ahora no"}
-          </span>
-        </div>
-        <span className="cd-delta-note">
-          Basta con superar un tope. UVT {d.anio}: {d.uvt ? formatoCOP(d.uvt * 100) : "sin dato"} · proyección con{" "}
-          {d.meses_transcurridos} {d.meses_transcurridos === 1 ? "mes" : "meses"} registrados.
-        </span>
-        {d.filas.map((f) => {
-          const pct = Math.min(100, Math.round((f.pct_proyectado ?? 0) * 100));
-          const clase = pct >= 100 ? "cd-progress--over" : pct >= 80 ? "cd-progress--warn" : "";
-          return (
-            <div key={f.clave} className="cd-stack" style={{ gap: 6 }}>
-              <div className="cd-row" style={{ justifyContent: "space-between", flexWrap: "nowrap", gap: 10 }}>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>{f.nombre}</span>
-                <span className="cd-delta-note cd-num" style={{ whiteSpace: "nowrap" }}>
-                  {formatoCOP(f.valor)} de {f.tope ? formatoCOP(f.tope) : "—"}
-                </span>
-              </div>
-              <div
-                className={`cd-progress ${clase}`}
-                role="progressbar"
-                aria-label={f.nombre}
-                aria-valuenow={pct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <i style={{ width: `${Math.max(1, pct)}%` }} />
-              </div>
-              <span className="cd-delta-note cd-num">
-                {f.tope_uvt.toLocaleString("es-CO")} UVT
-                {f.proyectado !== f.valor && ` · a este ritmo cerrarías el año en ${formatoCOP(f.proyectado)}`}
-              </span>
-            </div>
-          );
-        })}
+        <CabeceraTarjeta
+          titulo={`Topes para declarar por ${d.anio}`}
+          rango="Barra: lo que cerrarías el año a este ritmo frente al tope"
+        />
+        {d.filas.map((f) => (
+          <div key={f.clave} className="cd-stack renta-tope" style={{ gap: 6 }}>
+            <span className="renta-tope-nombre">{f.nombre}</span>
+            {f.tope ? (
+              <BarraLimite etiqueta={f.nombre} gastado={f.proyectado} limite={f.tope} alta />
+            ) : (
+              <span className="cd-delta-note">Sin tope configurado</span>
+            )}
+            <span className="cd-delta-note cd-num">
+              Llevas {formatoCOP(f.valor)} · tope {f.tope_uvt.toLocaleString("es-CO")} UVT
+            </span>
+          </div>
+        ))}
         <p className="cd-delta-note" style={{ margin: 0 }}>
           {d.aviso} Los topes son los del art. 592 del Estatuto Tributario; la app no ve tus consumos con tarjeta de
           otros bancos ni tu patrimonio fuera de estas cuentas.
         </p>
       </section>
       <section className="cd-card cd-stack" style={{ gap: 12, overflowX: "auto" }}>
-        <div className="cd-card-head">
-          <h3 className="cd-card-title">Seguridad social como independiente</h3>
-          <span className="cd-delta-note cd-num">total {formatoCOP(d.seguridad_social.total_anio)}</span>
-        </div>
+        <CabeceraTarjeta
+          titulo="Seguridad social como independiente"
+          rango={`total ${formatoCOP(d.seguridad_social.total_anio)}`}
+        />
         <span className="cd-delta-note">
           IBC = {porcentaje(d.seguridad_social.porcentajes.ibc, 0)} de tus ingresos de trabajo independiente (mínimo 1
           salario mínimo). Salud {porcentaje(d.seguridad_social.porcentajes.salud, 1)}, pensión{" "}
@@ -95,11 +105,7 @@ function Termometro({ anio }: { anio: number }) {
             <tbody>
               {d.seguridad_social.meses.map((m) => (
                 <tr key={m.mes}>
-                  <td
-                    data-etiqueta="<tr>
-                <th>Mes"
-                    style={{ textTransform: "capitalize" }}
-                  >
+                  <td data-etiqueta="Mes" style={{ textTransform: "capitalize" }}>
                     {nombreMes(m.mes)}
                   </td>
                   <td data-etiqueta="Ingreso" style={{ textAlign: "right" }}>
@@ -143,7 +149,7 @@ function Parametros() {
   const valor = (p: ParametroCO) => (esTasa(p.clave) ? `${porcentaje(p.valor, 2)} E.A.` : formatoCOP(p.valor * 100));
   return (
     <section className="cd-card cd-stack" style={{ gap: 10 }}>
-      <h3 className="cd-card-title">Parámetros de Colombia</h3>
+      <CabeceraTarjeta titulo="Parámetros de Colombia" rango="toca uno para corregirlo" />
       {trm.data && (
         <div className="cd-row" style={{ justifyContent: "space-between" }}>
           <span>
@@ -219,7 +225,9 @@ export function ImpuestosPage() {
           <h1>Renta y aportes</h1>
           <p>Si te tocaría declarar renta y cuánto aportarías como independiente. Estimación educativa.</p>
         </div>
-        <div className="cd-seg" role="radiogroup" aria-label="Año gravable">
+      </div>
+      <BarraFiltros etiqueta="Año gravable">
+        <div className="cd-seg cd-seg--brand" role="radiogroup" aria-label="Año gravable">
           {[actual - 1, actual].map((a) => (
             <button
               key={a}
@@ -232,9 +240,9 @@ export function ImpuestosPage() {
             </button>
           ))}
         </div>
-      </div>
+      </BarraFiltros>
       <div className="cd-bento">
-        <div className="span-8 cd-stack" style={{ gap: 16 }}>
+        <div className="span-8 cd-stack" style={{ gap: "var(--gap-bento)" }}>
           <Termometro anio={anio} />
         </div>
         <div className="span-4">

@@ -1,95 +1,141 @@
-/** Inicio: saldo disponible con seis indicadores compactos, flujo de caja con próximos pagos (primero lo
- * vencido), donas de gastos e ingresos, saldo en el tiempo, mapa de calor y movimientos recientes. Cada gráfico
- * recuerda su periodo. */
+/** Inicio (sistema compacto, docs/sistema/10_SISTEMA_DISENO_COMPACTO.md §6): saldo con acciones rápidas, seis
+ * KPIs compactos con variación frente al mes anterior, flujo de caja en dos tonos, próximos pagos (primero lo
+ * vencido), hallazgos del mes, distribución de gastos e ingresos, saldo en el tiempo, mapa de calor y
+ * movimientos recientes. Cada gráfico recuerda su periodo. */
 import { useSistema } from "@/shared/lib/useSistema";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { useCaptura } from "@/features/captura";
-import { FilaMovimiento } from "@/features/transacciones";
+import { TablaMovimientos } from "@/features/transacciones";
 import type { Dashboard } from "@/shared/api/tipos";
 import { api } from "@/shared/lib/api";
-import { fechaCorta, formatoCOP, nombreMes } from "@/shared/lib/formato";
+import { BarrasAgrupadas } from "@/shared/charts";
+import { fechaCorta, formatoCOP, hoyISO, nombreMes, porcentaje } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 import { Dinero } from "@/shared/ui/Dinero";
-import { ErrorVista, TarjetaCargando, Vacio } from "@/shared/ui/Estados";
+import { ErrorVista, TarjetaCargando } from "@/shared/ui/Estados";
 import { DiasRestantes } from "@/shared/ui/DiasRestantes";
-import { Icono, iconoCategoria, type NombreIcono } from "@/shared/ui/Icono";
-import { CuentaEtiqueta, LogoCuenta } from "@/shared/ui/SelectorCuenta";
+import { ListaDensa } from "@/shared/ui/Datos";
+import { Icono } from "@/shared/ui/Icono";
+import { IconoCategoria, tonosCategoria, useEstiloCategorias } from "@/shared/ui/EstiloCategoria";
+import { useDesvanecido } from "@/shared/lib/useDesvanecido";
+import { CarruselInsight } from "@/shared/ui/CarruselInsight";
+import { CabeceraTarjeta, KpiCompacto } from "@/shared/ui/Kpi";
+import { LogoCuenta } from "@/shared/ui/SelectorCuenta";
 
 import { ControlPeriodo, usePeriodo } from "@/features/analisis/Periodo";
 
-import { DonaCategorias } from "./components/DonaCategorias";
-import { FlujoCaja } from "./components/FlujoCaja";
+import { CategoriasMes } from "./components/CategoriasMes";
+import { GastoDiario } from "./components/GastoDiario";
 import { MapaCalor } from "./components/MapaCalor";
+import "./inicio.css";
 import { SaldoPatrimonio } from "./components/SaldoPatrimonio";
 
+import { ZonaPeriodo } from "@/features/analisis/ZonaPeriodo";
+import { keepPreviousData } from "@tanstack/react-query";
 /** Cuotas de deuda de los próximos 30 días que el saldo no alcanza a cubrir. */
 function faltanteCuotas(d: Dashboard): { faltante: number; cuotas: number } {
   return { cuotas: d.cuotas_proximas, faltante: Math.max(0, d.cuotas_proximas - d.saldo_total) };
 }
 
-function Kpi({
-  etiqueta,
-  icono,
-  valor,
-  nota,
-  negativo,
-  a,
-}: {
-  etiqueta: string;
-  icono: NombreIcono;
-  valor: number;
-  nota: string;
-  /** Solo lo que pide atención va en rojo (gastar no es rojo). */
-  negativo?: boolean;
-  a: "/flujo" | "/deudas" | "/categorias" | "/recurrentes";
-}) {
-  return (
-    <Link
-      to={a}
-      search={a === "/categorias" ? { grupo: "ingreso" } : undefined}
-      className="cd-card cd-kpi kpi-compacta tarjeta-enlace span-3"
-      aria-label={`${etiqueta}: ver detalle`}
-    >
-      <span className="cd-kpi-label">
-        <span className="cd-kpi-ico">
-          <Icono nombre={icono} pequeno />
-        </span>
-        {etiqueta}
-      </span>
-      <div className="cd-kpi-value" style={negativo ? { color: "var(--negative)" } : undefined}>
-        <Dinero centavos={valor} />
-      </div>
-      <span className="cd-delta-note kpi-nota">{nota}</span>
-    </Link>
-  );
-}
-
 const pagos = (n: number) => `${n} ${n === 1 ? "pago" : "pagos"}`;
 
-/** Flujo de caja del Inicio: 6 m, 12 m o todo, con ‹ › para ir a periodos anteriores. */
-function FlujoInicio({ mes }: { mes: string }) {
+/** Flujo de caja del Inicio: ingresos y gastos por mes en dos tonos, con periodo recordado. */
+function FlujoInicio() {
   const nav = usePeriodo("12m", "inicio-flujo");
   const mensual = useQuery({
     queryKey: claves.reporteMensual(nav.periodo),
     queryFn: () => api.reporteMensual(nav.periodo),
+    placeholderData: keepPreviousData,
   });
+  const meses = mensual.data?.meses ?? [];
   return (
     <section className="cd-card span-8">
-      <div className="cd-card-head" style={{ flexWrap: "wrap", gap: 8 }}>
-        <Link to="/flujo" className="cd-card-title tarjeta-enlace-titulo">
-          Flujo de caja →
-        </Link>
-        <ControlPeriodo nav={nav} opciones={["6m", "12m", "todo", "rango"]} />
-      </div>
-      {mensual.data ? <FlujoCaja meses={mensual.data.meses} activo={mes} /> : <TarjetaCargando filas={3} />}
+      <CabeceraTarjeta
+        titulo="Flujo de caja"
+        rango="Ingresos y gastos por mes"
+        rangoSoloEscritorio
+        accion={<ControlPeriodo nav={nav} opciones={["6m", "12m", "todo", "rango"]} />}
+      />
+      {mensual.isError && <ErrorVista error={mensual.error} reintentar={() => void mensual.refetch()} />}
+      {mensual.isPending && <TarjetaCargando filas={3} />}
+      {mensual.data && (
+        <ZonaPeriodo nav={nav} cargando={mensual.isPlaceholderData}>
+          <BarrasAgrupadas
+            titulo="Ingresos y gastos por mes"
+            etiquetas={meses.map((m) => nombreMes(m.mes, true))}
+            detalles={meses.map((m) => nombreMes(m.mes))}
+            series={[
+              { nombre: "Ingresos", color: "var(--chart-1)", valores: meses.map((m) => m.ingresos_total) },
+              {
+                nombre: "Gastos",
+                color: "color-mix(in srgb, var(--chart-1) 40%, var(--card))",
+                valores: meses.map((m) => m.gastos_total),
+              },
+            ]}
+            alto={220}
+            relativo
+            desvanecer
+          />
+        </ZonaPeriodo>
+      )}
+      <Link to="/flujo" className="cd-link" style={{ marginTop: 8 }}>
+        Ver flujo de caja →
+      </Link>
     </section>
   );
 }
 
+/** Hallazgos del mes calculados con los datos de Inicio (nada inventado: si falta el dato, no se dice). */
+function hallazgos(
+  d: Dashboard,
+  enCamino: { total: number; n: number },
+  promedio: (k: "ingresos_total" | "gastos_total") => number,
+): { frase: string; cifra: string }[] {
+  const salida: { frase: string; cifra: string }[] = [];
+  const m = d.mes_actual;
+  const mes = nombreMes(d.mes).split(" ")[0];
+  const promGastos = promedio("gastos_total");
+  if (m && promGastos > 0)
+    salida.push({
+      frase: `En ${mes} llevas gastado el {cifra} de lo que gastas en un mes promedio.`,
+      cifra: porcentaje(m.gastos_total / promGastos, 0),
+    });
+  const promIngresos = promedio("ingresos_total");
+  if (m && promIngresos > 0)
+    salida.push({
+      frase: `Tus ingresos de ${mes} van en el {cifra} de tu promedio mensual.`,
+      cifra: porcentaje(m.ingresos_total / promIngresos, 0),
+    });
+  if (enCamino.n > 0)
+    salida.push({
+      frase: `En los próximos 30 días salen {cifra} en ${pagos(enCamino.n)} programados.`,
+      cifra: formatoCOP(enCamino.total),
+    });
+  return salida;
+}
+
+/** Parte del mes ya transcurrida (1 si el mes ya terminó). */
+function fraccionDelMes(mes: string): number {
+  const hoy = hoyISO();
+  if (hoy.slice(0, 7) !== mes) return 1;
+  const [a, m] = mes.split("-").map(Number);
+  const dias = new Date(a ?? 2000, m ?? 1, 0).getDate();
+  return Number(hoy.slice(8, 10)) / dias;
+}
+
+/** Variación frente a una referencia; null si no hay con qué comparar. */
+function variacion(actual: number | undefined, anterior: number | undefined): number | null {
+  if (actual === undefined || !anterior) return null;
+  return (actual - anterior) / Math.abs(anterior);
+}
+
 export function DashboardPage() {
+  const filaKpis1 = useDesvanecido<HTMLDivElement>();
+  const filaKpis2 = useDesvanecido<HTMLDivElement>();
   const { abrir, abrirMovimiento } = useCaptura();
+  const estiloCat = useEstiloCategorias();
   const dash = useQuery({ queryKey: claves.dashboard, queryFn: api.dashboard });
   const sistema = useSistema();
   const cal = useQuery({ queryKey: claves.calendario(30), queryFn: () => api.calendario(30) });
@@ -125,6 +171,13 @@ export function DashboardPage() {
   const vencido = { total: -vencidos.reduce((t, e) => t + e.monto, 0), n: vencidos.length };
   const idsVencidos = new Set(vencidos.map((e) => e.id));
   const proximos = d.proximos_pagos.filter((p) => !idsVencidos.has(p.id)).slice(0, 5);
+  const flujoMes = mesActual?.flujo_operativo ?? 0;
+  // El mes en curso va a medias: se compara con el ritmo promedio a la fecha, no con un mes completo.
+  const avanceMes = fraccionDelMes(d.mes);
+  const dIngresos = variacion(mesActual?.ingresos_total, promedio("ingresos_total") * avanceMes);
+  const dGastos = variacion(mesActual?.gastos_total, promedio("gastos_total") * avanceMes);
+  const notaRitmo = avanceMes < 1 ? "vs ritmo promedio" : "vs promedio";
+  const lista = hallazgos(d, enCamino, promedio);
 
   return (
     <>
@@ -172,20 +225,20 @@ export function DashboardPage() {
       )}
 
       <div className="cd-bento">
-        <Link
-          to="/cuentas"
-          className="cd-balance inicio-saldo tarjeta-enlace span-3"
-          aria-label="Saldo disponible: ver cuentas"
-        >
+        <section className="cd-balance inicio-saldo span-4" aria-labelledby="inicio-saldo">
           <div className="cd-balance-top">
-            <span className="cd-balance-label">Saldo disponible</span>
-            <span className="cd-chip-glass">{incluidas.length} cuentas</span>
+            <span id="inicio-saldo" className="cd-balance-label">
+              Saldo disponible
+            </span>
+            <Link to="/cuentas" className="cd-chip-glass inicio-saldo-cuentas">
+              {incluidas.length} cuentas →
+            </Link>
           </div>
           <div className="cd-balance-value">
             <Dinero centavos={d.saldo_total} />
           </div>
           <ul className="inicio-cuentas">
-            {incluidas.map((c) => (
+            {incluidas.slice(0, 4).map((c) => (
               <li key={c.id}>
                 <LogoCuenta cuenta={c} tam={18} />
                 <span>{c.nombre}</span>
@@ -193,148 +246,188 @@ export function DashboardPage() {
               </li>
             ))}
           </ul>
-        </Link>
-        <Kpi
-          etiqueta="Ingresos"
-          icono="entra"
-          valor={mesActual?.ingresos_total ?? 0}
-          nota={`Promedio ${formatoCOP(promedio("ingresos_total"))}/mes`}
-          a="/categorias"
-        />
-        <Kpi
-          etiqueta="Vencido"
-          icono="alerta"
-          valor={vencido.total}
-          negativo={vencido.n > 0}
-          nota={vencido.n ? `${pagos(vencido.n)} sin registrar` : "Al día"}
-          a="/recurrentes"
-        />
-        <Kpi
-          etiqueta={`Flujo de ${mesCorto}`}
-          icono="flujo"
-          valor={mesActual?.flujo_operativo ?? 0}
-          negativo={(mesActual?.flujo_operativo ?? 0) < 0}
-          nota={(mesActual?.flujo_operativo ?? 0) < 0 ? "Déficit" : "Superávit"}
-          a="/flujo"
-        />
-        <Kpi
-          etiqueta="Gastos"
-          icono="sale"
-          valor={mesActual?.gastos_total ?? 0}
-          nota={`Promedio ${formatoCOP(promedio("gastos_total"))}/mes`}
-          a="/flujo"
-        />
-        <Kpi
-          etiqueta="En camino"
-          icono="calendario"
-          valor={enCamino.total}
-          nota={`${pagos(enCamino.n)} en 30 días`}
-          a="/recurrentes"
-        />
-        <Kpi
-          etiqueta="Deuda"
-          icono="deudas"
-          valor={d.deuda_total}
-          nota={`${d.creditos.length} ${d.creditos.length === 1 ? "crédito" : "créditos"} · ${formatoCOP(d.cuotas_mes)}/mes`}
-          a="/deudas"
-        />
-
-        <FlujoInicio mes={d.mes} />
-        <section className="cd-card span-4 inicio-proximos">
-          <div className="cd-card-head">
-            <h3 className="cd-card-title">Próximos pagos</h3>
-            <Link className="cd-link" to="/recurrentes">
-              Ver todo →
-            </Link>
+          <div className="inicio-acciones">
+            <button className="cd-btn cd-btn--sm" onClick={() => abrir("gasto")}>
+              <Icono nombre="sale" pequeno /> Gasto
+            </button>
+            <button className="cd-btn cd-btn--sm" onClick={() => abrir("ingreso")}>
+              <Icono nombre="entra" pequeno /> Ingreso
+            </button>
+            <button className="cd-btn cd-btn--sm" onClick={() => abrir("transferencia")}>
+              <Icono nombre="movimientos" pequeno /> Transferir
+            </button>
           </div>
-          {d.proximos_pagos.length || vencidos.length ? (
-            <ul className="cd-list">
-              {vencidos.map((e) => (
-                <li key={`vencido-${e.tipo}-${e.id}`} style={{ padding: 0 }}>
-                  <button
-                    type="button"
-                    className="fila-boton cd-row"
-                    style={{ padding: "10px 8px", gap: 12, flexWrap: "nowrap" }}
-                    disabled={e.tipo !== "programada"}
-                    onClick={() => abrirMovimiento(e.id)}
-                  >
-                    <span
-                      className="cd-avatar cd-avatar--sq"
-                      style={{ background: "var(--negative-soft)", color: "var(--negative)" }}
-                    >
-                      <Icono nombre="alerta" />
-                    </span>
-                    <div className="grow">
-                      {e.descripcion || e.categoria_ruta?.at(-1)}
-                      <small>
-                        {fechaCorta(e.fecha)}
-                        {e.cuenta ? ` · ${e.cuenta}` : ""}
-                      </small>
-                    </div>
-                    <span className="cd-stack" style={{ alignItems: "flex-end", gap: 4 }}>
-                      <span className="cd-amt">{formatoCOP(Math.abs(e.monto))}</span>
-                      <DiasRestantes dias={e.dias} />
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {proximos.map((p) => (
-                <li key={p.id} style={{ padding: 0 }}>
-                  <button
-                    type="button"
-                    className="fila-boton cd-row"
-                    style={{ padding: "10px 8px", gap: 12, flexWrap: "nowrap" }}
-                    onClick={() => abrirMovimiento(p)}
-                  >
-                    <span
-                      className="cd-avatar cd-avatar--sq"
-                      style={{ background: "var(--brand-soft)", color: "var(--on-brand-soft)" }}
-                    >
-                      <Icono nombre={iconoCategoria(p.categoria_ruta, p.grupo)} />
-                    </span>
-                    <div className="grow">
-                      {p.descripcion || p.categoria_ruta.at(-1)}
-                      <small>
-                        {fechaCorta(p.fecha)} · <CuentaEtiqueta nombre={p.cuenta} id={p.cuenta_id} />
-                      </small>
-                    </div>
-                    <span className="cd-stack" style={{ alignItems: "flex-end", gap: 4 }}>
-                      <span className="cd-amt">{formatoCOP(Math.abs(p.monto))}</span>
-                      <DiasRestantes dias={p.dias} />
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Vacio titulo="No tienes pagos programados" />
-          )}
         </section>
 
-        <DonaCategorias tipo="gasto" />
-        <DonaCategorias tipo="ingreso" />
+        <div className="span-8 inicio-kpis">
+          <div
+            ref={filaKpis1}
+            className="inicio-kpis-fila desvanece-lados"
+            role="group"
+            aria-label="Ingresos, gastos y flujo del mes"
+          >
+            <KpiCompacto
+              etiqueta="Ingresos"
+              icono="entra"
+              valor={mesActual?.ingresos_total ?? 0}
+              delta={
+                dIngresos === null ? undefined : { valor: dIngresos, sentido: dIngresos > 0 ? "mejora" : "neutro" }
+              }
+              nota={notaRitmo}
+              pie={{ texto: `Promedio ${formatoCOP(promedio("ingresos_total"))}/mes`, a: "/flujo" }}
+            />
+            <KpiCompacto
+              etiqueta="Gastos"
+              icono="sale"
+              valor={mesActual?.gastos_total ?? 0}
+              delta={dGastos === null ? undefined : { valor: dGastos }}
+              nota={notaRitmo}
+              pie={{ texto: `Promedio ${formatoCOP(promedio("gastos_total"))}/mes`, a: "/flujo" }}
+            />
+            <KpiCompacto
+              etiqueta={`Flujo de ${mesCorto}`}
+              icono="flujo"
+              valor={flujoMes}
+              delta={{
+                valor: 0,
+                sentido: flujoMes < 0 ? "alerta" : "mejora",
+                texto: flujoMes < 0 ? "Déficit" : "Superávit",
+              }}
+              pie={{ texto: "Ver flujo de caja", a: "/flujo" }}
+            />
+          </div>
+          <div
+            ref={filaKpis2}
+            className="inicio-kpis-fila desvanece-lados"
+            role="group"
+            aria-label="Pendientes y deuda"
+          >
+            <KpiCompacto
+              etiqueta="Vencido"
+              icono="alerta"
+              valor={vencido.total}
+              cargando={cal.isPending}
+              delta={
+                cal.isSuccess
+                  ? vencido.n
+                    ? { valor: 0, sentido: "alerta", texto: `${pagos(vencido.n)} sin registrar` }
+                    : { valor: 0, sentido: "mejora", texto: "Al día" }
+                  : undefined
+              }
+              nota={cal.isError ? "No se pudo consultar" : undefined}
+              pie={{ texto: "Ver recurrentes", a: "/recurrentes" }}
+            />
+            <KpiCompacto
+              etiqueta="En camino"
+              icono="calendario"
+              valor={enCamino.total}
+              cargando={cal.isPending}
+              nota={`${pagos(enCamino.n)} en 30 días`}
+              pie={{ texto: "Ver calendario", a: "/recurrentes" }}
+            />
+            <KpiCompacto
+              etiqueta="Deuda"
+              icono="deudas"
+              valor={d.deuda_total}
+              nota={`${formatoCOP(d.cuotas_mes)}/mes`}
+              pie={{
+                texto: `${d.creditos.length} ${d.creditos.length === 1 ? "crédito" : "créditos"}`,
+                a: "/deudas",
+              }}
+            />
+          </div>
+        </div>
+
+        <FlujoInicio />
+        <section className="cd-card span-4 inicio-proximos">
+          <CabeceraTarjeta
+            titulo="Próximos pagos"
+            rango={vencidos.length ? `${pagos(vencidos.length)} vencidos primero` : "Próximos 30 días"}
+            accion={
+              <Link className="cd-link" to="/recurrentes">
+                Ver todo →
+              </Link>
+            }
+          />
+          <ListaDensa
+            etiqueta="Próximos pagos"
+            vacio="No tienes pagos programados."
+            max={40}
+            filas={[
+              ...vencidos.map((e) => ({
+                clave: `vencido-${e.tipo}-${e.id}`,
+                titulo: e.descripcion || e.categoria_ruta?.at(-1) || "Pago",
+                detalle: `${fechaCorta(e.fecha)}${e.cuenta ? ` · ${e.cuenta}` : ""}`,
+                inicio: (
+                  <span className="inicio-ico inicio-ico--alerta">
+                    <Icono nombre="alerta" pequeno />
+                  </span>
+                ),
+                fin: <MontoConDias monto={e.monto} dias={e.dias} />,
+                alElegir: e.tipo === "programada" ? () => abrirMovimiento(e.id) : undefined,
+              })),
+              ...proximos.map((p) => ({
+                clave: p.id,
+                titulo: p.descripcion || p.categoria_ruta.at(-1) || "Pago",
+                detalle: `${fechaCorta(p.fecha)} · ${p.cuenta}`,
+                inicio: (
+                  <span className="inicio-ico" style={tonosCategoria(estiloCat({ ruta: p.categoria_ruta }))}>
+                    <IconoCategoria
+                      estilo={estiloCat({ ruta: p.categoria_ruta })}
+                      ruta={p.categoria_ruta}
+                      grupo={p.grupo}
+                      tam={16}
+                    />
+                  </span>
+                ),
+                fin: <MontoConDias monto={p.monto} dias={p.dias} />,
+                alElegir: () => abrirMovimiento(p),
+              })),
+            ]}
+          />
+        </section>
+
+        <div className="span-4 inicio-columna">
+          {lista.length > 0 && <CarruselInsight items={lista} chip="Este mes" />}
+          <GastoDiario />
+        </div>
+        <div className="span-8">
+          <CategoriasMes />
+        </div>
 
         <SaldoPatrimonio patrimonio={d.patrimonio} />
         <MapaCalor />
 
         <section className="cd-card span-12">
-          <div className="cd-card-head">
-            <h3 className="cd-card-title">Movimientos recientes</h3>
-            <Link className="cd-link" to="/movimientos">
-              Ver todo →
-            </Link>
-          </div>
+          <CabeceraTarjeta
+            titulo="Movimientos recientes"
+            accion={
+              <Link className="cd-link" to="/movimientos">
+                Ver todo →
+              </Link>
+            }
+          />
           {recientes.isPending && <TarjetaCargando filas={5} />}
           {recientes.isError && <ErrorVista error={recientes.error} reintentar={() => void recientes.refetch()} />}
           {recientes.data && (
-            <ul className="cd-list">
-              {recientes.data.items.map((tx) => (
-                <FilaMovimiento key={tx.id} tx={tx} mostrarFecha />
-              ))}
-            </ul>
+            <TablaMovimientos
+              titulo="Movimientos recientes"
+              items={recientes.data.items}
+              vacio={{ titulo: "Aún no hay movimientos" }}
+            />
           )}
         </section>
       </div>
     </>
+  );
+}
+
+/** Monto de un pago con los días que faltan (o el retraso) debajo. */
+function MontoConDias({ monto, dias }: { monto: number; dias: number }) {
+  return (
+    <span className="inicio-monto-dias">
+      <b className="cd-num">{formatoCOP(Math.abs(monto))}</b>
+      <DiasRestantes dias={dias} />
+    </span>
   );
 }

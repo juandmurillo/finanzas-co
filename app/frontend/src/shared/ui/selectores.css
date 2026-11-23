@@ -1,0 +1,452 @@
+/* Listas desplegables y calendarios propios (Desplegable, CampoFecha, Flotante). Solo tokens del tema: cada
+   estilo de apariencia los retoca en styles/estilos.css. */
+
+/* ---------- Controles ---------- */
+.desplegable,
+.campo-fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.desplegable:disabled,
+.campo-fecha:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+/* Sin clase propia, el control toma la forma de un campo. */
+.desplegable:not(.cd-input):not(.cd-select),
+.campo-fecha:not(.cd-input):not(.cd-select) {
+  height: var(--control-height);
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: 500 var(--texto-cuerpo) var(--font-sans);
+}
+.desplegable.cd-select {
+  padding-right: 10px;
+}
+.desplegable-valor,
+.campo-fecha-valor {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.desplegable-valor.vacio,
+.campo-fecha-valor.vacio {
+  color: var(--ink-muted);
+}
+.desplegable-flecha {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--ink-muted);
+  transition: transform 0.15s ease;
+}
+.desplegable[aria-expanded="true"] .desplegable-flecha {
+  transform: rotate(180deg);
+}
+.campo-fecha > svg {
+  flex: none;
+  color: var(--ink-muted);
+}
+.desplegable:hover:not(:disabled),
+.campo-fecha:hover:not(:disabled) {
+  border-color: var(--ink-muted);
+}
+.desplegable:focus-visible,
+.campo-fecha:focus-visible,
+.desplegable[aria-expanded="true"],
+.campo-fecha[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 22%, transparent);
+}
+.desplegable[aria-invalid="true"],
+.campo-fecha[aria-invalid="true"] {
+  border-color: var(--negative);
+}
+
+/* ---------- Panel flotante ---------- */
+.flotante {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100vw - 16px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  animation: flotante-entra 0.12s ease-out;
+}
+@keyframes flotante-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+/* ---------- Lista ---------- */
+.desplegable-lista {
+  max-width: min(420px, calc(100vw - 16px));
+}
+.desplegable-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+}
+.desplegable-grupo {
+  padding: 10px 10px 4px;
+  color: var(--ink-muted);
+  font: 700 11px var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.desplegable-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font: 500 var(--texto-cuerpo) var(--font-sans);
+  cursor: pointer;
+  user-select: none;
+}
+.desplegable-opcion.en-grupo {
+  padding-left: 18px;
+}
+.desplegable-opcion.activa {
+  background: var(--accent-soft);
+}
+.desplegable-opcion[aria-selected="true"] {
+  font-weight: 700;
+}
+.desplegable-opcion[aria-disabled="true"] {
+  color: var(--ink-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.desplegable-texto {
+  flex: 1;
+  min-width: 0;
+}
+.desplegable-marca {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--focus-ring);
+}
+
+/* ---------- Calendario ---------- */
+.calendario {
+  width: 296px;
+}
+.calendario-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+.calendario-cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.calendario-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  font: 700 14px var(--font-sans);
+}
+button.calendario-titulo {
+  cursor: pointer;
+}
+button.calendario-titulo:hover {
+  background: var(--card-raised);
+}
+.calendario-titulo span {
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+.calendario-flecha {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  font: 600 18px/1 var(--font-sans);
+  cursor: pointer;
+}
+.calendario-flecha:hover {
+  background: var(--card-raised);
+}
+.calendario-rejilla {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.calendario-fila {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.calendario-dia-semana {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  color: var(--ink-muted);
+  font: 700 11px var(--font-sans);
+}
+.calendario-dia {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 38px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  font: 600 13px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.calendario-dia:hover:not(:disabled):not(.elegido) {
+  background: var(--accent-soft);
+}
+.calendario-dia.otro-mes {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+.calendario-dia.hoy:not(.elegido) {
+  box-shadow: inset 0 0 0 1.5px var(--focus-ring);
+}
+.calendario-dia.elegido {
+  background: var(--nav-active);
+  color: var(--on-nav-active);
+  font-weight: 800;
+}
+.calendario-dia:disabled {
+  color: var(--ink-subtle, var(--ink-muted));
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.calendario-dia:focus-visible,
+.calendario-mes:focus-visible,
+.calendario-flecha:focus-visible,
+.calendario-titulo:focus-visible,
+.calendario-hora-campo:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.calendario-meses {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.calendario-mes {
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  font: 600 13px var(--font-sans);
+  cursor: pointer;
+}
+.calendario-mes:hover:not(:disabled):not(.elegido) {
+  background: var(--accent-soft);
+}
+.calendario-mes.hoy:not(.elegido) {
+  border-color: var(--focus-ring);
+}
+.calendario-mes.elegido {
+  background: var(--nav-active);
+  color: var(--on-nav-active);
+}
+.calendario-mes:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.calendario-hora {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--ink-muted);
+  font-weight: 700;
+}
+.calendario-hora-campo {
+  width: 44px;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--ink);
+  font: 700 15px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.calendario-hora .cd-btn {
+  margin-left: auto;
+}
+.calendario-pie {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* En el celular la lista y el calendario son más cómodos al dedo. */
+@media (max-width: 600px) {
+  .desplegable-opcion {
+    min-height: 44px;
+  }
+  .calendario {
+    width: min(340px, calc(100vw - 16px));
+  }
+}
+
+/* Opción de cuenta: logo, nombre y saldo pequeño al lado. */
+.opcion-cuenta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.opcion-cuenta-texto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.opcion-cuenta-texto small {
+  margin-left: 6px;
+}
+.desplegable-lista .opcion-cuenta {
+  padding-block: 2px;
+}
+/* El control con logo usa el mismo alto que los selectores visuales (categoría, fecha de la captura). */
+.selector-cuenta .desplegable-valor {
+  display: flex;
+  align-items: center;
+}
+
+/* ---------- Panel lateral (filtros en el celular) ---------- */
+.panel-lateral-fondo {
+  position: fixed;
+  inset: 0;
+  /* Debajo de las hojas (70), que se abren desde el panel (elegir categoría), y de las listas flotantes (200). */
+  z-index: 60;
+  background: var(--scrim);
+  animation: mov-aparece var(--mov-media, 200ms) ease both;
+}
+.panel-lateral {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 380px);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  padding-top: env(safe-area-inset-top, 0px);
+  animation: panel-entra var(--mov-pagina, 260ms) var(--mov-salida, ease-out) both;
+}
+@keyframes panel-entra {
+  from {
+    transform: translateX(100%);
+  }
+}
+:root[data-movimiento="reducida"] .panel-lateral {
+  animation-name: mov-aparece;
+}
+.panel-lateral-cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-lateral-cuerpo {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 16px;
+}
+.panel-lateral-pie {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border);
+}
+.panel-lateral-pie .cd-btn {
+  flex: 1;
+  justify-content: center;
+}
+/* Un campo por fila, todos del mismo alto y ancho */
+.panel-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.panel-campo > span:first-child {
+  color: var(--ink-muted);
+  font: 700 11px var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.panel-campo :is(.cd-input, .cd-select, .periodo, .selector-disparador, .desplegable) {
+  width: 100%;
+  min-height: 44px;
+  justify-content: flex-start;
+}
+.panel-campo .periodo-boton {
+  flex: 1;
+  height: 44px;
+}
+.panel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.filtros-activos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.filtros-activos li {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  font: 600 12px var(--font-sans);
+}

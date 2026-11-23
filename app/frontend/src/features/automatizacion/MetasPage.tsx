@@ -10,6 +10,10 @@ import { api } from "@/shared/lib/api";
 import { rutaDe } from "@/shared/lib/categorias";
 import { fechaCorta, formatoCOP, mascaraMonto, nombreMes, parseMonto, porcentaje } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
+import { useFiltroRecordado } from "@/shared/lib/useFiltroRecordado";
+import { Circulo, Gauge } from "@/shared/charts";
+import { BarraLimite } from "@/shared/ui/Datos";
+import { CabeceraTarjeta } from "@/shared/ui/Kpi";
 import { ErrorVista, TarjetaCargando, Vacio } from "@/shared/ui/Estados";
 import { Hoja } from "@/shared/ui/Hoja";
 import { MenuAcciones } from "@/shared/ui/MenuAcciones";
@@ -17,6 +21,10 @@ import { Icono, type NombreIcono } from "@/shared/ui/Icono";
 import { SelectorCategoria } from "@/shared/ui/SelectorCategoria";
 import { LogoCuenta } from "@/shared/ui/SelectorCuenta";
 
+import "./metas.css";
+
+import { Desplegable } from "@/shared/ui/Desplegable";
+import { CampoFecha } from "@/shared/ui/CampoFecha";
 const TIPOS: Record<TipoMeta, { nombre: string; icono: NombreIcono; ayuda: string }> = {
   ahorro: { nombre: "Ahorro", icono: "meta", ayuda: "Junta un monto en una cuenta (fondo de emergencia, una compra)." },
   deuda: {
@@ -59,8 +67,6 @@ function TarjetaMeta({ m, alEditar }: { m: Meta; alEditar: () => void }) {
   const pct = Math.round(m.progreso * 100);
   const retrocede = (m.tipo === "ahorro" || m.tipo === "deuda") && pct < 0;
   const regresiva = cuentaRegresiva(m);
-  const limite = m.tipo === "tope_gasto" || m.tipo === "habito";
-  const claseBarra = limite ? (m.excedido ? "cd-progress--over" : pct >= 80 ? "cd-progress--warn" : "") : "";
   let detalle: string;
   if (m.tipo === "ahorro") {
     detalle = `${formatoCOP(m.actual)} de ${formatoCOP(m.objetivo ?? 0)} en ${m.cuenta ?? "tu cuenta"}`;
@@ -74,7 +80,7 @@ function TarjetaMeta({ m, alEditar }: { m: Meta; alEditar: () => void }) {
     detalle = m.actual > 0 ? `${formatoCOP(m.actual)} este mes` : "Nada este mes";
   }
   return (
-    <article className="cd-card cd-stack" style={{ gap: 14 }}>
+    <article className="cd-card cd-stack meta-detalle" style={{ gap: 14 }}>
       <div className="cd-row" style={{ flexWrap: "nowrap", gap: 12 }}>
         <span className="cd-kpi-ico" style={{ flex: "none" }}>
           <Icono nombre={TIPOS[m.tipo].icono} />
@@ -110,18 +116,31 @@ function TarjetaMeta({ m, alEditar }: { m: Meta; alEditar: () => void }) {
           ]}
         />
       </div>
-      {m.tipo !== "habito" && (
-        <div
-          className={`cd-progress ${claseBarra}`}
-          role="progressbar"
-          aria-label={m.nombre}
-          aria-valuenow={pct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <i style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
-        </div>
-      )}
+      <div className="meta-visual">
+        {m.tipo === "ahorro" && (
+          <Gauge titulo={m.nombre} valor={Math.max(0, m.actual)} meta={m.objetivo ?? 0} tamano={240} grosor={18} />
+        )}
+        {m.tipo === "deuda" && (
+          <Gauge
+            titulo={`${m.nombre}: pagado`}
+            valor={Math.max(0, (m.base ?? 0) - m.actual)}
+            meta={m.base ?? 0}
+            tamano={240}
+            grosor={18}
+          />
+        )}
+        {m.tipo === "tope_gasto" && (
+          <div className="meta-tope">
+            <BarraLimite etiqueta={m.nombre} gastado={m.actual} limite={m.objetivo ?? 0} alta />
+          </div>
+        )}
+        {m.tipo === "habito" && (
+          <div className="meta-racha">
+            <b>{m.racha_dias ?? "—"}</b>
+            <span>días sin gastar en esto</span>
+          </div>
+        )}
+      </div>
       <span className="cd-delta-note cd-num">
         {detalle}
         {m.excedido && m.tipo === "tope_gasto" && " · pasaste el tope"}
@@ -161,6 +180,54 @@ function TarjetaMeta({ m, alEditar }: { m: Meta; alEditar: () => void }) {
         </button>
       )}
     </article>
+  );
+}
+
+/** Color propio de cada meta (sigue a la meta, no a su posición). */
+const colorMeta = (m: Meta) => `--cat-${(m.id % 8) + 1}`;
+
+function MiniMeta({ m, activa, alElegir }: { m: Meta; activa: boolean; alElegir: () => void }) {
+  const color = colorMeta(m);
+  const fraccion =
+    m.tipo === "deuda"
+      ? (m.base ?? 0) > 0
+        ? Math.max(0, (m.base ?? 0) - m.actual) / (m.base ?? 1)
+        : 0
+      : m.tipo === "habito"
+        ? Math.min(1, (m.racha_dias ?? 0) / 30)
+        : m.progreso;
+  const valor =
+    m.tipo === "habito"
+      ? `${m.racha_dias ?? 0} días`
+      : m.tipo === "deuda"
+        ? `${formatoCOP(Math.max(0, (m.base ?? 0) - m.actual))} pagados`
+        : `${formatoCOP(m.actual)} de ${formatoCOP(m.objetivo ?? 0)}`;
+  return (
+    <button type="button" className={`mini-meta ${activa ? "activa" : ""}`} aria-pressed={activa} onClick={alElegir}>
+      <span className="mini-meta-cabeza">
+        <span
+          className="mini-meta-ico"
+          style={{ background: `color-mix(in srgb, var(${color}) 18%, transparent)`, color: `var(${color})` }}
+          aria-hidden
+        >
+          <Icono nombre={TIPOS[m.tipo].icono} pequeno />
+        </span>
+        <Circulo
+          titulo={m.nombre}
+          fraccion={fraccion}
+          tamano={60}
+          grosor={6}
+          texto={m.tipo === "habito" ? `${m.racha_dias ?? 0} d` : undefined}
+          color={m.excedido ? "var(--negative)" : `var(${color})`}
+          severidad={m.tipo === "tope_gasto"}
+        />
+      </span>
+      <span className="mini-meta-texto">
+        <b>{m.nombre}</b>
+        <small className="cd-num">{valor}</small>
+        <small>{TIPOS[m.tipo].nombre}</small>
+      </span>
+    </button>
   );
 }
 
@@ -232,7 +299,7 @@ function FormMeta({ meta, alCerrar }: { meta: Meta | null; alCerrar: () => void 
     >
       <div className="cd-stack" style={{ gap: 6 }}>
         {etiqueta("tipo", "Tipo")}
-        <select
+        <Desplegable
           id={`${id}-tipo`}
           className="cd-input"
           disabled={Boolean(meta)}
@@ -244,7 +311,7 @@ function FormMeta({ meta, alCerrar }: { meta: Meta | null; alCerrar: () => void 
               {t.nombre}
             </option>
           ))}
-        </select>
+        </Desplegable>
         <span className="cd-delta-note">{TIPOS[tipo].ayuda}</span>
       </div>
       <div className="cd-stack" style={{ gap: 6 }}>
@@ -275,7 +342,7 @@ function FormMeta({ meta, alCerrar }: { meta: Meta | null; alCerrar: () => void 
       {meta && (
         <div className="cd-stack" style={{ gap: 6 }}>
           {etiqueta("estado", "Estado")}
-          <select
+          <Desplegable
             id={`${id}-estado`}
             className="cd-input"
             value={estado}
@@ -284,13 +351,13 @@ function FormMeta({ meta, alCerrar }: { meta: Meta | null; alCerrar: () => void 
             <option value="activa">Activa</option>
             <option value="cumplida">Cumplida</option>
             <option value="archivada">Archivada</option>
-          </select>
+          </Desplegable>
         </div>
       )}
       {(tipo === "ahorro" || tipo === "deuda") && (
         <div className="cd-stack" style={{ gap: 6 }}>
           {etiqueta("fecha", "Para cuándo (opcional)")}
-          <input
+          <CampoFecha
             id={`${id}-fecha`}
             type="date"
             className="cd-input"
@@ -515,6 +582,8 @@ export function MetasPage() {
   const activas = todas.filter((m) => m.estado === "activa");
   const cumplidas = todas.filter((m) => m.estado === "cumplida");
   const archivadas = todas.filter((m) => m.estado === "archivada");
+  const [elegida, setElegida] = useFiltroRecordado<{ id: number | null }>("metas-elegida", { id: null });
+  const seleccionada = activas.find((m) => m.id === elegida.id) ?? activas[0];
   return (
     <>
       <div className="cd-pagehead">
@@ -548,11 +617,26 @@ export function MetasPage() {
           />
         </section>
       )}
-      <div className="metas-rejilla">
-        {activas.map((m) => (
-          <TarjetaMeta key={m.id} m={m} alEditar={() => setForm(m)} />
-        ))}
-      </div>
+      {seleccionada && (
+        <div className="cd-bento">
+          <div className="span-6">
+            <TarjetaMeta key={seleccionada.id} m={seleccionada} alEditar={() => setForm(seleccionada)} />
+          </div>
+          <section className="cd-card span-6">
+            <CabeceraTarjeta titulo="Tus metas" rango={`${activas.length} activas · elige una para verla en grande`} />
+            <div className="metas-mini">
+              {activas.map((m) => (
+                <MiniMeta
+                  key={m.id}
+                  m={m}
+                  activa={m.id === seleccionada.id}
+                  alElegir={() => setElegida(() => ({ id: m.id }))}
+                />
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
       {cumplidas.length > 0 && (
         <>
           <h2 className="cd-card-title" style={{ margin: "8px 0 0" }}>

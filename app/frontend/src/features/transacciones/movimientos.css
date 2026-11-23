@@ -1,0 +1,125 @@
+/* Movimientos con el sistema compacto (§6). */
+.mov-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.mov-buscar {
+  flex: 1 1 220px;
+  max-width: 360px;
+  height: var(--control-height);
+}
+.mov-buscar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: 500 var(--texto-cuerpo) var(--font-sans);
+}
+.mov-filtros .cd-select {
+  height: var(--control-height);
+}
+
+/* Chips de grupo: una fila que se desplaza en el celular */
+.mov-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.mov-chip {
+  flex: none;
+  height: var(--control-sm);
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink-muted);
+  font: 600 var(--texto-etiqueta) var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mov-chip:hover {
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+.mov-chip[aria-pressed="true"] {
+  background: var(--nav-active);
+  border-color: transparent;
+  color: var(--on-nav-active);
+}
+
+.mov-metricas {
+  padding: 4px 0 14px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mov-mas {
+  display: grid;
+  place-items: center;
+  padding-top: 12px;
+}
+
+.mov-filtro-activo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 8px 8px 14px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  font-size: var(--texto-cuerpo);
+}
+
+/* Filtro por categoría: el mismo selector visual de la captura, con su botón para quitarlo. */
+.mov-categoria {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.mov-categoria .selector-disparador {
+  height: var(--control-height);
+  min-width: 190px;
+  max-width: 280px;
+}
+.filtro-fechas-rapidos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Celular: un solo botón de filtros a la derecha del buscador, con el número de filtros activos. */
+.mov-filtros-boton {
+  position: relative;
+  flex: none;
+  width: var(--control-height);
+  height: var(--control-height);
+}
+.mov-filtros-cuenta {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 11px/18px var(--font-sans);
+  text-align: center;
+}
+@media (max-width: 860px) {
+  .mov-filtros {
+    flex-wrap: nowrap;
+  }
+  .mov-buscar {
+    max-width: none;
+  }
+}

@@ -1,24 +1,26 @@
 /** Flujo de caja (RF-RP-02, fase 8 punto 12) con la estructura del resumen «All Spending» de Cashew:
  * periodo con ‹ ›, columna «Actual» (totales que llevan a sus movimientos, gráfico acumulado y desglose por
  * categorías de gasto o ingreso) y columna «Historial» (una tarjeta por mes, toca una para verla). */
-import { rutaSuave } from "@/shared/lib/curvas";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+
+import { rangoFechas } from "@/features/dashboard/components/CategoriasMes";
 import { useState } from "react";
 
 import type { CategoriaReporte } from "@/shared/api/tipos";
+import { AreaSeries } from "@/shared/charts";
+import { IconoCategoria, useEstiloCategorias } from "@/shared/ui/EstiloCategoria";
 import { api, type Periodo } from "@/shared/lib/api";
-import { abreviar, fechaCorta, formatoCOP, hoyISO, moverMes, nombreMes, porcentaje } from "@/shared/lib/formato";
+import { fechaCorta, formatoCOP, hoyISO, moverMes, nombreMes, porcentaje } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 import { useFiltroRecordado } from "@/shared/lib/useFiltroRecordado";
 import { ErrorVista, TarjetaCargando, Vacio } from "@/shared/ui/Estados";
-import { Icono, iconoCategoria, type NombreIcono } from "@/shared/ui/Icono";
-import { SensorContinuo, TooltipGrafico, ZonaGrafico } from "@/shared/ui/TooltipGrafico";
+import { CabeceraTarjeta, KpiCompacto } from "@/shared/ui/Kpi";
 
 import { BotonExcel, ControlPeriodo, usePeriodo, type NavPeriodo } from "./Periodo";
+import { BarraFiltros } from "@/shared/ui/BarraFiltros";
 
-const SERIES = ["c1", "c2", "c3", "c4", "c5", "c6"] as const;
-
+import { ZonaPeriodo } from "@/features/analisis/ZonaPeriodo";
 function etiquetaPeriodo(p: Periodo): string {
   if (!p.desde || !p.hasta) return "todo el historial";
   return p.desde === p.hasta
@@ -27,113 +29,58 @@ function etiquetaPeriodo(p: Periodo): string {
 }
 
 // ---------- Totales ----------
-function FilaTotal({
-  icono,
-  texto,
-  valor,
-  color,
-  nota,
-  a,
-  grupo,
-}: {
-  icono: NombreIcono;
-  texto: string;
-  valor: number;
-  color?: string;
-  nota?: string;
-  a: "/movimientos" | "/recurrentes" | "/prestamos";
-  grupo?: string;
-}) {
-  return (
-    <li>
-      <Link to={a} search={grupo ? { grupo } : undefined} className="flujo-total" title={nota}>
-        <span className="flujo-total-rotulo">
-          <span className="cd-kpi-ico">
-            <Icono nombre={icono} pequeno />
-          </span>
-          {texto}
-        </span>
-        <b className="cd-num" style={{ color }}>
-          {formatoCOP(valor)}
-        </b>
-      </Link>
-    </li>
-  );
-}
-
 function Totales({ periodo }: { periodo: Periodo }) {
   const mensual = useQuery({ queryKey: claves.reporteMensual(periodo), queryFn: () => api.reporteMensual(periodo) });
   const cal = useQuery({ queryKey: claves.calendario(30), queryFn: () => api.calendario(30) });
   const prestamos = useQuery({ queryKey: ["prestamos", "resumen"], queryFn: api.resumenPrestamos });
   const t = mensual.data?.totales;
-  if (mensual.isPending) return <TarjetaCargando filas={4} />;
   if (mensual.isError) return <ErrorVista error={mensual.error} reintentar={() => void mensual.refetch()} />;
+  const cargando = mensual.isPending;
   const gasto = t?.gastos_total ?? 0;
   const ingreso = t?.ingresos_total ?? 0;
   const neto = ingreso - gasto;
   const proximos = (cal.data?.eventos ?? []).filter((e) => e.monto < 0);
   const vencidos = (cal.data?.vencidos ?? []).filter((e) => e.monto < 0);
+  const pr = prestamos.data;
   return (
-    <section className="cd-card cd-stack" style={{ gap: 10 }}>
-      <span className="cd-kpi-label">Resumen de {etiquetaPeriodo(periodo)}</span>
-      <ul className="flujo-totales">
-        <FilaTotal
-          icono="flujo"
-          texto="Neto"
-          nota="Ingresos menos gastos"
-          valor={neto}
-          color={neto < 0 ? "var(--negative)" : "var(--positive)"}
-          a="/movimientos"
-        />
-        <FilaTotal icono="sale" texto="Gastos" valor={gasto} a="/movimientos" />
-        <FilaTotal
-          icono="entra"
-          texto="Ingresos"
-          valor={ingreso}
-          color="var(--positive)"
-          a="/movimientos"
-          grupo="ingreso"
-        />
-        {prestamos.data && (prestamos.data.me_deben > 0 || prestamos.data.debo > 0) && (
-          <>
-            <FilaTotal
-              icono="persona"
-              texto="Me deben"
-              nota="préstamos a personas"
-              valor={prestamos.data.me_deben}
-              a="/prestamos"
-            />
-            <FilaTotal
-              icono="persona"
-              texto="Debo"
-              nota="préstamos de personas"
-              valor={prestamos.data.debo}
-              a="/prestamos"
-            />
-          </>
-        )}
-        <FilaTotal
-          icono="calendario"
-          texto="Próximos"
-          nota={`${proximos.length} pagos en 30 días`}
-          valor={-proximos.reduce((s, e) => s + e.monto, 0)}
-          a="/recurrentes"
-        />
-        <FilaTotal
-          icono="alerta"
-          texto="Vencidos"
-          nota={vencidos.length ? `${vencidos.length} sin registrar` : "al día"}
-          valor={-vencidos.reduce((s, e) => s + e.monto, 0)}
-          color={vencidos.length ? "var(--negative)" : undefined}
-          a="/recurrentes"
-        />
-      </ul>
-      {t && (
-        <span className="cd-delta-note cd-num">
-          Con créditos y préstamos (neto de caja): {formatoCOP(t.flujo_neto, { signo: true })}
-        </span>
-      )}
-    </section>
+    <div className="flujo-kpis" aria-label={`Resumen de ${etiquetaPeriodo(periodo)}`}>
+      <KpiCompacto
+        inversa
+        etiqueta="Neto"
+        icono="flujo"
+        valor={neto}
+        cargando={cargando}
+        nota={t ? `con créditos y préstamos ${formatoCOP(t.flujo_neto, { signo: true })}` : undefined}
+      />
+      <KpiCompacto
+        etiqueta="Ingresos"
+        icono="entra"
+        valor={ingreso}
+        cargando={cargando}
+        abrir="/movimientos"
+        nota={etiquetaPeriodo(periodo)}
+      />
+      <KpiCompacto
+        etiqueta="Gastos"
+        icono="sale"
+        valor={gasto}
+        cargando={cargando}
+        abrir="/movimientos"
+        nota={ingreso > 0 ? `${porcentaje(gasto / ingreso, 0)} de lo que entró` : etiquetaPeriodo(periodo)}
+      />
+      <KpiCompacto
+        etiqueta="Próximos 30 días"
+        icono="calendario"
+        valor={-proximos.reduce((t2, e) => t2 + e.monto, 0)}
+        abrir="/recurrentes"
+        delta={vencidos.length ? { valor: 0, sentido: "alerta", texto: `${vencidos.length} vencidos` } : undefined}
+        nota={
+          pr && (pr.me_deben > 0 || pr.debo > 0)
+            ? `${proximos.length} pagos · te deben ${formatoCOP(pr.me_deben)}`
+            : `${proximos.length} pagos programados`
+        }
+      />
+    </div>
   );
 }
 
@@ -143,6 +90,15 @@ const LINEAS = [
   { clave: "gasto", texto: "Gastos", color: "var(--negative)" },
   { clave: "neto", texto: "Neto", color: "var(--ink)" },
 ] as const;
+
+type Paso = "dia" | "semana" | "mes";
+
+/** Lunes de la semana de `f` (AAAA-MM-DD). */
+function lunes(f: string): string {
+  const d = new Date(`${f.slice(0, 10)}T12:00:00`);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 function GraficoFlujo({ periodo }: { periodo: Periodo }) {
   const datos = useQuery({
@@ -155,23 +111,21 @@ function GraficoFlujo({ periodo }: { periodo: Periodo }) {
     gasto: true,
     neto: false,
   });
-  const [activo, setActivo] = useState<number | null>(null);
   const dias = datos.data?.dias ?? [];
   if (datos.isPending) return <TarjetaCargando filas={3} />;
   if (dias.length < 2) return null;
-  // Sin acumular, un periodo largo se lee mejor por meses.
-  const porMes = !cfg.acumulado && dias.length > 62;
-  const base = porMes
-    ? [
-        ...dias
-          .reduce((m, d) => {
-            const k = d.fecha.slice(0, 7);
-            const v = m.get(k) ?? { fecha: `${k}-01`, gasto: 0, ingreso: 0 };
-            return m.set(k, { ...v, gasto: v.gasto + d.gasto, ingreso: v.ingreso + d.ingreso });
-          }, new Map<string, { fecha: string; gasto: number; ingreso: number }>())
-          .values(),
-      ]
-    : dias.map((d) => ({ fecha: d.fecha, gasto: d.gasto, ingreso: d.ingreso }));
+  // Sin acumular: por día hasta 2 meses, por semana hasta 13 meses y por mes en periodos más largos.
+  const paso: Paso = cfg.acumulado || dias.length <= 62 ? "dia" : dias.length <= 400 ? "semana" : "mes";
+  const clave = (f: string) => (paso === "dia" ? f.slice(0, 10) : paso === "semana" ? lunes(f) : `${f.slice(0, 7)}-01`);
+  const base = [
+    ...dias
+      .reduce((m, d) => {
+        const k = clave(d.fecha);
+        const v = m.get(k) ?? { fecha: k, gasto: 0, ingreso: 0 };
+        return m.set(k, { ...v, gasto: v.gasto + d.gasto, ingreso: v.ingreso + d.ingreso });
+      }, new Map<string, { fecha: string; gasto: number; ingreso: number }>())
+      .values(),
+  ];
   const serie = base.reduce<{ fecha: string; gasto: number; ingreso: number; neto: number }[]>((acc, d) => {
     const previo = cfg.acumulado ? acc.at(-1) : undefined;
     const gasto = (previo?.gasto ?? 0) + d.gasto;
@@ -180,23 +134,21 @@ function GraficoFlujo({ periodo }: { periodo: Periodo }) {
     return acc;
   }, []);
   const visibles = LINEAS.filter((l) => cfg[l.clave]);
-  const valores = serie.flatMap((p) => visibles.map((l) => p[l.clave]));
-  const max = Math.max(1, ...valores);
-  const min = Math.min(0, ...valores);
-  const W = 640;
-  const tiempos = serie.map((p) => Date.parse(p.fecha));
-  const t0 = tiempos[0] ?? 0;
-  const tramo = Math.max(1, (tiempos.at(-1) ?? 0) - t0);
-  const xs = tiempos.map((t) => 48 + ((t - t0) / tramo) * (W - 58));
-  const y = (v: number) => 175 - ((v - min) / Math.max(1, max - min)) * 155;
-  const linea = (k: "gasto" | "ingreso" | "neto") =>
-    rutaSuave(serie.map((p, i): [number, number] => [xs[i] ?? 0, y(p[k])]));
-  const p0 = activo !== null ? serie[activo] : undefined;
-  const cada = Math.max(1, Math.ceil(serie.length / 6));
-  const etiqueta = (f: string) => (porMes ? nombreMes(f.slice(0, 7), true) : fechaCorta(f));
+  const nombrePaso = paso === "dia" ? "Por día" : paso === "semana" ? "Por semana" : "Por mes";
+  const pasoSinAcumular = dias.length <= 62 ? "Por día" : dias.length <= 400 ? "Por semana" : "Por mes";
+  const rotulo = (f: string) =>
+    paso === "semana"
+      ? `Semana del ${fechaCorta(f, true)}`
+      : paso === "mes"
+        ? nombreMes(f.slice(0, 7))
+        : fechaCorta(f, true);
   return (
     <section className="cd-card cd-stack" style={{ gap: 10 }}>
-      <div className="cd-card-head" style={{ margin: 0, flexWrap: "wrap", gap: 8 }}>
+      <CabeceraTarjeta
+        titulo="Ingresos y gastos"
+        rango={`${cfg.acumulado ? "Acumulado" : nombrePaso} · ${etiquetaPeriodo(periodo)}`}
+      />
+      <div className="cd-row" style={{ margin: 0, flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
         <div className="cd-seg cd-seg--brand" role="radiogroup" aria-label="Forma de sumar">
           {[true, false].map((v) => (
             <button
@@ -204,12 +156,9 @@ function GraficoFlujo({ periodo }: { periodo: Periodo }) {
               role="radio"
               aria-checked={cfg.acumulado === v}
               aria-selected={cfg.acumulado === v}
-              onClick={() => {
-                setActivo(null);
-                setCfg((c) => ({ ...c, acumulado: v }));
-              }}
+              onClick={() => setCfg((c) => ({ ...c, acumulado: v }))}
             >
-              {v ? "Acumulado" : porMes || dias.length > 62 ? "Por mes" : "Por día"}
+              {v ? "Acumulado" : pasoSinAcumular}
             </button>
           ))}
         </div>
@@ -230,79 +179,76 @@ function GraficoFlujo({ periodo }: { periodo: Periodo }) {
           ))}
         </div>
       </div>
-      <ZonaGrafico>
-        <svg className="cd-chart" viewBox={`0 0 ${W} 200`} role="img" aria-label="Ingresos, gastos y neto en el tiempo">
-          <line className="grid" x1="44" x2={W} y1={y(max)} y2={y(max)} />
-          <text x="40" y={y(max) + 4} textAnchor="end">
-            {abreviar(max)}
-          </text>
-          <line className="grid-dash" x1="44" x2={W} y1={y(0)} y2={y(0)} />
-          <text x="40" y={y(0) + 4} textAnchor="end">
-            0
-          </text>
-          {/* El mínimo solo se rotula si no se monta sobre el cero. */}
-          {y(min) - y(0) > 14 && (
-            <text x="40" y={y(min) + 4} textAnchor="end">
-              {abreviar(min)}
-            </text>
-          )}
-          {visibles.map((l) => (
-            <path key={l.clave} d={linea(l.clave)} fill="none" stroke={l.color} strokeWidth="2.5" />
-          ))}
-          {serie.map((p, i) =>
-            i % cada === 0 ? (
-              <text key={p.fecha} x={xs[i]} y="194" textAnchor={i === 0 ? "start" : "middle"}>
-                {etiqueta(p.fecha)}
-              </text>
-            ) : null,
-          )}
-          {p0 &&
-            activo !== null &&
-            visibles.map((l) => <circle key={l.clave} cx={xs[activo]} cy={y(p0[l.clave])} r="4.5" fill={l.color} />)}
-          <SensorContinuo
-            xs={xs}
-            izquierda={44}
-            ancho={W - 44}
-            arriba={10}
-            alto={178}
-            activo={activo}
-            alCambiar={setActivo}
-          />
-        </svg>
-        {p0 && activo !== null && (
-          <TooltipGrafico izquierda={((xs[activo] ?? 0) / W) * 100}>
-            <b style={{ textTransform: "capitalize" }}>
-              {porMes ? nombreMes(p0.fecha.slice(0, 7)) : fechaCorta(p0.fecha, true)}
-            </b>
-            {visibles.map((l) => (
-              <span key={l.clave} className="fila">
-                <span>
-                  <i className="punto" style={{ background: l.color }} />
-                  {l.texto}
-                </span>
-                {formatoCOP(p0[l.clave], l.clave === "neto" ? { signo: true } : undefined)}
-              </span>
-            ))}
-          </TooltipGrafico>
-        )}
-      </ZonaGrafico>
+      <AreaSeries
+        titulo="Ingresos, gastos y neto en el tiempo"
+        fechas={serie.map((p) => p.fecha)}
+        rotulo={rotulo}
+        alto={260}
+        series={visibles.map((l) => ({
+          clave: l.clave,
+          nombre: l.texto,
+          color: l.color,
+          valores: serie.map((p) => p[l.clave]),
+          formato: l.clave === "neto" ? (v: number) => formatoCOP(v, { signo: true }) : undefined,
+        }))}
+      />
     </section>
   );
 }
 
 // ---------- Desglose por categorías ----------
+interface Fila {
+  id: number | null;
+  nombre: string;
+  categoria: string;
+  total: number;
+  subs: CategoriaReporte["subcategorias"];
+}
+
 function Desglose({ periodo }: { periodo: Periodo }) {
-  const [vista, setVista] = useFiltroRecordado("flujo-desglose", { tipo: "gasto" as "gasto" | "ingreso", subs: false });
+  const [vista, setVista] = useFiltroRecordado("flujo-desglose-v2", {
+    tipo: "gasto" as "gasto" | "ingreso",
+    nivel: "categoria" as "categoria" | "subcategoria",
+  });
   const grupo = vista.tipo === "gasto" ? "gasto_vida" : "ingreso";
   const conjunto = vista.tipo === "gasto" ? "gastos" : "ingresos";
   const datos = useQuery({
     queryKey: claves.reporteCategorias(periodo, conjunto),
     queryFn: () => api.reporteConjunto(periodo, conjunto),
   });
+  const estilo = useEstiloCategorias();
   const [activo, setActivo] = useState<number | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
-  const filas: CategoriaReporte[] = (datos.data?.categorias ?? []).filter((c) => c.total > 0);
-  const total = filas.reduce((t, c) => t + c.total, 0);
+  const categorias: CategoriaReporte[] = (datos.data?.categorias ?? []).filter((c) => c.total > 0);
+  const total = categorias.reduce((t, c) => t + c.total, 0);
+  const colorFila = (f: { id: number | null; nombre: string; categoria: string }) =>
+    estilo({ id: f.id, ruta: [f.categoria, f.nombre] }).color;
+  // Por subcategoría: cada una como si fuera categoría; lo que no tiene subcategoría queda con su categoría.
+  const filas: Fila[] =
+    vista.nivel === "categoria"
+      ? categorias.map((c) => ({
+          id: c.id ?? null,
+          nombre: c.categoria,
+          categoria: c.categoria,
+          total: c.total,
+          subs: c.subcategorias,
+        }))
+      : categorias
+          .flatMap((c) => {
+            const subs = c.subcategorias.map((x) => ({
+              id: x.id ?? null,
+              nombre: x.subcategoria,
+              categoria: c.categoria,
+              total: x.total,
+              subs: [],
+            }));
+            const resto = c.total - c.subcategorias.reduce((t, x) => t + x.total, 0);
+            return resto > 0
+              ? [...subs, { id: c.id ?? null, nombre: c.categoria, categoria: c.categoria, total: resto, subs: [] }]
+              : subs;
+          })
+          .filter((f) => f.total > 0)
+          .sort((a, b) => b.total - a.total);
   const R = 70;
   const C = 2 * Math.PI * R;
   const inicios = filas.map((_, i) => filas.slice(0, i).reduce((t, f) => t + (total ? (f.total / total) * C : 0), 0));
@@ -316,7 +262,11 @@ function Desglose({ periodo }: { periodo: Periodo }) {
     });
   return (
     <section className="cd-card cd-stack" style={{ gap: 14 }}>
-      <div className="cd-card-head" style={{ margin: 0, flexWrap: "wrap", gap: 8 }}>
+      <CabeceraTarjeta
+        titulo={vista.tipo === "gasto" ? "En qué se fue" : "De dónde vino"}
+        rango={`${filas.length} ${vista.nivel === "categoria" ? "categorías" : "subcategorías"} · ${formatoCOP(total)}`}
+      />
+      <div className="cd-row" style={{ margin: 0, flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
         <div className="cd-seg cd-seg--brand" role="radiogroup" aria-label="Tipo">
           {(["gasto", "ingreso"] as const).map((t) => (
             <button
@@ -333,14 +283,22 @@ function Desglose({ periodo }: { periodo: Periodo }) {
             </button>
           ))}
         </div>
-        <label className="cd-row cd-delta-note" style={{ gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={vista.subs}
-            onChange={(e) => setVista((v) => ({ ...v, subs: e.target.checked }))}
-          />
-          Mostrar todas las subcategorías
-        </label>
+        <div className="cd-seg" role="radiogroup" aria-label="Nivel">
+          {(["categoria", "subcategoria"] as const).map((n) => (
+            <button
+              key={n}
+              role="radio"
+              aria-checked={vista.nivel === n}
+              aria-selected={vista.nivel === n}
+              onClick={() => {
+                setActivo(null);
+                setVista((v) => ({ ...v, nivel: n }));
+              }}
+            >
+              {n === "categoria" ? "Categorías" : "Subcategorías"}
+            </button>
+          ))}
+        </div>
       </div>
       {datos.isPending && <TarjetaCargando filas={4} />}
       {datos.data && filas.length === 0 && <Vacio titulo="Sin movimientos en este periodo" />}
@@ -350,18 +308,34 @@ function Desglose({ periodo }: { periodo: Periodo }) {
             <svg
               className="cd-chart dona-animada"
               viewBox="0 0 160 160"
-              key={`${vista.tipo}-${periodo.desde}-${periodo.hasta}`}
+              key={`${vista.tipo}-${vista.nivel}-${periodo.desde}-${periodo.hasta}`}
               width="180"
               height="180"
               role="img"
               aria-label="Composición por categoría"
               onMouseLeave={() => setActivo(null)}
             >
+              <defs>
+                {filas.map((f, i) => (
+                  // Cada tramo se desvanece hacia el centro (el origen de la dona).
+                  <radialGradient
+                    key={`${f.categoria}-${f.nombre}`}
+                    id={`dona-flujo-${i}`}
+                    gradientUnits="userSpaceOnUse"
+                    cx="80"
+                    cy="80"
+                    r="83"
+                  >
+                    <stop offset="68%" style={{ stopColor: colorFila(f), stopOpacity: 0.3 }} />
+                    <stop offset="100%" style={{ stopColor: colorFila(f), stopOpacity: 1 }} />
+                  </radialGradient>
+                ))}
+              </defs>
               <circle className="ring-track" cx="80" cy="80" r={R} fill="none" strokeWidth="20" />
               {filas.map((f, i) => (
                 <circle
-                  key={f.categoria}
-                  className={SERIES[i % SERIES.length]}
+                  key={`${f.categoria}-${f.nombre}`}
+                  stroke={`url(#dona-flujo-${i})`}
                   cx="80"
                   cy="80"
                   r={R}
@@ -371,7 +345,7 @@ function Desglose({ periodo }: { periodo: Periodo }) {
                   strokeDashoffset={-(inicios[i] ?? 0)}
                   transform="rotate(-90 80 80)"
                   style={{
-                    opacity: activo !== null && activo !== i ? 0.3 : i >= SERIES.length ? 0.65 : 1,
+                    opacity: activo !== null && activo !== i ? 0.3 : 1,
                     cursor: "pointer",
                   }}
                   onMouseEnter={() => setActivo(i)}
@@ -380,17 +354,17 @@ function Desglose({ periodo }: { periodo: Periodo }) {
               ))}
             </svg>
             <div className="cd-donut-center" aria-live="polite">
-              <small>{sel ? sel.categoria : vista.tipo === "gasto" ? "Gastos" : "Ingresos"}</small>
+              <small>{sel ? sel.nombre : vista.tipo === "gasto" ? "Gastos" : "Ingresos"}</small>
               <strong>{formatoCOP(sel ? sel.total : total)}</strong>
               {sel && <small>{porcentaje(sel.total / total, 0)}</small>}
             </div>
           </div>
           <ul className="cd-list" style={{ margin: 0 }} onMouseLeave={() => setActivo(null)}>
             {filas.map((f, i) => {
-              const abierta = vista.subs || abiertas.has(f.categoria);
+              const abierta = abiertas.has(f.nombre);
               return (
                 <li
-                  key={f.categoria}
+                  key={`${f.categoria}-${f.nombre}`}
                   className="cd-stack"
                   style={{ gap: 4, alignItems: "stretch", opacity: activo !== null && activo !== i ? 0.5 : 1 }}
                 >
@@ -400,27 +374,73 @@ function Desglose({ periodo }: { periodo: Periodo }) {
                     style={{ gap: 10, flexWrap: "nowrap", padding: "6px 4px" }}
                     aria-expanded={abierta}
                     onMouseEnter={() => setActivo(i)}
-                    onClick={() => alternar(f.categoria)}
+                    onClick={() => alternar(f.nombre)}
                   >
-                    <i className={`cd-sw ${SERIES[i % SERIES.length]}`} />
-                    <Icono nombre={iconoCategoria([f.categoria], grupo)} pequeno />
-                    <span style={{ flex: 1, minWidth: 0, fontWeight: 600 }}>{f.categoria}</span>
-                    <span className="cd-delta-note cd-num">{porcentaje(f.pct, 0)}</span>
+                    <i className="cd-sw" style={{ background: colorFila(f) }} />
+                    <IconoCategoria
+                      estilo={estilo({ id: f.id, ruta: [f.categoria, f.nombre] })}
+                      ruta={[f.categoria]}
+                      grupo={grupo}
+                      tam={18}
+                    />
+                    <span style={{ flex: 1, minWidth: 0, fontWeight: 600 }}>
+                      {f.nombre}
+                      {vista.nivel === "subcategoria" && f.nombre !== f.categoria && (
+                        <small className="cd-delta-note" style={{ display: "block", fontWeight: 400 }}>
+                          {f.categoria}
+                        </small>
+                      )}
+                    </span>
+                    <span className="cd-delta-note cd-num">{porcentaje(total ? f.total / total : 0, 0)}</span>
                     <b className="cd-num">{formatoCOP(f.total)}</b>
                     <span className="cd-delta-note" aria-hidden>
-                      {f.subcategorias.length ? (abierta ? "▾" : "▸") : ""}
+                      {abierta ? "▾" : "▸"}
                     </span>
                   </button>
-                  {abierta && f.subcategorias.length > 0 && (
-                    <ul className="flujo-subcategorias">
-                      {f.subcategorias.map((s) => (
-                        <li key={s.subcategoria}>
-                          <span>{s.subcategoria}</span>
-                          <span className="cd-delta-note cd-num">{porcentaje(s.pct_categoria, 0)}</span>
-                          <span className="cd-num">{formatoCOP(s.total)}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  {abierta && (
+                    <div className="flujo-detalle">
+                      {f.subs.length > 0 && (
+                        <ul className="flujo-subcategorias">
+                          {f.subs.map((x) => (
+                            <li key={x.subcategoria}>
+                              <Link
+                                className="flujo-sub-enlace"
+                                to="/movimientos"
+                                search={{
+                                  categoria: x.id ?? f.id ?? undefined,
+                                  etiqueta: `${f.nombre} › ${x.subcategoria}`,
+                                  ...rangoFechas(periodo),
+                                }}
+                                aria-label={`${x.subcategoria}: ${formatoCOP(x.total)}. Ver sus movimientos`}
+                              >
+                                <span>{x.subcategoria}</span>
+                                <span className="cd-delta-note cd-num">{porcentaje(x.pct_categoria, 0)}</span>
+                                <span className="cd-num">{formatoCOP(x.total)}</span>
+                                <span aria-hidden className="cd-delta-note">
+                                  →
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {f.id != null && (
+                        <Link
+                          className="cd-link flujo-ver-movs"
+                          to="/movimientos"
+                          search={{
+                            categoria: f.id,
+                            etiqueta:
+                              vista.nivel === "subcategoria" && f.nombre !== f.categoria
+                                ? `${f.categoria} › ${f.nombre}`
+                                : f.nombre,
+                            ...rangoFechas(periodo),
+                          }}
+                        >
+                          Ver los movimientos de {f.nombre} →
+                        </Link>
+                      )}
+                    </div>
                   )}
                 </li>
               );
@@ -447,6 +467,7 @@ function Historial({ nav }: { nav: NavPeriodo }) {
     acc.push({ m, neto, acumulado: (acc.at(-1)?.acumulado ?? 0) + neto });
     return acc;
   }, []);
+  const tope = Math.max(1, ...meses.flatMap((m) => [m.gastos_total, m.ingresos_total]));
   const elegido =
     nav.preset === "rango" && nav.periodo.desde === nav.periodo.hasta
       ? nav.periodo.desde
@@ -456,7 +477,7 @@ function Historial({ nav }: { nav: NavPeriodo }) {
   return (
     <section className="cd-card cd-stack" style={{ gap: 10 }}>
       <div className="cd-card-head" style={{ margin: 0 }}>
-        <h3 className="cd-card-title">Historial</h3>
+        <h2 className="cd-card-title">Mes a mes</h2>
         <label className="cd-row cd-delta-note" style={{ gap: 6 }}>
           <input
             type="checkbox"
@@ -483,8 +504,12 @@ function Historial({ nav }: { nav: NavPeriodo }) {
                   {formatoCOP(valor, { signo: true })}
                 </b>
               </span>
+              <span className="flujo-mes-barras" aria-hidden>
+                <i className="entra" style={{ width: `${(m.ingresos_total / tope) * 100}%` }} />
+                <i className="sale" style={{ width: `${(m.gastos_total / tope) * 100}%` }} />
+              </span>
               <span className="cd-row cd-delta-note cd-num" style={{ gap: 12 }}>
-                <span>↓ {formatoCOP(m.gastos_total)}</span>
+                <span style={{ color: "var(--negative)" }}>↓ {formatoCOP(m.gastos_total)}</span>
                 <span style={{ color: "var(--positive)" }}>↑ {formatoCOP(m.ingresos_total)}</span>
               </span>
             </button>
@@ -512,22 +537,29 @@ export function FlujoPage() {
           <h1>Flujo de caja</h1>
           <p>Cuánto entró, cuánto salió y en qué, en el periodo que elijas. Sin transferencias entre tus cuentas.</p>
         </div>
-        <div className="cd-row">
-          <ControlPeriodo nav={nav} />
-          <BotonExcel periodo={nav.periodo} />
+      </div>
+      <BarraFiltros>
+        <ControlPeriodo nav={nav} />
+        <div className="cd-seg flujo-pestanas" role="tablist" aria-label="Vista">
+          {(["actual", "historial"] as const).map((p) => (
+            <button key={p} role="tab" aria-selected={pestana === p} onClick={() => setPestana(p)}>
+              {p === "actual" ? "Actual" : "Historial"}
+            </button>
+          ))}
         </div>
-      </div>
-      <div className="cd-seg flujo-pestanas" role="tablist" aria-label="Vista">
-        {(["actual", "historial"] as const).map((p) => (
-          <button key={p} role="tab" aria-selected={pestana === p} onClick={() => setPestana(p)}>
-            {p === "actual" ? "Actual" : "Historial"}
-          </button>
-        ))}
-      </div>
+        <span className="empuje">
+          <BotonExcel periodo={nav.periodo} />
+        </span>
+      </BarraFiltros>
       <div className="cd-bento">
-        <div className={`span-8 cd-stack flujo-col ${pestana === "actual" ? "visible" : ""}`} style={{ gap: 24 }}>
+        <div
+          className={`span-8 cd-stack flujo-col ${pestana === "actual" ? "visible" : ""}`}
+          style={{ gap: "var(--gap-bento)" }}
+        >
           <Totales periodo={nav.periodo} />
-          <GraficoFlujo periodo={nav.periodo} />
+          <ZonaPeriodo nav={nav}>
+            <GraficoFlujo periodo={nav.periodo} />
+          </ZonaPeriodo>
           <Desglose periodo={nav.periodo} />
         </div>
         <div className={`span-4 flujo-col ${pestana === "historial" ? "visible" : ""}`} style={{ alignSelf: "start" }}>

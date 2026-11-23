@@ -8,6 +8,7 @@ import { formatoCOP } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 import { Icono } from "@/shared/ui/Icono";
 
+import { dentroDeFlotante } from "@/shared/ui/Flotante";
 const COLOR = { critica: "var(--negative)", aviso: "var(--warning)", info: "var(--ink-muted)" } as const;
 
 export function Alertas() {
@@ -20,7 +21,8 @@ export function Alertas() {
 
   useEffect(() => {
     if (!abierto) return;
-    const fuera = (e: MouseEvent) => caja.current && !caja.current.contains(e.target as Node) && setAbierto(false);
+    const fuera = (e: MouseEvent) =>
+      !dentroDeFlotante(e.target) && caja.current && !caja.current.contains(e.target as Node) && setAbierto(false);
     const escape = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
     document.addEventListener("mousedown", fuera);
     document.addEventListener("keydown", escape);
@@ -80,9 +82,9 @@ export function Alertas() {
             boxShadow: "var(--shadow-lg, 0 12px 32px rgb(0 0 0 / 0.18))",
           }}
         >
-          <h3 className="cd-card-title" style={{ marginBottom: 6 }}>
+          <h2 className="cd-card-title" style={{ marginBottom: 6 }}>
             Alertas
-          </h3>
+          </h2>
           {lista.length === 0 && <span className="cd-delta-note">Todo en orden por ahora.</span>}
           {lista.map((a) => (
             <Link

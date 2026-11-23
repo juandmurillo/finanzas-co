@@ -119,3 +119,20 @@ def alerta_costo(tasa_ea: float, tasa_mensual: float, frecuencia: str, usura_con
     usura = f"{usura_consumo * 100:.2f}".replace(".", ",")
     texto = f"Este préstamo equivale a {ea} % E.A.; la usura de consumo es {usura} %."
     return texto + (" Tiene forma de gota a gota." if gota_a_gota else "")
+
+
+def repartir_entrega(cuotas: list[tuple[date, int]], monto: int, desde: date) -> list[int]:
+    """Nuevo capital de cada cuota al entregar `monto` adicional en la fecha `desde`.
+
+    Se reparte por igual entre las cuotas que vencen desde esa fecha (el residuo, a la última);
+    si ya no queda ninguna por vencer, todo va a la última. Sin cuotas (plan libre) no cambia nada.
+    """
+    if not cuotas:
+        return []
+    capitales = [c for _, c in cuotas]
+    futuras = [i for i, (f, _) in enumerate(cuotas) if f >= desde] or [len(cuotas) - 1]
+    base = monto // len(futuras)
+    for i in futuras:
+        capitales[i] += base
+    capitales[futuras[-1]] += monto - base * len(futuras)
+    return capitales

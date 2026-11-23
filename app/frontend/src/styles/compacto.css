@@ -1,0 +1,302 @@
+/*
+ * Caudal compacto (docs/sistema/10_SISTEMA_DISENO_COMPACTO.md, paso 1): tipografía, densidad de los
+ * componentes base y utilidades de rayado y degradado. Se carga después de caudal.css; los tamaños
+ * vienen de tokens.css, así que aquí solo se ajusta lo que caudal.css fija a mano.
+ */
+
+/* ---------- Lienzo ---------- */
+.cd-content {
+  padding: 0 var(--space-6) var(--space-6);
+  gap: var(--gap-bento);
+}
+.cd-topbar {
+  padding: 0 var(--space-6);
+  gap: var(--space-3);
+}
+.cd-bento {
+  gap: var(--gap-bento);
+}
+.cd-pagehead {
+  gap: var(--space-3);
+}
+.cd-pagehead h1 {
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+}
+.cd-pagehead p {
+  font-size: var(--texto-cuerpo);
+  margin-top: 2px;
+}
+
+/* ---------- Tarjetas ---------- */
+.cd-card {
+  padding: var(--panel-relleno);
+  box-shadow: none;
+}
+.cd-card--densa {
+  padding: var(--panel-relleno-denso);
+}
+.cd-card-head {
+  margin-bottom: var(--space-3);
+  min-height: var(--control-sm);
+}
+.cd-card-title {
+  font-size: var(--texto-titulo);
+  line-height: 20px;
+}
+/* Rango aplicado bajo el título de una tarjeta (§4.2) */
+.cd-card-rango {
+  display: block;
+  font-size: var(--texto-etiqueta);
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+/* ---------- KPI ---------- */
+.cd-kpi {
+  gap: var(--space-2);
+  padding: var(--panel-relleno-denso) var(--panel-relleno);
+}
+.cd-kpi-label {
+  font-size: var(--texto-etiqueta);
+}
+.cd-kpi-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+}
+.cd-kpi-ico svg {
+  width: 16px;
+  height: 16px;
+}
+.cd-kpi-value {
+  font-size: var(--texto-cifra-kpi);
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: proportional-nums;
+}
+/* Sobretítulo en mayúsculas para KPIs de resumen */
+.cd-sobretitulo {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* ---------- Héroe ---------- */
+.cd-balance {
+  background: var(--grad-heroe);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  gap: var(--space-3);
+  min-height: 0;
+}
+.cd-balance-value {
+  font-size: var(--texto-cifra-heroe);
+  line-height: 36px;
+  font-variant-numeric: proportional-nums;
+}
+.cd-balance-label {
+  font-size: var(--texto-etiqueta);
+}
+.cd-balance-foot {
+  font-size: var(--texto-etiqueta);
+}
+
+/* ---------- Controles ---------- */
+.cd-btn {
+  padding: 0 var(--space-4);
+  font-size: var(--texto-cuerpo);
+}
+.cd-btn--sm {
+  height: var(--control-sm);
+  padding: 0 var(--space-3);
+  font-size: var(--texto-etiqueta);
+}
+.cd-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.cd-input {
+  font-size: var(--texto-cuerpo);
+  padding: 0 var(--space-3);
+}
+.cd-seg {
+  padding: 3px;
+  gap: 2px;
+}
+.cd-seg button {
+  height: var(--control-sm);
+  padding: 0 var(--space-3);
+  font-size: var(--texto-etiqueta);
+}
+.cd-select {
+  height: var(--control-sm);
+  font-size: var(--texto-etiqueta);
+}
+.cd-badge {
+  height: 20px;
+  padding: 0 8px;
+  font-size: 11px;
+  gap: 4px;
+}
+
+/* ---------- Listas y tablas ---------- */
+.cd-list li {
+  min-height: var(--fila-alto);
+  padding: 8px 0;
+  gap: var(--space-3);
+  font-size: var(--texto-cuerpo);
+}
+.cd-table th {
+  padding: 8px 12px;
+}
+.cd-table td {
+  padding: 10px 12px;
+  font-size: var(--texto-cuerpo);
+}
+.cd-amt,
+.cd-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Navegación ---------- */
+.cd-sidebar {
+  padding: var(--space-4) var(--space-3);
+  gap: var(--gap-bento);
+}
+.cd-nav a {
+  height: 36px;
+  font-size: var(--texto-cuerpo);
+  gap: 10px;
+}
+.cd-nav a svg {
+  width: 18px;
+  height: 18px;
+}
+.cd-nav-group {
+  font-size: 10px;
+}
+.cd-logo {
+  font-size: 16px;
+}
+.cd-logo-mark {
+  width: 28px;
+  height: 28px;
+}
+.cd-logo-mark i {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------- Utilidades de datos (§3.3) ---------- */
+.rayado {
+  background-image: var(--rayado);
+}
+.grad-barra {
+  background-image: var(--grad-barra);
+}
+.grad-area {
+  background-image: var(--grad-area);
+}
+
+/* ---------- Toque: el control se ve compacto pero el área táctil llega a 44 px ---------- */
+@media (pointer: coarse) {
+  .cd-btn,
+  .cd-icon-btn,
+  .cd-seg button,
+  .cd-select,
+  .mov-chip,
+  .periodo-boton,
+  .cd-badge[role="button"] {
+    position: relative;
+  }
+  .mov-chip::after,
+  .periodo-boton::after {
+    content: "";
+    position: absolute;
+    inset: -8px -2px;
+  }
+  .cd-btn::after,
+  .cd-icon-btn::after,
+  .cd-seg button::after,
+  .cd-select::after {
+    content: "";
+    position: absolute;
+    inset: -5px -2px;
+  }
+  .cd-seg button::after,
+  .cd-select::after,
+  .cd-btn--sm::after {
+    inset: -8px -2px;
+  }
+  .cd-input {
+    min-height: 44px;
+  }
+}
+
+/* Columna de 9 en el bento (KPI + resumen en la misma fila) */
+.span-9 {
+  grid-column: span 9;
+}
+
+/* ---------- Celular y app Android: escala más compacta ----------
+   Tarjetas, encabezados, filas, filtros y menús más bajos. Los montos conservan su tamaño de lectura y cada
+   control mantiene un área táctil de 44 px aunque se vea más pequeño (bloque «Toque» de arriba). */
+@media (max-width: 860px) {
+  :root {
+    --topbar-height: 48px;
+    --gap-bento: 10px;
+    --panel-relleno: 14px;
+    --panel-relleno-denso: 10px;
+    --fila-alto: 40px;
+  }
+  .cd-content {
+    gap: 12px;
+  }
+  .cd-pagehead {
+    gap: 8px;
+    padding-top: 2px;
+  }
+  .cd-pagehead h1 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+  /* La descripción de cada página repite lo que dice su título: en el celular se omite. */
+  .cd-pagehead p {
+    display: none;
+  }
+  .cd-card {
+    padding: var(--panel-relleno);
+  }
+  .cd-card-head {
+    margin-bottom: 8px;
+  }
+  .cd-card-rango {
+    font-size: 11.5px;
+    line-height: 15px;
+  }
+  .kpi-c {
+    gap: 4px;
+    padding: var(--panel-relleno-denso) 12px;
+  }
+  .kpi-c-arriba {
+    min-height: 24px;
+  }
+  .kpi-c-ico {
+    width: 24px;
+    height: 24px;
+  }
+  .barra-filtros {
+    gap: 6px;
+  }
+  .cd-list li {
+    padding: 6px 0;
+  }
+  .mov-chip {
+    padding: 0 10px;
+  }
+}

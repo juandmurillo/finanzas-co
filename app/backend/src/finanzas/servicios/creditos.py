@@ -81,17 +81,41 @@ def registrar_extracto(uow: UnidadDeTrabajo, credito_id: int, d: DatosExtracto) 
 
 # ---------- Fase 7: pagos ligados al crédito, creación y edición ----------
 ABONO = "Abono a capital"
+# Desde la migración 0012: Servicio de deuda › Créditos › {crédito}, y los abonos en la hermana «Abono · {crédito}».
+CREDITOS = "Créditos"
+PREFIJO_ABONO = "Abono · "
+
+
+def nombre_abono(nombre_credito: str) -> str:
+    return f"{PREFIJO_ABONO}{nombre_credito}"[:80]
+
+
+def categoria_abono(sesion: Session, c: Credito) -> Categoria | None:
+    """La subcategoría de abonos a capital del crédito (hermana de la del crédito)."""
+    cat = sesion.get(Categoria, c.categoria_id) if c.categoria_id else None
+    if cat is None or cat.padre_id is None:
+        return None
+    return sesion.scalar(
+        select(Categoria).where(Categoria.padre_id == cat.padre_id, Categoria.nombre == nombre_abono(cat.nombre))
+    )
 
 
 def credito_de_categoria(sesion: Session, categoria_id: int | None) -> Credito | None:
-    """El crédito al que pertenece una categoría (la del crédito o una de sus subcategorías)."""
+    """El crédito al que pertenece una categoría: la del crédito o su «Abono · {crédito}»."""
     if categoria_id is None:
         return None
     cat = sesion.get(Categoria, categoria_id)
     if cat is None or cat.grupo != "servicio_deuda":
         return None
-    ids = {cat.id} | ({cat.padre_id} if cat.padre_id else set())
-    return sesion.scalar(select(Credito).where(Credito.categoria_id.in_(ids)))
+    directo = sesion.scalar(select(Credito).where(Credito.categoria_id == cat.id))
+    if directo is not None or not cat.nombre.startswith(PREFIJO_ABONO) or cat.padre_id is None:
+        return directo
+    hermana = sesion.scalar(
+        select(Categoria).where(
+            Categoria.padre_id == cat.padre_id, Categoria.nombre == cat.nombre.removeprefix(PREFIJO_ABONO)
+        )
+    )
+    return sesion.scalar(select(Credito).where(Credito.categoria_id == hermana.id)) if hermana else None
 
 
 def recalcular(sesion: Session, credito_id: int) -> int:
@@ -104,13 +128,9 @@ def recalcular(sesion: Session, credito_id: int) -> int:
     txs = list(
         sesion.scalars(select(Transaccion).where(Transaccion.credito_id == c.id, Transaccion.estado == "confirmada"))
     )
+    abono = categoria_abono(sesion, c)
     pagos = [
-        PagoCredito(
-            tx.id,
-            tx.fecha[:10],
-            abs(tx.monto),
-            es_abono=bool(tx.categoria and tx.categoria.nombre == ABONO and tx.categoria.padre_id == c.categoria_id),
-        )
+        PagoCredito(tx.id, tx.fecha[:10], abs(tx.monto), es_abono=abono is not None and tx.categoria_id == abono.id)
         for tx in txs
     ]
     extractos = [
@@ -208,8 +228,8 @@ def crear(uow: UnidadDeTrabajo, d: DatosCredito) -> Credito:
     _validar_credito(d)
     if uow.sesion.scalar(select(Credito).where(Credito.nombre == d.nombre.strip())) is not None:
         raise ErrorValidacion(f"Ya existe un crédito llamado {d.nombre}")
-    categoria = categoria_por_ruta(uow.sesion, Grupo.SERVICIO_DEUDA, d.nombre.strip(), None)
-    categoria_por_ruta(uow.sesion, Grupo.SERVICIO_DEUDA, d.nombre.strip(), ABONO)
+    categoria = categoria_por_ruta(uow.sesion, Grupo.SERVICIO_DEUDA, CREDITOS, d.nombre.strip())
+    categoria_por_ruta(uow.sesion, Grupo.SERVICIO_DEUDA, CREDITOS, nombre_abono(d.nombre.strip()))
     datos = asdict(d)
     cuenta_desembolso = datos.pop("cuenta_desembolso_id")
     c = Credito(**datos, categoria_id=categoria.id, estado="activo")
@@ -235,7 +255,10 @@ def editar(uow: UnidadDeTrabajo, credito_id: int, d: DatosCredito) -> Credito:
     _sincronizar_desembolso(uow.sesion, c, cuenta_desembolso)
     cat = uow.sesion.get(Categoria, c.categoria_id) if c.categoria_id else None
     if cat is not None and cat.nombre == nombre_anterior:  # solo si la categoría se llamaba igual que el crédito
+        abono = categoria_abono(uow.sesion, c)
         cat.nombre = c.nombre
+        if abono is not None:
+            abono.nombre = nombre_abono(c.nombre)
     recalcular(uow.sesion, c.id)
     _programar_cuota(uow.sesion, c)
     uow.registrar(DominioCambio(INVALIDA + ("recurrentes", "transacciones", "categorias"), "editar", (c.id,)))
@@ -315,11 +338,13 @@ def eliminar(uow: UnidadDeTrabajo, credito_id: int) -> dict[str, int]:
         sesion.delete(t)
     sesion.execute(delete(Recurrente).where(Recurrente.id.in_(recurrentes_ids)))
     categoria_id = c.categoria_id
+    abono = categoria_abono(sesion, c)
     sesion.delete(c)
     sesion.flush()
-    if categoria_id is not None and _categoria_libre(sesion, categoria_id):
-        sesion.execute(delete(Categoria).where(Categoria.padre_id == categoria_id))
-        sesion.execute(delete(Categoria).where(Categoria.id == categoria_id))
+    for ident in [categoria_id, abono.id if abono else None]:
+        if ident is not None and _categoria_libre(sesion, ident):
+            sesion.execute(delete(Categoria).where(Categoria.padre_id == ident))
+            sesion.execute(delete(Categoria).where(Categoria.id == ident))
     uow.registrar(
         DominioCambio(INVALIDA + ("recurrentes", "transacciones", "categorias", "cuentas"), "borrar", (credito_id,))
     )

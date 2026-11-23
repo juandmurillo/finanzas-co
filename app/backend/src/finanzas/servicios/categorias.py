@@ -9,7 +9,9 @@ from dataclasses import dataclass
 from sqlalchemy import func, select, update
 
 from finanzas.dominio.errores import ErrorValidacion, NoEncontrado
+from finanzas.dominio.estilo_categorias import estilo_nueva
 from finanzas.dominio.eventos import DominioCambio
+from finanzas.dominio.simbolos import color_valido, simbolo_valido
 from finanzas.infra.modelos import (
     Categoria,
     Credito,
@@ -23,7 +25,6 @@ from finanzas.infra.modelos import (
 from finanzas.infra.uow import UnidadDeTrabajo
 
 INVALIDA = ("categorias", "transacciones", "presupuesto", "reportes", "dashboard", "reglas", "metas")
-COLORES = {f"chart-{i}" for i in range(1, 7)}
 
 
 @dataclass
@@ -37,8 +38,10 @@ class DatosCategoria:
 def _validar(d: DatosCategoria) -> None:
     if not d.nombre.strip() or len(d.nombre.strip()) > 80:
         raise ErrorValidacion("El nombre debe tener entre 1 y 80 caracteres")
-    if d.color is not None and d.color not in COLORES:
-        raise ErrorValidacion("El color debe ser de la paleta (chart-1 … chart-6)")
+    if not color_valido(d.color):
+        raise ErrorValidacion("El color debe ser de la paleta (cat-1 … cat-8)")
+    if not simbolo_valido(d.icono):
+        raise ErrorValidacion("Símbolo no válido: usa un ícono, un emoji o una imagen pequeña")
 
 
 def _hermana(uow: UnidadDeTrabajo, padre_id: int | None, nombre: str, excepto: int | None = None) -> bool:
@@ -62,14 +65,21 @@ def crear(uow: UnidadDeTrabajo, padre_id: int, d: DatosCategoria) -> Categoria:
         raise ErrorValidacion("Una subcategoría no puede tener subcategorías")
     if _hermana(uow, padre.id, d.nombre.strip()):
         raise ErrorValidacion(f"Ya existe «{d.nombre}» ahí")
+    # Sin color ni ícono elegidos: los sugeridos por el nombre (se pueden cambiar después).
+    hermanas = set(
+        uow.sesion.scalars(
+            select(Categoria.color).where(Categoria.padre_id == padre.id, Categoria.color.is_not(None))
+        ).all()
+    )
+    icono_sug, color_sug = estilo_nueva(d.nombre.strip(), padre.grupo, padre.nivel + 1, hermanas)
     c = Categoria(
         padre_id=padre.id,
         nivel=padre.nivel + 1,
         nombre=d.nombre.strip(),
         grupo=padre.grupo,
         es_fijo=bool(d.es_fijo),
-        icono=d.icono,
-        color=d.color,
+        icono=d.icono or icono_sug,
+        color=d.color or color_sug,
     )
     uow.sesion.add(c)
     uow.sesion.flush()

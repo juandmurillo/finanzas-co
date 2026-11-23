@@ -38,7 +38,7 @@ class Cuenta(Base):
     saldo_inicial: Mapped[int] = mapped_column(Integer, default=0)
     exenta_gmf: Mapped[bool] = mapped_column(default=False)
     color: Mapped[str | None] = mapped_column(String(20))
-    icono: Mapped[str | None] = mapped_column(String(40))
+    icono: Mapped[str | None] = mapped_column(Text)
     orden: Mapped[int] = mapped_column(default=0)
     archivado_en: Mapped[str | None] = mapped_column(String(40))
     incluir_en_total: Mapped[bool] = mapped_column(default=True, server_default="1")
@@ -61,7 +61,7 @@ class Categoria(Base):
     grupo: Mapped[str] = mapped_column(String(30))
     es_fijo: Mapped[bool] = mapped_column(default=False)
     color: Mapped[str | None] = mapped_column(String(20))
-    icono: Mapped[str | None] = mapped_column(String(40))
+    icono: Mapped[str | None] = mapped_column(Text)
     archivado_en: Mapped[str | None] = mapped_column(String(40))
 
     padre: Mapped[Categoria | None] = relationship(remote_side=[id])
@@ -163,7 +163,8 @@ class Credito(Base):
     seguro_mensual: Mapped[int] = mapped_column(default=0)
     dia_pago: Mapped[int]
     estado: Mapped[str] = mapped_column(String(20), default="activo")
-    # Categoría «Servicio de deuda › {crédito}»: los movimientos ahí se ligan al crédito y recalculan su saldo.
+    # Categoría «Servicio de deuda › Créditos › {crédito}» (y su hermana «Abono · {crédito}», desde 0012):
+    # los movimientos ahí se ligan al crédito y recalculan su saldo.
     categoria_id: Mapped[int | None] = mapped_column(ForeignKey("categoria.id", ondelete="SET NULL"))
     # Movimiento de desembolso (grupo financiación): no es un pago, por eso no usa `transaccion.credito_id`.
     desembolso_id: Mapped[int | None] = mapped_column(

@@ -1,0 +1,206 @@
+/* Configuración: índice de filas + detalle. En el celular, el detalle reemplaza al índice. */
+.config {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.config-indice {
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: calc(var(--topbar-height) + 8px);
+}
+.config-fila {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 60px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  text-decoration: none;
+}
+.config-fila + .config-fila {
+  border-top: 1px solid var(--border);
+}
+.config-fila:hover {
+  background: var(--card-raised);
+}
+.config-fila[aria-current="page"] {
+  background: var(--accent-soft);
+}
+.config-fila > svg {
+  color: var(--ink-subtle);
+}
+.config-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--card-raised);
+}
+.config-fila[aria-current="page"] .config-ico {
+  background: var(--card);
+  color: var(--accent-ink);
+}
+.config-texto b,
+.config-texto small {
+  display: block;
+}
+.config-texto small {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+.config-titulo {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+.config-volver {
+  display: none;
+  font-weight: 600;
+  text-decoration: none;
+  min-height: 44px;
+  align-items: center;
+}
+@media (max-width: 860px) {
+  .config {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .config-indice {
+    position: static;
+  }
+  .config[data-detalle="no"] .config-detalle,
+  .config[data-detalle="si"] .config-indice {
+    display: none;
+  }
+  .config[data-detalle="no"] .config-fila[aria-current="page"] {
+    background: none;
+  }
+  .config-volver {
+    display: inline-flex;
+  }
+}
+
+/* ---------- Apariencia ---------- */
+.apariencia fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.apariencia .cd-seg {
+  align-self: flex-start;
+}
+.apariencia .cd-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.acentos {
+  /* Cuadrícula alineada: todas las opciones miden lo mismo (también la elegida) y quedan en columnas parejas. */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+.acento {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 48px;
+  padding: 0 12px 0 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  font: 600 13px var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.acento > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Elegida: anillo de 2 px en tinta (oscuro en claro, claro en oscuro) dibujado con sombra interior, sin cambiar
+   el tamaño; la muestra lleva además un aro y la palomita. */
+.acento[aria-checked="true"] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  background: var(--card-raised);
+}
+.acento-muestra {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #ffffff; /* la muestra es de color fijo, la palomita también */
+}
+.acento[aria-checked="true"] .acento-muestra {
+  box-shadow:
+    0 0 0 2px var(--card-raised),
+    0 0 0 4px var(--ink);
+}
+.acento-muestra svg {
+  filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.6));
+  width: 16px;
+  height: 16px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .acento[aria-checked="false"]:hover {
+    border-color: var(--border-strong);
+  }
+}
+.apariencia-muestra {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.apariencia-muestra .cd-balance {
+  min-height: 150px;
+}
+.apariencia-muestra .cd-balance-value {
+  font-size: 30px;
+  line-height: 36px;
+  white-space: nowrap;
+}
+.apariencia-filas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.apariencia-filas li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.apariencia-filas li:last-child {
+  border: 0;
+}
+.apariencia-filas .cd-input {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .apariencia-muestra {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -74,7 +74,14 @@ def estado(sesion: Session) -> dict[str, Any]:
         "es_demo": leer(sesion, "es_demo") == "1",
         "modulo_apuestas": leer(sesion, "modulo_apuestas", "auto"),
         "modulos": {"apuestas": apuestas_visibles(sesion)},
+        # Mes (AAAA-MM) del movimiento confirmado más antiguo: límite al navegar hacia atrás en los gráficos.
+        "primer_mes": _primer_mes(sesion),
     }
+
+
+def _primer_mes(sesion: Session) -> str | None:
+    fecha = sesion.scalar(select(func.min(Transaccion.fecha)).where(Transaccion.estado == "confirmada"))
+    return fecha[:7] if fecha else None
 
 
 def configurar(uow: UnidadDeTrabajo, cambios: dict[str, str]) -> None:

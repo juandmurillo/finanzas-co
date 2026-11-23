@@ -25,6 +25,9 @@ class Config(BaseSettings):
     origenes_cors: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     hosts_permitidos: list[str] = ["localhost", "127.0.0.1", "testserver"]
     zona_horaria: str = "America/Bogota"
+    # Arranque portátil (Android): secreto que exige cada petición y carpeta del frontend compilado que sirve la API.
+    secreto: str | None = Field(default=None, repr=False)
+    web_dir: Path | None = None
     # Respaldo diario y programación de recurrentes mientras la API corre (apagado en pruebas).
     tareas_diarias: bool = True
     # Asistente opcional (fase 6): la clave puede ir en app/backend/.env (no versionado) como ANTHROPIC_API_KEY.

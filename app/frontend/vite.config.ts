@@ -1,12 +1,18 @@
 /// <reference types="vitest/config" />
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
+
+// Versión de la app: la de package.json, la misma fuente que usa el proyecto (se muestra en «Más › Acerca de»).
+const version = (JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8")) as { version: string })
+  .version;
 
 // La API corre en 127.0.0.1:8000; el proxy evita CORS y mantiene el backend solo en localhost.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: { __VERSION_APP__: JSON.stringify(version) },
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {
     port: 5173,

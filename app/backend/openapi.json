@@ -2381,6 +2381,58 @@
       }
      }
     }
+   },
+   "patch": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Editar Prestamo",
+    "operationId": "editar_prestamo_api_v1_prestamos__prestamo_id__patch",
+    "parameters": [
+     {
+      "name": "prestamo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Prestamo Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CambiosPrestamoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Editar Prestamo Api V1 Prestamos  Prestamo Id  Patch"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/prestamos/{prestamo_id}/abonos": {
@@ -2422,6 +2474,118 @@
           "type": "integer"
          },
          "title": "Response Abonar Api V1 Prestamos  Prestamo Id  Abonos Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prestamos/{prestamo_id}/entregas": {
+   "post": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Prestar Mas",
+    "description": "Entrega adicional al mismo préstamo (mismas condiciones).",
+    "operationId": "prestar_mas_api_v1_prestamos__prestamo_id__entregas_post",
+    "parameters": [
+     {
+      "name": "prestamo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Prestamo Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AbonoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "integer"
+         },
+         "title": "Response Prestar Mas Api V1 Prestamos  Prestamo Id  Entregas Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prestamos/{prestamo_id}/edicion/vista-previa": {
+   "post": {
+    "tags": [
+     "prestamos"
+    ],
+    "summary": "Vista Previa Edicion",
+    "description": "Cómo quedaría lo pendiente con los cambios, sin guardar.",
+    "operationId": "vista_previa_edicion_api_v1_prestamos__prestamo_id__edicion_vista_previa_post",
+    "parameters": [
+     {
+      "name": "prestamo_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Prestamo Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CambiosPrestamoIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Vista Previa Edicion Api V1 Prestamos  Prestamo Id  Edicion Vista Previa Post"
         }
        }
       }
@@ -2925,7 +3089,7 @@
      "reportes"
     ],
     "summary": "Reporte Valor Neto",
-    "description": "Saldo de las cuentas incluidas en el total, al cierre de cada mes o día.",
+    "description": "Saldo de las cuentas incluidas en el total (o de una sola cuenta), al cierre de cada mes o día.",
     "operationId": "reporte_valor_neto_api_v1_reportes_valor_neto_get",
     "parameters": [
      {
@@ -2979,6 +3143,22 @@
        "type": "string",
        "default": "mes",
        "title": "Escala"
+      }
+     },
+     {
+      "name": "cuenta_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Cuenta Id"
       }
      }
     ],
@@ -5118,6 +5298,176 @@
     ],
     "title": "BorrarIn"
    },
+   "CambiosPrestamoIn": {
+    "properties": {
+     "persona": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Persona"
+     },
+     "origen": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "amigo",
+         "familia",
+         "companero",
+         "otra_fuente"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Origen"
+     },
+     "nota": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nota"
+     },
+     "fecha": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha"
+     },
+     "monto_inicial": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Monto Inicial"
+     },
+     "tipo_interes": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "ninguno",
+         "fijo",
+         "simple_mensual"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tipo Interes"
+     },
+     "interes_fijo": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Interes Fijo"
+     },
+     "tasa_mensual": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tasa Mensual"
+     },
+     "plan": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "fecha_unica",
+         "cuotas",
+         "libre"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Plan"
+     },
+     "frecuencia": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "diaria",
+         "semanal",
+         "quincenal",
+         "mensual"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Frecuencia"
+     },
+     "num_cuotas": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 120.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Num Cuotas"
+     },
+     "fecha_limite": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fecha Limite"
+     }
+    },
+    "type": "object",
+    "title": "CambiosPrestamoIn",
+    "description": "Solo se cambia lo que llega; capital, fecha y condiciones recalculan lo pendiente."
+   },
    "CategoriaCambios": {
     "properties": {
      "nombre": {
@@ -5137,7 +5487,7 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 40
+        "maxLength": 200000
        },
        {
         "type": "null"
@@ -5264,7 +5614,7 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 40
+        "maxLength": 200000
        },
        {
         "type": "null"
@@ -5614,13 +5964,25 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 40
+        "maxLength": 200000
        },
        {
         "type": "null"
        }
       ],
       "title": "Icono"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
      },
      "incluir_en_total": {
       "anyOf": [
@@ -5690,7 +6052,8 @@
      "color": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 20
        },
        {
         "type": "null"
@@ -5702,7 +6065,7 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 40
+        "maxLength": 200000
        },
        {
         "type": "null"

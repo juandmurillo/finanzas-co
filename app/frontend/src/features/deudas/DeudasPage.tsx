@@ -1,11 +1,11 @@
 /** Deudas (RF-DE): créditos con saldo del último extracto, costo real vs usura, simulador y amortización. */
-import { rutaSuave } from "@/shared/lib/curvas";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { useCaptura } from "@/features/captura";
 import type { CreditoDetalle, Simulacion } from "@/shared/api/tipos";
+import { AreaComparada, Circulo, MedioAnillo } from "@/shared/charts";
 import { api } from "@/shared/lib/api";
 import {
   diasHasta,
@@ -17,18 +17,22 @@ import {
   parseMonto,
   porcentaje,
 } from "@/shared/lib/formato";
+import { mostrarPanel } from "@/shared/lib/panel";
 import { claves } from "@/shared/lib/queryKeys";
 import { useDebounce } from "@/shared/lib/useDebounce";
 import { DiasRestantes } from "@/shared/ui/DiasRestantes";
-import { Carrusel } from "@/shared/ui/Carrusel";
 import { Dinero } from "@/shared/ui/Dinero";
 import { ErrorVista, TarjetaCargando, Vacio } from "@/shared/ui/Estados";
 import { Hoja } from "@/shared/ui/Hoja";
+import { ListaDensa } from "@/shared/ui/Datos";
+import { CabeceraTarjeta, FilaMetricas, KpiCompacto } from "@/shared/ui/Kpi";
 import { MenuAcciones } from "@/shared/ui/MenuAcciones";
 
+import "./deudas.css";
 import { AbonoUnico, CompraCartera } from "./ExtrasDeuda";
 import { FormCredito } from "./FormCredito";
 
+import { CampoFecha } from "@/shared/ui/CampoFecha";
 type Accion =
   | { tipo: "nuevo" }
   | { tipo: "editar"; credito: CreditoDetalle }
@@ -42,167 +46,197 @@ function etiquetaMes(i: number): string {
   return `${nombreMes(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, true)} ${String(d.getFullYear()).slice(2)}`;
 }
 
-function TarjetaCredito({
+/** Fila de la lista: lo necesario para comparar créditos de un vistazo. */
+function FilaCredito({ c, activo, onSeleccionar }: { c: CreditoDetalle; activo: boolean; onSeleccionar: () => void }) {
+  const p = c.proximo_pago;
+  return (
+    <li>
+      <button type="button" className="fila-credito" aria-current={activo ? "true" : undefined} onClick={onSeleccionar}>
+        <Circulo titulo={`Capital pagado de ${c.nombre}`} fraccion={c.avance} tamano={48} grosor={5} />
+        <span className="fila-credito-nombre">
+          <b>{c.nombre}</b>
+          <small>
+            {c.entidad} · {porcentaje(c.tasa_ea, 1)} E.A.
+          </small>
+        </span>
+        <span className="fila-credito-proximo">
+          {p?.fecha ? (
+            <>
+              <b className="cd-num">{formatoCOP(p.total)}</b>
+              <small>
+                {fechaCorta(p.fecha)} <DiasRestantes dias={diasHasta(p.fecha)} />
+              </small>
+            </>
+          ) : (
+            <small>Sin cuota programada</small>
+          )}
+        </span>
+        <span className="fila-credito-saldo">
+          <b className="cd-num">{formatoCOP(c.saldo)}</b>
+          <small>pendiente</small>
+        </span>
+      </button>
+    </li>
+  );
+}
+
+type PestanaDetalle = "pagos" | "amortizacion" | "extractos";
+
+/** Detalle de un crédito: próxima cuota con «Registrar pago», condiciones y, debajo, sus tablas. */
+function PanelCredito({
   c,
   usura,
-  activo,
-  onSeleccionar,
   onAccion,
+  onVolver,
 }: {
   c: CreditoDetalle;
   usura: number;
-  activo: boolean;
-  onSeleccionar: () => void;
   onAccion: (a: Accion) => void;
+  onVolver: () => void;
 }) {
   const p = c.proximo_pago;
   const { abrir, abrirMovimiento } = useCaptura();
+  const [pestana, setPestana] = useState<PestanaDetalle>("pagos");
+  const abonar = () =>
+    abrir("gasto", {
+      categoriaId: c.categoria_abono_id,
+      cuentaId: c.cuenta_pago_id,
+      descripcion: `Abono a capital ${c.nombre}`,
+    });
   return (
-    <article
-      className="cd-card cd-stack"
-      style={{ gap: 14, outline: activo ? "2px solid var(--focus-ring)" : undefined }}
-    >
-      <div className="cd-card-head" style={{ margin: 0 }}>
-        <div>
-          <h3 className="cd-card-title">{c.nombre}</h3>
-          <span className="cd-delta-note">{c.entidad}</span>
+    <section className="panel-credito cd-stack" aria-labelledby={`credito-${c.id}`} tabIndex={-1}>
+      <button type="button" className="panel-volver" onClick={onVolver}>
+        ‹ Créditos
+      </button>
+      <div className="panel-superior">
+        <div className="panel-cuota">
+          <div className="cd-row" style={{ justifyContent: "space-between", flexWrap: "nowrap", gap: 8 }}>
+            <div>
+              <p className="panel-sobre">Próxima cuota</p>
+              <h2 id={`credito-${c.id}`}>{c.nombre}</h2>
+            </div>
+            <MenuAcciones
+              etiqueta={`Acciones de ${c.nombre}`}
+              acciones={[
+                { texto: "Editar crédito", alElegir: () => onAccion({ tipo: "editar", credito: c }) },
+                { texto: "Marcar como pagado", alElegir: () => onAccion({ tipo: "pagado", credito: c }) },
+                {
+                  texto: "Eliminar crédito",
+                  peligro: true,
+                  alElegir: () => onAccion({ tipo: "eliminar", credito: c }),
+                },
+              ]}
+            />
+          </div>
+          {p ? (
+            <>
+              <p className="panel-monto cd-num">{formatoCOP(p.total)}</p>
+              <div className="panel-desglose cd-num">
+                {(
+                  [
+                    ["Capital", p.capital],
+                    ["Interés", p.interes],
+                    ["Seguro", p.seguro],
+                  ] as const
+                ).map(([t, v]) => (
+                  <span key={t}>
+                    {t}
+                    <b>{formatoCOP(v)}</b>
+                  </span>
+                ))}
+              </div>
+              <div className="panel-pie">
+                <span className="cd-row" style={{ gap: 6 }}>
+                  {p.fecha ? `Vence el ${fechaCorta(p.fecha, true)}` : "Sin fecha programada"}
+                  {p.fecha && <DiasRestantes dias={diasHasta(p.fecha)} />}
+                </span>
+                <span className="cd-row" style={{ gap: 6 }}>
+                  <button className="cd-btn cd-btn--sm panel-secundario" onClick={abonar}>
+                    Abonar a capital
+                  </button>
+                  <button
+                    className="cd-btn cd-btn--sm cd-btn--accent"
+                    onClick={() =>
+                      p.transaccion_id != null
+                        ? abrirMovimiento(p.transaccion_id)
+                        : abrir("gasto", { cuentaId: c.cuenta_pago_id, descripcion: `Cuota ${c.nombre}` })
+                    }
+                  >
+                    Registrar pago
+                  </button>
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className="panel-sobre" style={{ margin: "12px 0 0" }}>
+              No hay cuotas pendientes en la proyección.
+            </p>
+          )}
         </div>
-        <span className="cd-row" style={{ gap: 6, flexWrap: "nowrap" }}>
-          <span className={`cd-badge ${c.prioridad_avalancha === 1 ? "cd-badge--warning" : "cd-badge--neutral"}`}>
-            {c.prioridad_avalancha === 1 ? "Prioridad 1 · más cara" : `Prioridad ${c.prioridad_avalancha}`}
-          </span>
-          <MenuAcciones
-            etiqueta={`Acciones de ${c.nombre}`}
-            acciones={[
-              { texto: "Editar", alElegir: () => onAccion({ tipo: "editar", credito: c }) },
-              { texto: "Marcar como pagado", alElegir: () => onAccion({ tipo: "pagado", credito: c }) },
-              { texto: "Eliminar crédito", peligro: true, alElegir: () => onAccion({ tipo: "eliminar", credito: c }) },
-            ]}
+
+        <div className="panel-avance">
+          <MedioAnillo
+            titulo={`Has pagado el ${porcentaje(c.avance, 0)} del capital`}
+            fraccion={c.avance}
+            tamano={180}
+            grosor={16}
+            detalle="del capital"
           />
-        </span>
-      </div>
-      <div className="cd-stack" style={{ gap: 2 }}>
-        <span className="cd-kpi-label">Saldo al {fechaCorta(c.fecha_saldo, true)}</span>
-        <span style={{ fontSize: 28, lineHeight: "34px", fontWeight: 700 }}>
-          <Dinero centavos={c.saldo} decimales />
-        </span>
-      </div>
-      <div className="cd-stack" style={{ gap: 6 }}>
-        <div className="cd-goal-meta">
-          <span>Capital pagado</span>
-          <b>{porcentaje(c.avance, 0)}</b>
-        </div>
-        <div className="cd-progress" role="img" aria-label={`Has pagado el ${porcentaje(c.avance, 0)} del capital`}>
-          <i style={{ width: `${Math.max(0, Math.min(100, c.avance * 100))}%` }} />
-        </div>
-      </div>
-      <div className="cuotas-credito" role="group" aria-label="Cuotas">
-        <span>
-          <b className="cd-num">{c.cuotas_pagadas}</b>
-          <small>pagadas</small>
-        </span>
-        <span>
-          <b className="cd-num">{c.cuotas_pendientes}</b>
-          <small>por pagar</small>
-        </span>
-        <span>
-          <b className="cd-num">{c.cuotas_pagadas + c.cuotas_pendientes}</b>
-          <small>en total</small>
-        </span>
-      </div>
-      {p && (
-        <div
-          className="cd-stack"
-          style={{ gap: 6, padding: 12, borderRadius: "var(--radius-md)", background: "var(--surface-2, var(--bg))" }}
-        >
-          <div className="cd-row" style={{ justifyContent: "space-between", gap: 8 }}>
-            <span className="cd-kpi-label">Próximo pago{p.fecha && ` · ${fechaCorta(p.fecha)}`}</span>
-            {p.fecha && <DiasRestantes dias={diasHasta(p.fecha)} />}
-          </div>
-          <b className="cd-num" style={{ fontSize: 20 }}>
-            {formatoCOP(p.total)}
-          </b>
-          <div
-            className="cd-delta-note cd-num"
-            style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 4 }}
-          >
-            {(
-              [
-                ["Capital", p.capital],
-                ["Interés", p.interes],
-                ["Seguro", p.seguro],
-              ] as const
-            ).map(([t, v]) => (
-              <span key={t} className="cd-stack" style={{ gap: 0 }}>
-                {t}
-                <b style={{ color: "var(--ink)" }}>{formatoCOP(v)}</b>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="cd-stack" style={{ gap: 6 }}>
-        <div className="cd-goal-meta">
-          <span>Tasa pactada · usura {porcentaje(usura, 1)}</span>
-          <b>{porcentaje(c.tasa_ea)} E.A.</b>
-        </div>
-        <div
-          className={`cd-progress ${c.tasa_ea >= usura * 0.9 ? "cd-progress--warn" : ""}`}
-          role="img"
-          aria-label={`Tasa ${porcentaje(c.tasa_ea)} frente a usura ${porcentaje(usura)}`}
-        >
-          <i style={{ width: `${Math.min(100, (c.tasa_ea / usura) * 100)}%` }} />
-        </div>
-      </div>
-      <ul className="cd-list">
-        <li>
-          <div className="grow">
-            Cuota
+          <span>
+            <b>Capital pagado</b>
             <small>
-              incluye seguro {formatoCOP(c.seguro_mensual)} · día {c.dia_pago}
+              {c.cuotas_pagadas} de {c.cuotas_pagadas + c.cuotas_pendientes} cuotas
             </small>
-          </div>
-          <span className="cd-amt">{formatoCOP(c.cuota)}</span>
-        </li>
-        <li>
-          <div className="grow">
-            Costo real<small>sobre los {formatoCOP(c.monto_recibido)} recibidos</small>
-          </div>
-          <span className="cd-amt">{porcentaje(c.costo_real_ea, 1)} E.A.</span>
-        </li>
-        <li>
-          <div className="grow">
-            Intereses y seguro por pagar<small>termina en {nombreMes(c.fecha_fin.slice(0, 7))}</small>
-          </div>
-          <span className="cd-amt">{formatoCOP(c.intereses_por_pagar)}</span>
-        </li>
-      </ul>
-      <div className="cd-row" style={{ gap: 6 }}>
-        {p?.transaccion_id != null && (
-          <button
-            className="cd-btn cd-btn--primary cd-btn--sm"
-            onClick={() => p.transaccion_id && abrirMovimiento(p.transaccion_id)}
-          >
-            Pagué la cuota
-          </button>
-        )}
-        <button
-          className="cd-btn cd-btn--secondary cd-btn--sm"
-          onClick={() =>
-            abrir("gasto", {
-              categoriaId: c.categoria_abono_id,
-              cuentaId: c.cuenta_pago_id,
-              descripcion: `Abono a capital ${c.nombre}`,
-            })
-          }
-        >
-          Abonar a capital
-        </button>
-        <button className="cd-btn cd-btn--ghost cd-btn--sm" aria-expanded={activo} onClick={onSeleccionar}>
-          {activo ? "Ocultar detalle" : "Pagos y amortización"}
-        </button>
+            <small>Termina en {nombreMes(c.fecha_fin.slice(0, 7))}</small>
+          </span>
+        </div>
       </div>
-    </article>
+      <dl className="panel-datos">
+        <div>
+          <dt>Saldo al {fechaCorta(c.fecha_saldo, true)}</dt>
+          <dd className="cd-num">
+            <Dinero centavos={c.saldo} decimales />
+          </dd>
+        </div>
+        <div>
+          <dt>Cuotas pagadas</dt>
+          <dd className="cd-num">
+            {c.cuotas_pagadas} de {c.cuotas_pagadas + c.cuotas_pendientes}
+          </dd>
+        </div>
+        <div>
+          <dt>Cuota mensual · día {c.dia_pago}</dt>
+          <dd className="cd-num">{formatoCOP(c.cuota)}</dd>
+        </div>
+        <div>
+          <dt>Tasa · usura {porcentaje(usura, 1)}</dt>
+          <dd className={c.tasa_ea >= usura * 0.9 ? "texto-aviso" : undefined}>{porcentaje(c.tasa_ea)} E.A.</dd>
+        </div>
+        <div>
+          <dt>Costo real sobre {formatoCOP(c.monto_recibido)}</dt>
+          <dd>{porcentaje(c.costo_real_ea, 1)} E.A.</dd>
+        </div>
+        <div>
+          <dt>Intereses y seguro por pagar</dt>
+          <dd className="cd-num">{formatoCOP(c.intereses_por_pagar)}</dd>
+        </div>
+      </dl>
+
+      <div className="cd-seg" role="tablist" aria-label="Detalle del crédito" style={{ alignSelf: "flex-start" }}>
+        {(
+          [
+            ["pagos", "Pagos"],
+            ["amortizacion", "Amortización"],
+            ["extractos", "Extractos"],
+          ] as const
+        ).map(([v, t]) => (
+          <button key={v} role="tab" aria-selected={pestana === v} onClick={() => setPestana(v)}>
+            {t}
+          </button>
+        ))}
+      </div>
+      <TablasCredito id={c.id} pestana={pestana} />
+    </section>
   );
 }
 
@@ -296,64 +330,40 @@ function Historial() {
   if (!cerrados.data?.length) return null;
   return (
     <section className="cd-card">
-      <div className="cd-card-head">
-        <h3 className="cd-card-title">Historial de créditos</h3>
-        <span className="cd-delta-note">pagados o cerrados</span>
-      </div>
-      <ul className="cd-list">
-        {cerrados.data.map((c) => (
-          <li key={c.id}>
-            <div className="grow">
-              {c.nombre}
-              <small>
-                {c.entidad} · {fechaCorta(c.fecha_desembolso, true)}
-                {c.ultimo_pago && ` → ${fechaCorta(c.ultimo_pago, true)}`} · recibiste {formatoCOP(c.monto_recibido)}
-              </small>
-            </div>
-            <span className="cd-stack" style={{ alignItems: "flex-end", gap: 0 }}>
-              <span className="cd-amt">{formatoCOP(c.total_pagado)} pagados</span>
-              {c.costo > 0 && <span className="cd-delta-note cd-num">te costó {formatoCOP(c.costo)}</span>}
+      <CabeceraTarjeta titulo="Historial de créditos" rango="pagados o cerrados" />
+      <ListaDensa
+        etiqueta="Historial de créditos"
+        max={6}
+        filas={cerrados.data.map((c) => ({
+          clave: c.id,
+          titulo: c.nombre,
+          detalle: `${c.entidad} · ${fechaCorta(c.fecha_desembolso, true)}${c.ultimo_pago ? ` → ${fechaCorta(c.ultimo_pago, true)}` : ""} · recibiste ${formatoCOP(c.monto_recibido)}`,
+          fin: (
+            <span className="historial-fin">
+              <b className="cd-num">{formatoCOP(c.total_pagado)}</b>
+              {c.costo > 0 && <small className="cd-num">te costó {formatoCOP(c.costo)}</small>}
             </span>
-          </li>
-        ))}
-      </ul>
+          ),
+        }))}
+      />
     </section>
   );
 }
 
 function GraficoSimulacion({ s }: { s: Simulacion }) {
-  const n = Math.max(s.saldos_base.length, 2);
-  const maximo = Math.max(1, ...s.saldos_base);
-  const x = (i: number) => 50 + (i / (n - 1)) * 580;
-  const y = (v: number) => 190 - (v / maximo) * 170;
-  const paso = Math.max(1, Math.ceil((n - 1) / 6));
-  const marcas = Array.from({ length: Math.floor((n - 1) / paso) + 1 }, (_, k) => k * paso);
-  const linea = (serie: number[]) => rutaSuave(serie.map((v, i): [number, number] => [x(i), y(v)]));
-  const area = `${linea(s.saldos_con_abono)} L${x(s.saldos_con_abono.length - 1).toFixed(1)} 190 L50 190 Z`;
+  const n = Math.max(s.saldos_base.length, s.saldos_con_abono.length);
   return (
-    <svg
-      className="cd-chart"
-      viewBox="0 0 640 222"
-      role="img"
-      aria-label={`Saldo total mes a mes: ${s.meses_base} meses pagando solo la cuota y ${s.meses_con_abono} con el abono`}
-    >
-      <line className="grid" x1="44" x2="640" y1="20" y2="20" />
-      <line className="grid" x1="44" x2="640" y1="190" y2="190" />
-      <text x="40" y="24" textAnchor="end">
-        {formatoCOP(maximo).replace("$ ", "")}
-      </text>
-      <text x="40" y="194" textAnchor="end">
-        0
-      </text>
-      {marcas.map((i) => (
-        <text key={i} x={x(i)} y="212" textAnchor={i === 0 ? "start" : "middle"}>
-          {etiquetaMes(i)}
-        </text>
-      ))}
-      <path className="area1" d={area} />
-      <path className="l3" d={linea(s.saldos_base)} />
-      <path className="l1" d={linea(s.saldos_con_abono)} />
-    </svg>
+    <AreaComparada
+      titulo={`Saldo total mes a mes: ${s.meses_base} meses pagando solo la cuota y ${s.meses_con_abono} con el abono`}
+      nombre="Con abono"
+      nombreAnterior="Solo la cuota"
+      alto={240}
+      datos={Array.from({ length: n }, (_, i) => ({
+        etiqueta: etiquetaMes(i),
+        valor: s.saldos_con_abono[i] ?? 0,
+        anterior: s.saldos_base[i] ?? 0,
+      }))}
+    />
   );
 }
 
@@ -367,20 +377,8 @@ function Simulador() {
     placeholderData: (p) => p,
   });
   return (
-    <section className="cd-card cd-stack" aria-label="Simulador de abonos" style={{ gap: 16 }}>
-      <div className="cd-card-head" style={{ margin: 0 }}>
-        <h3 className="cd-card-title">Simulador de abonos</h3>
-        <div className="cd-legend">
-          <span>
-            <i className="cd-sw c1" />
-            Con abono
-          </span>
-          <span>
-            <i className="cd-sw c3" />
-            Solo la cuota
-          </span>
-        </div>
-      </div>
+    <section className="cd-card cd-stack" aria-label="Simulador de abonos" style={{ gap: 12 }}>
+      <CabeceraTarjeta titulo="Simulador de abonos" rango="Cuánto antes terminas si abonas cada mes" />
       <div className="cd-row">
         <label className="cd-select cd-num" style={{ height: 40, gap: 6 }}>
           <span className="cd-muted">Abono extra / mes $</span>
@@ -420,48 +418,31 @@ function Simulador() {
       </div>
       {sim.isError && <ErrorVista error={sim.error} />}
       {sim.data && (
-        <div className="simulador-cuerpo">
-          <div className="cd-stack" style={{ gap: 12 }}>
-            <ul
-              className="cd-list"
-              style={{ padding: "4px 16px", borderRadius: "var(--radius-md)", background: "var(--positive-soft)" }}
-            >
-              <li>
-                <div className="grow">
-                  Terminas
-                  <small>
-                    {nombreMes(sim.data.fecha_fin_con_abono)} en lugar de {nombreMes(sim.data.fecha_fin_base)}
-                  </small>
-                </div>
-                <span className="cd-amt" style={{ color: "var(--positive)" }}>
-                  {sim.data.meses_ahorrados} meses antes
-                </span>
-              </li>
-              <li>
-                <div className="grow">
-                  Ahorras<small>intereses y seguro</small>
-                </div>
-                <span className="cd-amt" style={{ color: "var(--positive)" }}>
-                  {formatoCOP(sim.data.ahorro)}
-                </span>
-              </li>
-              <li>
-                <div className="grow">Orden de pago</div>
-                <span className="cd-amt">{sim.data.orden.join(" → ")}</span>
-              </li>
-            </ul>
-            <p className="cd-delta-note" style={{ margin: 0 }}>
-              En cada abono pide al banco <b>abono a capital</b> con <b>reducción de plazo</b>.
-            </p>
-          </div>
+        <>
+          <FilaMetricas
+            etiqueta="Resultado del simulador"
+            metricas={[
+              {
+                etiqueta: "Terminas",
+                valor: nombreMes(sim.data.fecha_fin_con_abono),
+                nota: `en vez de ${nombreMes(sim.data.fecha_fin_base)}`,
+              },
+              { etiqueta: "Meses antes", valor: String(sim.data.meses_ahorrados), tono: "ingreso" },
+              { etiqueta: "Ahorras", valor: sim.data.ahorro, nota: "intereses y seguro", tono: "ingreso" },
+              { etiqueta: "Orden de pago", valor: sim.data.orden.join(" → ") },
+            ]}
+          />
           <GraficoSimulacion s={sim.data} />
-        </div>
+          <p className="cd-delta-note" style={{ margin: 0 }}>
+            En cada abono pide al banco <b>abono a capital</b> con <b>reducción de plazo</b>.
+          </p>
+        </>
       )}
     </section>
   );
 }
 
-function DetalleCredito({ id }: { id: number }) {
+function TablasCredito({ id, pestana }: { id: number; pestana: PestanaDetalle }) {
   const cliente = useQueryClient();
   const datos = useQuery({ queryKey: claves.amortizacion(id), queryFn: () => api.amortizacion(id) });
   const [form, setForm] = useState({ fecha: hoyISO(), saldo: "", cuotas: "" });
@@ -481,95 +462,95 @@ function DetalleCredito({ id }: { id: number }) {
   if (datos.isPending) return <TarjetaCargando filas={6} />;
   if (datos.isError) return <ErrorVista error={datos.error} reintentar={() => void datos.refetch()} />;
   const d = datos.data;
-  return (
-    <div className="cd-bento">
-      <section className="cd-card span-8 cd-stack" style={{ gap: 20 }}>
-        <div>
-          <div className="cd-card-head">
-            <h3 className="cd-card-title">Pagos registrados · {d.nombre}</h3>
-            <span className="cd-delta-note">cada pago repartido en capital, interés y seguro</span>
-          </div>
-          {d.pagos.length === 0 ? (
-            <Vacio titulo="Aún no hay pagos" texto="Al marcar una cuota o un abono aparece aquí." />
-          ) : (
-            <div style={{ overflowX: "auto", maxHeight: 320 }}>
-              <table className="cd-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Tipo</th>
-                    <th>Pagado</th>
-                    <th>Capital</th>
-                    <th>Interés</th>
-                    <th>Seguro</th>
-                    <th>Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...d.pagos].reverse().map((p) => (
-                    <tr key={p.transaccion_id}>
-                      <td className="cd-muted">{fechaCorta(p.fecha, true)}</td>
-                      <td>{p.tipo === "abono" ? "Abono" : "Cuota"}</td>
-                      <td className="cd-amt">{formatoCOP(p.monto)}</td>
-                      <td className="cd-amt">{formatoCOP(p.capital)}</td>
-                      <td className="cd-amt">{formatoCOP(p.interes)}</td>
-                      <td className="cd-amt cd-muted">{formatoCOP(p.seguro)}</td>
-                      <td className="cd-amt">{formatoCOP(p.saldo_despues)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        <div>
-          <div className="cd-card-head">
-            <h3 className="cd-card-title">Amortización proyectada · {d.nombre}</h3>
-            <span className="cd-delta-note">desde el extracto del {fechaCorta(d.fecha_saldo, true)}</span>
-          </div>
-          <div style={{ overflowX: "auto", maxHeight: 420 }}>
-            <table className="cd-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Fecha</th>
-                  <th>Interés</th>
-                  <th>Seguro</th>
-                  <th>Capital</th>
-                  <th>Saldo</th>
+  if (pestana === "pagos")
+    return d.pagos.length === 0 ? (
+      <Vacio titulo="Aún no hay pagos" texto="Al registrar una cuota o un abono aparece aquí." />
+    ) : (
+      <div className="tabla-desplazable">
+        <table className="cd-table">
+          <caption className="sr-only">Pagos registrados, repartidos en capital, interés y seguro</caption>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Pagado</th>
+              <th>Capital</th>
+              <th>Interés</th>
+              <th>Seguro</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...d.pagos].reverse().map((p) => (
+              <tr key={p.transaccion_id}>
+                <td className="cd-muted">{fechaCorta(p.fecha, true)}</td>
+                <td>{p.tipo === "abono" ? "Abono" : "Cuota"}</td>
+                <td className="cd-amt">{formatoCOP(p.monto)}</td>
+                <td className="cd-amt">{formatoCOP(p.capital)}</td>
+                <td className="cd-amt">{formatoCOP(p.interes)}</td>
+                <td className="cd-amt cd-muted">{formatoCOP(p.seguro)}</td>
+                <td className="cd-amt">{formatoCOP(p.saldo_despues)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  if (pestana === "amortizacion")
+    return (
+      <div className="cd-stack" style={{ gap: 8 }}>
+        <span className="cd-delta-note">Proyectada desde el extracto del {fechaCorta(d.fecha_saldo, true)}</span>
+        <div className="tabla-desplazable">
+          <table className="cd-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fecha</th>
+                <th>Interés</th>
+                <th>Seguro</th>
+                <th>Capital</th>
+                <th>Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.tabla.map((f) => (
+                <tr key={f.numero}>
+                  <td className="cd-num">{f.numero}</td>
+                  <td className="cd-muted">{fechaCorta(f.fecha, true)}</td>
+                  <td className="cd-amt">{formatoCOP(f.interes)}</td>
+                  <td className="cd-amt cd-muted">{formatoCOP(f.seguro)}</td>
+                  <td className="cd-amt">{formatoCOP(f.capital)}</td>
+                  <td className="cd-amt">{formatoCOP(f.saldo)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {d.tabla.map((f) => (
-                  <tr key={f.numero}>
-                    <td className="cd-num">{f.numero}</td>
-                    <td className="cd-muted">{fechaCorta(f.fecha, true)}</td>
-                    <td className="cd-amt">{formatoCOP(f.interes)}</td>
-                    <td className="cd-amt cd-muted">{formatoCOP(f.seguro)}</td>
-                    <td className="cd-amt">{formatoCOP(f.capital)}</td>
-                    <td className="cd-amt">{formatoCOP(f.saldo)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </section>
-      <section className="cd-card span-4 cd-stack" style={{ gap: 14, alignSelf: "start" }}>
-        <h3 className="cd-card-title">Cargar extracto</h3>
+      </div>
+    );
+  return (
+    <div className="extractos">
+      <form
+        className="cd-stack"
+        style={{ gap: 12 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          cargar.mutate();
+        }}
+      >
         <p className="cd-delta-note" style={{ margin: 0 }}>
           El extracto del banco es la fuente de verdad del saldo.
         </p>
-        <label className="cd-stack" style={{ gap: 6, fontSize: 12, fontWeight: 600, color: "var(--ink-muted)" }}>
+        <label className="cd-stack campo-etiqueta">
           Fecha de corte
-          <input
+          <CampoFecha
             type="date"
             className="cd-input"
             value={form.fecha}
             onChange={(e) => setForm({ ...form, fecha: e.target.value })}
           />
         </label>
-        <label className="cd-stack" style={{ gap: 6, fontSize: 12, fontWeight: 600, color: "var(--ink-muted)" }}>
+        <label className="cd-stack campo-etiqueta">
           Nuevo saldo
           <input
             className="cd-input cd-num"
@@ -579,7 +560,7 @@ function DetalleCredito({ id }: { id: number }) {
             onChange={(e) => setForm({ ...form, saldo: mascaraMonto(e.target.value) })}
           />
         </label>
-        <label className="cd-stack" style={{ gap: 6, fontSize: 12, fontWeight: 600, color: "var(--ink-muted)" }}>
+        <label className="cd-stack campo-etiqueta">
           Cuotas pendientes
           <input
             className="cd-input cd-num"
@@ -588,47 +569,78 @@ function DetalleCredito({ id }: { id: number }) {
             onChange={(e) => setForm({ ...form, cuotas: e.target.value.replace(/\D/g, "") })}
           />
         </label>
-        <button className="cd-btn cd-btn--primary" disabled={cargar.isPending} onClick={() => cargar.mutate()}>
+        <button className="cd-btn cd-btn--primary" disabled={cargar.isPending} style={{ alignSelf: "flex-end" }}>
           Guardar extracto
         </button>
-        <h4 className="cd-nav-group" style={{ padding: 0, margin: "8px 0 0" }}>
-          Historial
-        </h4>
-        <ul className="cd-list">
-          {d.extractos.map((e) => (
-            <li key={e.fecha_corte}>
-              <div className="grow">
-                {fechaCorta(e.fecha_corte, true)}
-                <small>{e.cuotas_pendientes} cuotas pendientes</small>
-              </div>
-              <span className="cd-amt">{formatoCOP(e.saldo)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      </form>
+      <div>
+        <h3 className="cd-nav-group" style={{ padding: 0, margin: "0 0 4px" }}>
+          Cargados
+        </h3>
+        {d.extractos.length === 0 ? (
+          <span className="cd-delta-note">Aún no hay extractos.</span>
+        ) : (
+          <ul className="cd-list">
+            {d.extractos.map((e) => (
+              <li key={e.fecha_corte}>
+                <div className="grow">
+                  {fechaCorta(e.fecha_corte, true)}
+                  <small>{e.cuotas_pendientes} cuotas pendientes</small>
+                </div>
+                <span className="cd-amt">{formatoCOP(e.saldo)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
 
+type Vista = "creditos" | "comparar";
+
 export function DeudasPage() {
   const creditos = useQuery({ queryKey: claves.creditos, queryFn: api.creditos });
   const usura = useQuery({ queryKey: ["parametros", "usura"], queryFn: api.usura, staleTime: 3_600_000 });
-  const [seleccionado, setSeleccionado] = useState<number | null>(null);
+  // `elegido` es el que tocó la persona; sin elección, el escritorio muestra la cuota más próxima.
+  const [elegido, setElegido] = useState<number | null>(null);
   const [accion, setAccion] = useState<Accion | null>(null);
+  const [vista, setVista] = useState<Vista>("creditos");
   if (creditos.isPending) return <TarjetaCargando />;
   if (creditos.isError) return <ErrorVista error={creditos.error} reintentar={() => void creditos.refetch()} />;
-  const lista = creditos.data;
+  const lista = [...creditos.data].sort((a, b) =>
+    (a.proximo_pago?.fecha ?? "9999").localeCompare(b.proximo_pago?.fecha ?? "9999"),
+  );
   const total = lista.reduce((t, c) => t + c.saldo, 0);
   const cuotas = lista.reduce((t, c) => t + c.cuota, 0);
   const intereses = lista.reduce((t, c) => t + c.intereses_por_pagar, 0);
   const tasaUsura = usura.data?.consumo_bajo_monto ?? 0.6666;
-  const capitalInicial = lista.reduce((t, c) => t + c.capital_inicial, 0);
-  const avance = capitalInicial ? 1 - total / capitalInicial : 0;
-  const costoMes = lista.reduce((t, c) => t + (c.proximo_pago ? c.proximo_pago.interes + c.proximo_pago.seguro : 0), 0);
-  const proxima = lista
-    .filter((c) => c.proximo_pago?.fecha)
-    .map((c) => ({ nombre: c.nombre, fecha: c.proximo_pago?.fecha ?? "" }))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
+  const seleccionado = lista.find((c) => c.id === elegido) ?? lista[0];
+  const proxima = lista.find((c) => c.proximo_pago?.fecha);
+
+  const kpisDeudas = (
+    <div className={`deudas-kpis ${vista === "creditos" ? "en-columna" : ""}`}>
+      <KpiCompacto
+        inversa
+        etiqueta="Capital pendiente"
+        icono="deudas"
+        valor={total}
+        nota={`${lista.length} ${lista.length === 1 ? "crédito" : "créditos"}`}
+      />
+      <KpiCompacto etiqueta="Cuotas al mes" icono="calendario" valor={cuotas} nota="suma de las cuotas" />
+      <KpiCompacto etiqueta="Intereses y seguro" icono="alerta" valor={intereses} nota="por pagar hasta el final" />
+      <KpiCompacto
+        etiqueta="Próxima cuota"
+        icono="sale"
+        valor={proxima?.proximo_pago?.total ?? "—"}
+        nota={
+          proxima?.proximo_pago?.fecha
+            ? `${proxima.nombre} · ${fechaCorta(proxima.proximo_pago.fecha)}`
+            : "sin cuotas programadas"
+        }
+      />
+    </div>
+  );
 
   return (
     <>
@@ -656,70 +668,60 @@ export function DeudasPage() {
         </section>
       ) : (
         <>
-          <div className="cd-bento">
-            <div className="span-3 cd-balance">
-              <div className="cd-balance-top">
-                <span className="cd-balance-label">Deuda total</span>
-                <span className="cd-chip-glass">{lista.length} créditos</span>
-              </div>
-              <div className="cd-balance-value">
-                <Dinero centavos={total} />
-              </div>
-              <div className="cd-balance-foot">
-                <span style={{ opacity: 0.85 }}>{formatoCOP(intereses)} en intereses y seguro por pagar</span>
-              </div>
-            </div>
-            <div className="cd-card cd-kpi span-3">
-              <span className="cd-kpi-label">Cuotas al mes</span>
-              <span className="cd-kpi-value">
-                <Dinero centavos={cuotas} />
-              </span>
-              <span className="cd-delta-note">
-                {proxima ? `la próxima: ${proxima.nombre} el ${fechaCorta(proxima.fecha)}` : "sin cuotas programadas"}
-              </span>
-            </div>
-            <div className="cd-card cd-kpi span-3">
-              <span className="cd-kpi-label">Capital pagado</span>
-              <span className="cd-kpi-value">{porcentaje(avance, 0)}</span>
-              <div className="cd-progress" role="img" aria-label={`Has pagado el ${porcentaje(avance, 0)} del capital`}>
-                <i style={{ width: `${Math.max(0, Math.min(100, avance * 100))}%` }} />
-              </div>
-              <span className="cd-delta-note">de {formatoCOP(capitalInicial)} prestados</span>
-            </div>
-            <div className="cd-card cd-kpi span-3">
-              <span className="cd-kpi-label">Costo de este mes</span>
-              <span className="cd-kpi-value">
-                <Dinero centavos={costoMes} />
-              </span>
-              <span className="cd-delta-note">
-                intereses y seguro de las próximas cuotas · {porcentaje(cuotas ? costoMes / cuotas : 0, 0)} de lo que
-                pagas
-              </span>
-            </div>
+          <div className="cd-seg" role="tablist" aria-label="Vista de deudas" style={{ alignSelf: "flex-start" }}>
+            <button role="tab" aria-selected={vista === "creditos"} onClick={() => setVista("creditos")}>
+              Mis créditos
+            </button>
+            <button role="tab" aria-selected={vista === "comparar"} onClick={() => setVista("comparar")}>
+              Comparar opciones
+            </button>
           </div>
-          <Carrusel etiqueta="Tus créditos">
-            {lista.map((c) => (
-              <div key={c.id}>
-                <TarjetaCredito
-                  c={c}
+          {vista === "creditos" ? (
+            <div className="deudas" data-detalle={elegido !== null ? "si" : "no"}>
+              <div className="deudas-lista cd-stack">
+                {kpisDeudas}
+                <section className="cd-card">
+                  <CabeceraTarjeta titulo="Tus créditos" rango="por fecha de la próxima cuota" />
+
+                  <ul className="lista-creditos">
+                    {lista.map((c) => (
+                      <FilaCredito
+                        key={c.id}
+                        c={c}
+                        activo={seleccionado?.id === c.id}
+                        onSeleccionar={() => {
+                          setElegido(c.id);
+                          requestAnimationFrame(() => mostrarPanel(".panel-credito"));
+                        }}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              </div>
+              {seleccionado && (
+                <PanelCredito
+                  key={seleccionado.id}
+                  c={seleccionado}
                   usura={tasaUsura}
-                  activo={seleccionado === c.id}
-                  onSeleccionar={() => setSeleccionado(seleccionado === c.id ? null : c.id)}
                   onAccion={setAccion}
+                  onVolver={() => setElegido(null)}
                 />
+              )}
+            </div>
+          ) : (
+            <>
+              {kpisDeudas}
+              <Simulador />
+              <div className="cd-bento">
+                <div className="span-6">
+                  <AbonoUnico creditos={lista} />
+                </div>
+                <div className="span-6">
+                  <CompraCartera />
+                </div>
               </div>
-            ))}
-          </Carrusel>
-          {seleccionado !== null && <DetalleCredito id={seleccionado} />}
-          <Simulador />
-          <div className="cd-bento">
-            <div className="span-6">
-              <AbonoUnico creditos={lista} />
-            </div>
-            <div className="span-6">
-              <CompraCartera />
-            </div>
-          </div>
+            </>
+          )}
         </>
       )}
       <Historial />

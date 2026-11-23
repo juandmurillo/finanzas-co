@@ -3,7 +3,7 @@
 import { useRefrescar } from "@/shared/lib/useRefrescar";
 import { useApuestasVisibles } from "@/shared/lib/useSistema";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { toast } from "sonner";
 
 import type { CategoriaNodo } from "@/shared/api/tipos";
@@ -12,9 +12,13 @@ import { rutaDe } from "@/shared/lib/categorias";
 import { claves } from "@/shared/lib/queryKeys";
 import { TarjetaCargando } from "@/shared/ui/Estados";
 import { Hoja } from "@/shared/ui/Hoja";
+import { Icono } from "@/shared/ui/Icono";
+import { CabeceraTarjeta } from "@/shared/ui/Kpi";
 import { Burbuja, SelectorCategoria } from "@/shared/ui/SelectorCategoria";
-import { SelectorEstilo } from "@/shared/ui/SelectorEstilo";
+import { ICONOS_ELEGIBLES } from "@/shared/ui/SelectorEstilo";
+import { SelectorSimbolo } from "@/shared/ui/Simbolo";
 
+import { Desplegable } from "@/shared/ui/Desplegable";
 const SECCIONES: [string, string[]][] = [
   ["Gastos", ["gasto_vida", "servicio_deuda", "apuestas", "ahorro_inversion"]],
   ["Ingresos", ["ingreso"]],
@@ -123,7 +127,7 @@ function FormCategoria({ accion, arbol, alCerrar }: { accion: Accion; arbol: Cat
       {accion.tipo === "editar" && raiz && (
         <label className="cd-stack" style={{ gap: 6 }}>
           <span className="cd-kpi-label">Pertenece a</span>
-          <select className="cd-input" value={padreId ?? ""} onChange={(e) => setPadreId(Number(e.target.value))}>
+          <Desplegable className="cd-input" value={padreId ?? ""} onChange={(e) => setPadreId(Number(e.target.value))}>
             <option value={raiz.id}>Ninguna: es una categoría principal</option>
             {raiz.hijos
               .filter((h) => h.id !== accion.cat.id)
@@ -132,7 +136,7 @@ function FormCategoria({ accion, arbol, alCerrar }: { accion: Accion; arbol: Cat
                   Subcategoría de {h.nombre}
                 </option>
               ))}
-          </select>
+          </Desplegable>
           <span className="cd-delta-note">
             {accion.cat.hijos.length > 0
               ? "Tiene subcategorías: para volverla subcategoría, mueve primero sus subcategorías."
@@ -140,7 +144,13 @@ function FormCategoria({ accion, arbol, alCerrar }: { accion: Accion; arbol: Cat
           </span>
         </label>
       )}
-      <SelectorEstilo icono={estilo.icono} color={estilo.color} alCambiar={setEstilo} />
+      <SelectorSimbolo
+        icono={estilo.icono}
+        color={estilo.color}
+        alCambiar={setEstilo}
+        iconos={ICONOS_ELEGIBLES}
+        respaldo="categorias"
+      />
     </Hoja>
   );
 }
@@ -157,21 +167,46 @@ function Fila({
   sub?: boolean;
 }) {
   return (
-    <div className="cd-row" style={{ flexWrap: "nowrap", gap: 10, padding: "8px 0", paddingLeft: sub ? 40 : 0 }}>
+    <li className={`admin-cat-fila ${sub ? "sub" : ""}`}>
       <Burbuja cat={cat} ruta={ruta} tam={sub ? 26 : 32} />
-      <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: sub ? 500 : 700 }}>{cat.nombre}</span>
-      {!sub && (
-        <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => onAccion({ tipo: "crear", padre: cat })}>
-          + Sub
+      <span className="admin-cat-nombre">
+        <b>{cat.nombre}</b>
+        {!sub && cat.hijos.length > 0 && (
+          <small>
+            {cat.hijos.length} {cat.hijos.length === 1 ? "subcategoría" : "subcategorías"}
+          </small>
+        )}
+      </span>
+      <span className="acciones-fila">
+        {!sub && (
+          <button
+            type="button"
+            aria-label={`Nueva subcategoría en ${cat.nombre}`}
+            title="Nueva subcategoría"
+            onClick={() => onAccion({ tipo: "crear", padre: cat })}
+          >
+            <Icono nombre="mas" pequeno />
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label={`Editar ${cat.nombre}`}
+          title="Editar"
+          onClick={() => onAccion({ tipo: "editar", cat })}
+        >
+          <Icono nombre="lapiz" pequeno />
         </button>
-      )}
-      <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => onAccion({ tipo: "editar", cat })}>
-        Editar
-      </button>
-      <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => onAccion({ tipo: "eliminar", cat })}>
-        Eliminar
-      </button>
-    </div>
+        <button
+          type="button"
+          className="peligro"
+          aria-label={`Eliminar ${cat.nombre}`}
+          title="Eliminar"
+          onClick={() => onAccion({ tipo: "eliminar", cat })}
+        >
+          <Icono nombre="basura" pequeno />
+        </button>
+      </span>
+    </li>
   );
 }
 
@@ -184,36 +219,35 @@ export function AdministrarCategorias() {
     <div className="cd-bento">
       {SECCIONES.map(([titulo, todos]) => {
         const grupos = todos.filter((g) => apuestas || g !== "apuestas");
+        const raices = (arbol.data ?? []).filter((raiz) => grupos.includes(raiz.grupo));
+        const total = raices.reduce((t, r) => t + r.hijos.length, 0);
         return (
-          <section key={titulo} className="cd-card span-6 cd-stack" style={{ gap: 4 }}>
-            <h3 className="cd-card-title">{titulo}</h3>
-            {(arbol.data ?? [])
-              .filter((raiz) => grupos.includes(raiz.grupo))
-              .map((raiz) => (
-                <div
-                  key={raiz.id}
-                  className="cd-stack"
-                  style={{ gap: 0, borderTop: "1px solid var(--border)", paddingTop: 8 }}
-                >
-                  <div className="cd-row" style={{ justifyContent: "space-between" }}>
-                    <span className="cd-kpi-label">{raiz.nombre}</span>
-                    <button
-                      className="cd-btn cd-btn--secondary cd-btn--sm"
-                      onClick={() => setAccion({ tipo: "crear", padre: raiz })}
-                    >
-                      + Categoría
-                    </button>
-                  </div>
-                  {raiz.hijos.map((cat) => (
-                    <div key={cat.id}>
-                      <Fila cat={cat} ruta={[raiz.nombre, cat.nombre]} onAccion={setAccion} />
-                      {cat.hijos.map((s) => (
-                        <Fila key={s.id} cat={s} ruta={[raiz.nombre, cat.nombre, s.nombre]} onAccion={setAccion} sub />
-                      ))}
-                    </div>
-                  ))}
+          <section key={titulo} className="cd-card span-6 admin-cat">
+            <CabeceraTarjeta titulo={titulo} rango={`${total} categorías · toca el lápiz para color y símbolo`} />
+            {raices.map((raiz) => (
+              <div key={raiz.id} className="admin-cat-grupo">
+                <div className="admin-cat-grupo-cabeza">
+                  <span>{raiz.nombre}</span>
+                  <button
+                    type="button"
+                    className="cd-btn cd-btn--ghost cd-btn--sm"
+                    onClick={() => setAccion({ tipo: "crear", padre: raiz })}
+                  >
+                    <Icono nombre="mas" pequeno /> Categoría
+                  </button>
                 </div>
-              ))}
+                <ul>
+                  {raiz.hijos.map((cat) => (
+                    <Fragment key={cat.id}>
+                      <Fila cat={cat} ruta={[raiz.nombre, cat.nombre]} onAccion={setAccion} />
+                      {cat.hijos.map((x) => (
+                        <Fila key={x.id} cat={x} ruta={[raiz.nombre, cat.nombre, x.nombre]} onAccion={setAccion} sub />
+                      ))}
+                    </Fragment>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </section>
         );
       })}

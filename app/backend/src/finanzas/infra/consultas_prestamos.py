@@ -39,6 +39,7 @@ def _a_dict(sesion: Session, p: PrestamoPersonal, hoy: date) -> dict[str, Any]:
     return {
         "id": p.id,
         "persona": p.contraparte.nombre,
+        "contraparte_id": p.contraparte_id,
         "direccion": p.direccion,
         "origen": p.origen,
         "monto": p.monto,
@@ -76,6 +77,18 @@ def listar(sesion: Session, estado: str | None = None) -> list[dict[str, Any]]:
     return [_a_dict(sesion, p, hoy) for p in prestamos]
 
 
+def _tipo_movimiento(t: Transaccion) -> str:
+    """entrega (desembolso inicial o adicional), abono a capital, interés o condonación."""
+    nombre = t.categoria.nombre if t.categoria else ""
+    if nombre == "Desembolso":
+        return "entrega"
+    if nombre == "Abono a capital":
+        return "abono"
+    if nombre == "Préstamo condonado":
+        return "condonacion"
+    return "interes"
+
+
 def detalle(sesion: Session, prestamo_id: int) -> dict[str, Any] | None:
     p = sesion.get(PrestamoPersonal, prestamo_id)
     if p is None:
@@ -84,12 +97,19 @@ def detalle(sesion: Session, prestamo_id: int) -> dict[str, Any] | None:
     puente = cuenta_puente(sesion, p.direccion)
     movimientos = sesion.scalars(
         select(Transaccion)
-        .options(joinedload(Transaccion.cuenta))
+        .options(joinedload(Transaccion.cuenta), joinedload(Transaccion.categoria))
         .where(Transaccion.prestamo_id == p.id, Transaccion.cuenta_id != puente.id)
         .order_by(Transaccion.fecha)
     )
     datos["movimientos"] = [
-        {"id": t.id, "fecha": t.fecha, "monto": t.monto, "descripcion": t.descripcion, "cuenta": t.cuenta.nombre}
+        {
+            "id": t.id,
+            "fecha": t.fecha,
+            "monto": t.monto,
+            "descripcion": t.descripcion,
+            "cuenta": t.cuenta.nombre,
+            "tipo": _tipo_movimiento(t),
+        }
         for t in movimientos
     ]
     return datos

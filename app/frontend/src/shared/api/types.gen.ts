@@ -753,7 +753,8 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /** Editar Prestamo */
+    patch: operations["editar_prestamo_api_v1_prestamos__prestamo_id__patch"];
     trace?: never;
   };
   "/api/v1/prestamos/{prestamo_id}/abonos": {
@@ -767,6 +768,46 @@ export interface paths {
     put?: never;
     /** Abonar */
     post: operations["abonar_api_v1_prestamos__prestamo_id__abonos_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/prestamos/{prestamo_id}/entregas": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Prestar Mas
+     * @description Entrega adicional al mismo préstamo (mismas condiciones).
+     */
+    post: operations["prestar_mas_api_v1_prestamos__prestamo_id__entregas_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/prestamos/{prestamo_id}/edicion/vista-previa": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Vista Previa Edicion
+     * @description Cómo quedaría lo pendiente con los cambios, sin guardar.
+     */
+    post: operations["vista_previa_edicion_api_v1_prestamos__prestamo_id__edicion_vista_previa_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -884,7 +925,7 @@ export interface paths {
     };
     /**
      * Reporte Valor Neto
-     * @description Saldo de las cuentas incluidas en el total, al cierre de cada mes o día.
+     * @description Saldo de las cuentas incluidas en el total (o de una sola cuenta), al cierre de cada mes o día.
      */
     get: operations["reporte_valor_neto_api_v1_reportes_valor_neto_get"];
     put?: never;
@@ -1607,6 +1648,36 @@ export interface components {
       /** Confirmacion */
       confirmacion: string;
     };
+    /**
+     * CambiosPrestamoIn
+     * @description Solo se cambia lo que llega; capital, fecha y condiciones recalculan lo pendiente.
+     */
+    CambiosPrestamoIn: {
+      /** Persona */
+      persona?: string | null;
+      /** Origen */
+      origen?: ("amigo" | "familia" | "companero" | "otra_fuente") | null;
+      /** Nota */
+      nota?: string | null;
+      /** Fecha */
+      fecha?: string | null;
+      /** Monto Inicial */
+      monto_inicial?: number | null;
+      /** Tipo Interes */
+      tipo_interes?: ("ninguno" | "fijo" | "simple_mensual") | null;
+      /** Interes Fijo */
+      interes_fijo?: number | null;
+      /** Tasa Mensual */
+      tasa_mensual?: number | null;
+      /** Plan */
+      plan?: ("fecha_unica" | "cuotas" | "libre") | null;
+      /** Frecuencia */
+      frecuencia?: ("diaria" | "semanal" | "quincenal" | "mensual") | null;
+      /** Num Cuotas */
+      num_cuotas?: number | null;
+      /** Fecha Limite */
+      fecha_limite?: string | null;
+    };
     /** CategoriaCambios */
     CategoriaCambios: {
       /** Nombre */
@@ -1776,6 +1847,8 @@ export interface components {
       institucion?: string | null;
       /** Icono */
       icono?: string | null;
+      /** Color */
+      color?: string | null;
       /** Incluir En Total */
       incluir_en_total?: boolean | null;
       /** Archivada */
@@ -3983,6 +4056,43 @@ export interface operations {
       };
     };
   };
+  editar_prestamo_api_v1_prestamos__prestamo_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        prestamo_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CambiosPrestamoIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   abonar_api_v1_prestamos__prestamo_id__abonos_post: {
     parameters: {
       query?: never;
@@ -4006,6 +4116,80 @@ export interface operations {
         content: {
           "application/json": {
             [key: string]: number;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  prestar_mas_api_v1_prestamos__prestamo_id__entregas_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        prestamo_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AbonoIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: number;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  vista_previa_edicion_api_v1_prestamos__prestamo_id__edicion_vista_previa_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        prestamo_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CambiosPrestamoIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
           };
         };
       };
@@ -4242,6 +4426,7 @@ export interface operations {
         /** @description Mes final AAAA-MM (incluido) */
         hasta?: string | null;
         escala?: "mes" | "dia" | "movimiento";
+        cuenta_id?: number | null;
       };
       header?: never;
       path?: never;

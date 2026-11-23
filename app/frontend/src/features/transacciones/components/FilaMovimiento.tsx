@@ -1,7 +1,7 @@
 import { useCaptura } from "@/features/captura";
 import type { Transaccion } from "@/shared/api/tipos";
 import { fechaCorta, formatoCOP, horaCorta } from "@/shared/lib/formato";
-import { Icono, iconoCategoria } from "@/shared/ui/Icono";
+import { IconoCategoria, tonosCategoria, useEstiloCategorias } from "@/shared/ui/EstiloCategoria";
 import { CuentaEtiqueta } from "@/shared/ui/SelectorCuenta";
 
 /** Fila de movimiento. Gastos en tinta, ingresos en `positive`, transferencias atenuadas. Al tocarla abre el
@@ -18,6 +18,8 @@ export function FilaMovimiento({
   onSeleccionar?: (tx: Transaccion) => void;
 }) {
   const { abrirMovimiento } = useCaptura();
+  const estilo = useEstiloCategorias();
+  const tono = estilo({ id: tx.categoria_id, ruta: tx.categoria_ruta });
   const alTocar = onSeleccionar ?? abrirMovimiento;
   const ruta = tx.categoria_ruta.slice(1);
   const esTransferencia = tx.grupo === "transferencia";
@@ -25,11 +27,8 @@ export function FilaMovimiento({
   const titulo = tx.descripcion || ruta.at(-1) || "Sin descripción";
   const contenido = (
     <>
-      <span
-        className="cd-avatar cd-avatar--sq"
-        style={{ background: "var(--brand-soft)", color: "var(--on-brand-soft)" }}
-      >
-        <Icono nombre={iconoCategoria(tx.categoria_ruta, tx.grupo)} />
+      <span className="cd-avatar cd-avatar--sq" style={tonosCategoria(tono)}>
+        <IconoCategoria estilo={tono} ruta={tx.categoria_ruta} grupo={tx.grupo} tam={20} />
       </span>
       <div className="grow" style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

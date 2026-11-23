@@ -29,6 +29,7 @@ def test_primer_uso_vacio_deja_la_app_lista(nueva: TestClient) -> None:
     assert nueva.post("/api/v1/sistema/primer-uso", json={"nombre": "Ana", "modo": "vacio"}).status_code == 204
     estado = nueva.get("/api/v1/sistema").json()
     assert (estado["primer_uso"], estado["nombre"], estado["es_demo"]) == (False, "Ana", False)
+    assert estado["primer_mes"] is None  # sin movimientos no hay límite hacia atrás
     assert len(nueva.get("/api/v1/cuentas").json()) == 2
     grupos = {r["grupo"]: r["hijos"] for r in nueva.get("/api/v1/categorias").json()}
     assert grupos["gasto_vida"] and grupos["ingreso"]  # se puede registrar sin importar nada
@@ -43,6 +44,7 @@ def test_demo_es_coherente_y_sin_apuestas(nueva: TestClient) -> None:
     assert len(creditos) == 2 and all(c["cuotas_pagadas"] > 0 and c["proximo_pago"] for c in creditos)
     meses = nueva.get("/api/v1/reportes/mensual").json()["meses"]
     assert len(meses) == 18 and all(m["ingresos"] > 0 for m in meses[:-1])  # el mes en curso puede ir sin nómina
+    assert estado["primer_mes"] == meses[0]["mes"]  # límite de los gráficos al ir hacia atrás
     assert nueva.get("/api/v1/reportes/dashboard").json()["saldo_total"] > 0
     assert nueva.get("/api/v1/calendario").json()["eventos"]
     assert len(nueva.get("/api/v1/metas").json()) == 3

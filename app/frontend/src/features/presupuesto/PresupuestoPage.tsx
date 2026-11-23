@@ -2,26 +2,33 @@
  * «Hogar» = arriendo + servicios + internet). El monto se fija al crear o editar y rige desde ese mes (fase 8, 8.1);
  * cada fila compara lo usado con el ritmo ideal del mes, y dos gráficos muestran meses pasados y el ritmo. */
 import { useRefrescar } from "@/shared/lib/useRefrescar";
-import { rutaSuave } from "@/shared/lib/curvas";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { aPeriodo, ControlPeriodo, usePeriodo } from "@/features/analisis/Periodo";
+import { AreaComparada, BarrasAgrupadas, MedioAnillo } from "@/shared/charts";
+import { BarraFiltros } from "@/shared/ui/BarraFiltros";
+import { BarraLimite } from "@/shared/ui/Datos";
+import { CabeceraTarjeta, FilaMetricas, KpiCompacto } from "@/shared/ui/Kpi";
+import { esMovil } from "@/shared/lib/dispositivo";
 import type { FilaPresupuesto, GrupoPresupuestoIn } from "@/shared/api/tipos";
 import { api } from "@/shared/lib/api";
 import { rutaDe } from "@/shared/lib/categorias";
-import { abreviar, formatoCOP, hoyISO, mascaraMonto, moverMes, nombreMes, parseMonto } from "@/shared/lib/formato";
+import { formatoCOP, hoyISO, mascaraMonto, moverMes, nombreMes, parseMonto } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 import { useFiltroRecordado } from "@/shared/lib/useFiltroRecordado";
-import { Dinero } from "@/shared/ui/Dinero";
 import { ErrorVista, TarjetaCargando, Vacio } from "@/shared/ui/Estados";
 import { Hoja } from "@/shared/ui/Hoja";
 import { Icono, type NombreIcono } from "@/shared/ui/Icono";
 import { colorDe, SelectorCategoria } from "@/shared/ui/SelectorCategoria";
 import { ICONOS_ELEGIBLES, SelectorEstilo } from "@/shared/ui/SelectorEstilo";
-import { Sensores, TooltipGrafico, ZonaGrafico } from "@/shared/ui/TooltipGrafico";
 
+import "./presupuesto.css";
+
+import { Desplegable } from "@/shared/ui/Desplegable";
+import { ZonaPeriodo } from "@/features/analisis/ZonaPeriodo";
+import { keepPreviousData } from "@tanstack/react-query";
 const GRUPOS_PRESUPUESTABLES = ["gasto_vida", "servicio_deuda", "apuestas", "ahorro_inversion"];
 
 function IconoGrupo({ f }: { f: Pick<FilaPresupuesto, "icono" | "color"> }) {
@@ -43,89 +50,91 @@ function FilaGrupo({ f, ritmo, alEditar }: { f: FilaPresupuesto; ritmo: number; 
     onError: (e) => toast.error(e.message),
     onSettled: refrescar,
   });
-  const clase = f.pct >= 100 ? "cd-progress--over" : f.pct >= 80 ? "cd-progress--warn" : "";
+  const enCurso = ritmo > 0 && ritmo < 1;
+  const diferencia = f.pct - ritmo * 100;
+  const movil = esMovil();
   return (
-    <li className="cd-stack" style={{ gap: 8, padding: "14px 0", borderBottom: "1px solid var(--border)" }}>
-      <div className="cd-row" style={{ flexWrap: "nowrap", gap: 12 }}>
+    <li
+      className={`fila-presupuesto ${movil ? "fila-tocable" : ""}`}
+      role={movil ? "button" : undefined}
+      tabIndex={movil ? 0 : undefined}
+      aria-label={movil ? `Editar ${f.nombre}` : undefined}
+      onClick={movil ? alEditar : undefined}
+      onKeyDown={movil ? (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), alEditar()) : undefined}
+    >
+      <div className="fila-presupuesto-cabeza">
         <IconoGrupo f={f} />
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <b style={{ fontSize: 15 }}>{f.nombre}</b>
-          {f.es_fijo && (
-            <span className="cd-badge cd-badge--neutral" style={{ marginLeft: 8 }}>
-              Fijo
-            </span>
-          )}
-          <span className="cd-delta-note" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {f.categorias.map((c) => c.ruta.slice(1).join(" › ")).join(" · ")}
+        <span className="fila-presupuesto-texto">
+          <b>
+            {f.nombre}
+            {f.es_fijo && <span className="cd-badge cd-badge--neutral">Fijo</span>}
+          </b>
+          <small>{f.categorias.map((c) => c.ruta.slice(1).join(" › ")).join(" · ")}</small>
+        </span>
+        {f.tiene_asignacion ? (
+          <span className="fila-presupuesto-pct">
+            <b className="cd-num">{f.pct}%</b>
+            {enCurso && (
+              <small className={diferencia > 5 ? "tono-alerta" : diferencia < -5 ? "tono-ingreso" : undefined}>
+                {diferencia > 5
+                  ? `${Math.round(diferencia)} pts sobre el ritmo`
+                  : diferencia < -5
+                    ? "bajo el ritmo"
+                    : "al ritmo"}
+              </small>
+            )}
           </span>
-        </span>
-        <span className="cd-stack" style={{ alignItems: "flex-end", gap: 0 }}>
-          {f.tiene_asignacion ? (
-            <>
-              <b className="cd-num" style={{ fontSize: 16 }}>
-                {f.pct} %
-              </b>
-              <span className="cd-delta-note cd-num">de {formatoCOP(f.asignado)}</span>
-            </>
-          ) : (
-            <button className="cd-btn cd-btn--secondary cd-btn--sm" onClick={alEditar}>
-              Poner monto
-            </button>
-          )}
-        </span>
-      </div>
-      {f.tiene_asignacion && (
-        <div
-          className={`cd-progress ${clase}`}
-          role="progressbar"
-          aria-label={f.nombre}
-          aria-valuenow={f.pct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <i style={{ width: `${Math.min(100, f.pct)}%` }} />
-          {ritmo > 0 && ritmo < 1 && (
-            <span className="presupuesto-ritmo" style={{ left: `${ritmo * 100}%` }} title="Ritmo ideal a hoy" />
-          )}
-        </div>
-      )}
-      <div className="cd-row" style={{ justifyContent: "space-between", gap: 8 }}>
-        <span className="cd-delta-note cd-num">
-          {f.tiene_asignacion && ritmo > 0 && ritmo < 1 && (
-            <b style={{ color: f.pct > ritmo * 100 + 5 ? "var(--negative)" : "var(--positive)" }}>
-              {f.pct > ritmo * 100 + 5
-                ? `${Math.round(f.pct - ritmo * 100)} pts por encima del ritmo`
-                : f.pct < ritmo * 100 - 5
-                  ? "por debajo del ritmo"
-                  : "al ritmo"}
-              {" · "}
-            </b>
-          )}
-          Gastado {formatoCOP(f.gastado)}
-          {f.tiene_asignacion &&
-            (f.disponible >= 0
-              ? ` · quedan ${formatoCOP(f.disponible)}`
-              : ` · te pasaste ${formatoCOP(-f.disponible)}`)}
-        </span>
-        <span className="cd-row" style={{ gap: 4 }}>
-          <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={alEditar}>
-            Editar
+        ) : (
+          <button
+            className="cd-btn cd-btn--secondary cd-btn--sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              alEditar();
+            }}
+          >
+            Poner monto
           </button>
-          {confirmar ? (
-            <button
-              className="cd-btn cd-btn--sm"
-              style={{ background: "var(--negative)", color: "var(--card)" }}
-              onClick={() => eliminar.mutate()}
-            >
-              Confirmar
+        )}
+        {!movil && (
+          <span className="acciones-fila">
+            <button type="button" aria-label={`Editar ${f.nombre}`} title="Editar" onClick={alEditar}>
+              <Icono nombre="lapiz" pequeno />
             </button>
-          ) : (
-            <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setConfirmar(true)}>
-              Eliminar
-            </button>
-          )}
-        </span>
+            {confirmar ? (
+              <button
+                type="button"
+                className="peligro confirmar"
+                aria-label={`Confirmar: eliminar ${f.nombre}`}
+                title="Confirmar eliminación"
+                onClick={() => eliminar.mutate()}
+              >
+                <Icono nombre="check" pequeno />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="peligro"
+                aria-label={`Eliminar ${f.nombre}`}
+                title="Eliminar"
+                onClick={() => setConfirmar(true)}
+              >
+                <Icono nombre="basura" pequeno />
+              </button>
+            )}
+          </span>
+        )}
       </div>
+      {f.tiene_asignacion ? (
+        <BarraLimite
+          etiqueta={f.nombre}
+          gastado={f.gastado}
+          limite={f.asignado}
+          ritmo={enCurso ? ritmo : undefined}
+          alta
+        />
+      ) : (
+        <span className="cd-delta-note cd-num">Gastado {formatoCOP(f.gastado)} · sin monto asignado</span>
+      )}
     </li>
   );
 }
@@ -148,6 +157,16 @@ function FormGrupo({
   const [monto, setMonto] = useState(
     inicial.tiene_asignacion ? mascaraMonto(String((inicial.asignado ?? 0) / 100)) : "",
   );
+  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
+  const eliminar = useMutation({
+    mutationFn: () => api.eliminarGrupo(inicial.id ?? 0),
+    onSuccess: () => {
+      toast(`Presupuesto «${inicial.nombre}» eliminado`);
+      alCerrar();
+    },
+    onError: (e) => toast.error(e.message),
+    onSettled: refrescar,
+  });
   const guardar = useMutation({
     mutationFn: async () => {
       const centavos = parseMonto(monto);
@@ -169,18 +188,37 @@ function FormGrupo({
       titulo={inicial.id ? `Editar ${inicial.nombre}` : "Nuevo presupuesto"}
       onCerrar={alCerrar}
       pie={
-        <>
-          <button className="cd-btn cd-btn--ghost" onClick={alCerrar}>
-            Cancelar
-          </button>
-          <button
-            className="cd-btn cd-btn--primary"
-            disabled={!nombre.trim() || ids.length === 0 || !parseMonto(monto) || guardar.isPending}
-            onClick={() => guardar.mutate()}
-          >
-            {inicial.id ? "Guardar cambios" : "Crear presupuesto"}
-          </button>
-        </>
+        confirmarBorrado ? (
+          <>
+            <span className="pie-confirmar" role="alert">
+              ¿Eliminar «{inicial.nombre}»? Sus categorías y movimientos se conservan.
+            </span>
+            <button className="cd-btn cd-btn--ghost" onClick={() => setConfirmarBorrado(false)}>
+              No
+            </button>
+            <button className="cd-btn cd-btn--peligro" disabled={eliminar.isPending} onClick={() => eliminar.mutate()}>
+              {eliminar.isPending ? "Eliminando…" : "Sí, eliminar"}
+            </button>
+          </>
+        ) : (
+          <>
+            {inicial.id ? (
+              <button className="cd-btn cd-btn--peligro-suave" onClick={() => setConfirmarBorrado(true)}>
+                Eliminar presupuesto
+              </button>
+            ) : null}
+            <button className="cd-btn cd-btn--ghost" onClick={alCerrar}>
+              Cancelar
+            </button>
+            <button
+              className="cd-btn cd-btn--primary"
+              disabled={!nombre.trim() || ids.length === 0 || !parseMonto(monto) || guardar.isPending}
+              onClick={() => guardar.mutate()}
+            >
+              {inicial.id ? "Guardar cambios" : "Crear presupuesto"}
+            </button>
+          </>
+        )
       }
     >
       <label className="cd-stack" style={{ gap: 6 }}>
@@ -236,155 +274,87 @@ function FormGrupo({
   );
 }
 
+function SelectorGrupo({
+  grupos,
+  valor,
+  alCambiar,
+}: {
+  grupos: { id: number; nombre: string }[];
+  valor?: number;
+  alCambiar: (g: number | undefined) => void;
+}) {
+  return (
+    <Desplegable
+      aria-label="Presupuesto"
+      className="cd-select"
+      value={valor ?? ""}
+      onChange={(e) => alCambiar(e.target.value ? Number(e.target.value) : undefined)}
+    >
+      <option value="">Todos juntos</option>
+      {grupos.map((g) => (
+        <option key={g.id} value={g.id}>
+          {g.nombre}
+        </option>
+      ))}
+    </Desplegable>
+  );
+}
+
 function Historico({ grupos }: { grupos: { id: number; nombre: string }[] }) {
   const nav = usePeriodo("6m", "presupuesto-mes-a-mes");
   const [filtro, setFiltro] = useFiltroRecordado<{ grupo?: number }>("presupuesto-mes-a-mes:grupo", {});
   const grupo = filtro.grupo;
-  const setGrupo = (g: number | undefined) => setFiltro(() => ({ grupo: g }));
   const periodo = nav.preset === "todo" ? aPeriodo("12m") : nav.periodo;
   const desde = periodo.desde ?? moverMes(hoyISO().slice(0, 7), -11);
   const hasta = periodo.hasta ?? hoyISO().slice(0, 7);
   const h = useQuery({
     queryKey: claves.historicoPresupuesto(desde, hasta, grupo),
     queryFn: () => api.historicoPresupuesto(desde, hasta, grupo),
+    placeholderData: keepPreviousData,
   });
   const meses = h.data?.meses ?? [];
   const con = meses.filter((m) => m.asignado > 0);
   const dentro = con.filter((m) => m.gastado <= m.asignado).length;
   const media = meses.length ? meses.reduce((t, m) => t + m.gastado, 0) / meses.length : 0;
-  const limiteMedio = con.length ? con.reduce((t, m) => t + m.asignado, 0) / con.length : 0;
-  const maximo = Math.max(1, ...meses.flatMap((m) => [m.asignado, m.gastado]));
-  const ancho = 640;
-  const paso = (ancho - 50) / Math.max(1, meses.length);
-  const [activo, setActivo] = useState<number | null>(null);
-  const centro = (i: number) => 56 + i * paso + Math.min(36, paso * 0.7) / 2;
-  const m0 = activo !== null ? meses[activo] : undefined;
   return (
-    <section className="cd-card cd-stack" style={{ gap: 12 }}>
-      <div className="cd-card-head" style={{ flexWrap: "wrap", gap: 8 }}>
-        <h3 className="cd-card-title">Mes a mes</h3>
-        <div className="cd-row" style={{ gap: 6 }}>
-          <select
-            aria-label="Presupuesto"
-            className="cd-input"
-            style={{ width: "auto" }}
-            value={grupo ?? ""}
-            onChange={(e) => setGrupo(e.target.value ? Number(e.target.value) : undefined)}
-          >
-            <option value="">Todos juntos</option>
-            {grupos.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.nombre}
-              </option>
-            ))}
-          </select>
-          <ControlPeriodo nav={nav} opciones={["6m", "12m", "rango"]} />
-        </div>
-      </div>
-      {con.length > 0 && (
-        <span className="cd-delta-note">
-          <b style={{ color: "var(--ink)" }}>
-            {dentro} de {con.length}
-          </b>{" "}
-          meses dentro del límite · gasto medio {formatoCOP(Math.round(media))}
-          {con.length > 0 && ` · límite medio ${formatoCOP(Math.round(limiteMedio))}`}
-        </span>
-      )}
-      {meses.length === 0 ? (
-        <span className="cd-delta-note">Sin datos en ese periodo.</span>
-      ) : (
-        <ZonaGrafico>
-          <svg className="cd-chart" viewBox={`0 0 ${ancho} 200`} role="img" aria-label="Asignado y gastado por mes">
-            <line className="grid" x1="44" x2={ancho} y1="20" y2="20" />
-            <text x="38" y="24" textAnchor="end">
-              {abreviar(maximo)}
-            </text>
-            <line className="grid-dash" x1="44" x2={ancho} y1="170" y2="170" />
-            {meses.map((m, i) => {
-              const x = 56 + i * paso;
-              const alto = (v: number) => (v / maximo) * 150;
-              const pasado = m.asignado > 0 && m.gastado > m.asignado;
-              return (
-                <g key={m.mes}>
-                  <rect
-                    opacity={activo === null || activo === i ? 1 : 0.45}
-                    x={x}
-                    y={170 - alto(m.gastado)}
-                    width={Math.min(36, paso * 0.7)}
-                    height={alto(m.gastado)}
-                    rx="5"
-                    fill={pasado ? "var(--negative)" : "var(--chart-1)"}
-                  />
-                  {m.asignado > 0 && (
-                    <line
-                      x1={x - 4}
-                      x2={x + Math.min(36, paso * 0.7) + 4}
-                      y1={170 - alto(m.asignado)}
-                      y2={170 - alto(m.asignado)}
-                      stroke="var(--ink)"
-                      strokeWidth="2.5"
-                      strokeDasharray="5 3"
-                    />
-                  )}
-                  <text x={x + Math.min(36, paso * 0.7) / 2} y="192" textAnchor="middle">
-                    {nombreMes(m.mes, true)}
-                  </text>
-                </g>
-              );
-            })}
-            <Sensores
-              n={meses.length}
-              x={centro}
-              ancho={paso}
-              alto={175}
-              arriba={10}
-              activo={activo}
-              alCambiar={setActivo}
+    <section className="cd-card">
+      <CabeceraTarjeta
+        titulo="Mes a mes"
+        rango={con.length ? `${dentro} de ${con.length} meses dentro del límite` : "Gastado frente al límite"}
+        accion={
+          <span className="cd-row" style={{ gap: 6 }}>
+            <SelectorGrupo grupos={grupos} valor={grupo} alCambiar={(g) => setFiltro(() => ({ grupo: g }))} />
+            <ControlPeriodo nav={nav} opciones={["6m", "12m", "rango"]} />
+          </span>
+        }
+      />
+      {h.isPending && <TarjetaCargando filas={3} />}
+      {h.isError && <ErrorVista error={h.error} reintentar={() => void h.refetch()} />}
+      {h.isSuccess &&
+        (meses.length === 0 ? (
+          <span className="cd-delta-note">Sin datos en ese periodo.</span>
+        ) : (
+          <ZonaPeriodo nav={nav} cargando={h.isPlaceholderData}>
+            <BarrasAgrupadas
+              titulo="Gastado y límite por mes"
+              etiquetas={meses.map((m) => nombreMes(m.mes, true))}
+              detalles={meses.map((m) => nombreMes(m.mes))}
+              series={[
+                { nombre: "Gastado", color: "var(--chart-1)", valores: meses.map((m) => m.gastado) },
+                {
+                  nombre: "Límite",
+                  color: "color-mix(in srgb, var(--chart-1) 35%, var(--card))",
+                  valores: meses.map((m) => m.asignado),
+                },
+              ]}
+              relativo
+              desvanecer
             />
-          </svg>
-          {m0 && activo !== null && (
-            <TooltipGrafico izquierda={(centro(activo) / ancho) * 100}>
-              <b style={{ textTransform: "capitalize" }}>{nombreMes(m0.mes)}</b>
-              <span className="fila">
-                <span>
-                  <i
-                    className="punto"
-                    style={{
-                      background: m0.asignado > 0 && m0.gastado > m0.asignado ? "var(--negative)" : "var(--chart-1)",
-                    }}
-                  />
-                  Gastado
-                </span>
-                {formatoCOP(m0.gastado)}
-              </span>
-              <span className="fila">
-                <span>Límite</span>
-                {m0.asignado ? formatoCOP(m0.asignado) : "—"}
-              </span>
-              {m0.asignado > 0 && (
-                <span className="fila">
-                  <span>{m0.gastado > m0.asignado ? "Te pasaste" : "Te sobró"}</span>
-                  {formatoCOP(Math.abs(m0.asignado - m0.gastado))}
-                </span>
-              )}
-            </TooltipGrafico>
-          )}
-        </ZonaGrafico>
-      )}
-      <div className="cd-legend">
-        <span>
-          <i className="cd-sw" style={{ background: "var(--ink)", height: 3 }} />
-          Límite del mes
-        </span>
-        <span>
-          <i className="cd-sw c1" />
-          Gastado dentro del límite
-        </span>
-        <span>
-          <i className="cd-sw" style={{ background: "var(--negative)" }} />
-          Gastado por encima de lo asignado
-        </span>
-      </div>
+            <p className="cd-delta-note" style={{ margin: "8px 0 0" }}>
+              Gasto medio {formatoCOP(Math.round(media))} al mes. En el globo, «Diferencia» negativa = te sobró.
+            </p>
+          </ZonaPeriodo>
+        ))}
     </section>
   );
 }
@@ -392,149 +362,68 @@ function Historico({ grupos }: { grupos: { id: number; nombre: string }[] }) {
 function RitmoMes({ mes, grupos }: { mes: string; grupos: { id: number; nombre: string }[] }) {
   const [filtro, setFiltro] = useFiltroRecordado<{ grupo?: number }>("presupuesto-ritmo:grupo", {});
   const grupo = filtro.grupo;
-  const setGrupo = (g: number | undefined) => setFiltro(() => ({ grupo: g }));
   const a = useQuery({
     queryKey: [...claves.presupuesto(mes), "acumulado", grupo ?? "todos"],
     queryFn: () => api.acumuladoPresupuesto(mes, grupo),
   });
   const d = a.data;
-  const W = 640;
-  const H = 200;
-  const tope = d ? Math.max(1, d.limite, ...d.serie.map((s) => Math.max(s.actual ?? 0, s.anterior))) : 1;
-  const x = (dia: number) => 44 + ((dia - 1) / Math.max(1, (d?.dias ?? 30) - 1)) * (W - 54);
-  const y = (v: number) => 170 - (v / tope) * 150;
-  const linea = (puntos: [number, number][]) => rutaSuave(puntos.map(([dx, v]): [number, number] => [x(dx), y(v)]));
-  const actual = d?.serie.filter((s) => s.actual !== null).map((s) => [s.dia, s.actual ?? 0] as [number, number]) ?? [];
-  const ultimo = actual.at(-1);
-  const ideal = d && ultimo ? (d.limite * ultimo[0]) / d.dias : 0;
-  const [activo, setActivo] = useState<number | null>(null);
-  const punto = activo !== null ? d?.serie[activo] : undefined;
+  const ultimo = d?.serie.filter((s) => s.actual !== null).at(-1);
+  const llevas = ultimo?.actual ?? 0;
+  const ideal = d && ultimo ? (d.limite * ultimo.dia) / d.dias : 0;
+  const proyeccion = d && ultimo && ultimo.dia < d.dias ? Math.round((llevas / ultimo.dia) * d.dias) : llevas;
+  const anteriorHoy = ultimo ? d?.serie[ultimo.dia - 1]?.anterior : undefined;
   return (
-    <section className="cd-card cd-stack" style={{ gap: 12 }}>
-      <div className="cd-card-head" style={{ flexWrap: "wrap", gap: 8 }}>
-        <h3 className="cd-card-title">Ritmo de {nombreMes(mes)}</h3>
-        <select
-          aria-label="Presupuesto"
-          className="cd-input"
-          style={{ width: "auto" }}
-          value={grupo ?? ""}
-          onChange={(e) => setGrupo(e.target.value ? Number(e.target.value) : undefined)}
-        >
-          <option value="">Todos juntos</option>
-          {grupos.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.nombre}
-            </option>
-          ))}
-        </select>
-      </div>
-      {d && ultimo && d.limite > 0 && (
-        <span className="cd-delta-note">
-          Al día {ultimo[0]} llevas <b style={{ color: "var(--ink)" }}>{formatoCOP(ultimo[1])}</b>; a ritmo ideal serían{" "}
-          {formatoCOP(Math.round(ideal))}
-          {ultimo[1] > ideal ? ` (${formatoCOP(Math.round(ultimo[1] - ideal))} por encima)` : " (vas bien)"}.
-        </span>
+    <section className="cd-card ritmo-mes">
+      <CabeceraTarjeta
+        titulo={`Ritmo de ${nombreMes(mes)}`}
+        rango={ultimo && d ? `Gasto acumulado al día ${ultimo.dia} de ${d.dias}` : "Gasto acumulado del mes"}
+        accion={<SelectorGrupo grupos={grupos} valor={grupo} alCambiar={(g) => setFiltro(() => ({ grupo: g }))} />}
+      />
+      {a.isPending && <TarjetaCargando filas={3} />}
+      {a.isError && <ErrorVista error={a.error} reintentar={() => void a.refetch()} />}
+      {d && ultimo && (
+        <FilaMetricas
+          etiqueta={`Ritmo de ${nombreMes(mes)}`}
+          metricas={[
+            { etiqueta: "Llevas", valor: llevas },
+            ...(d.limite > 0
+              ? [
+                  {
+                    etiqueta: "Ideal a hoy",
+                    valor: Math.round(ideal),
+                    nota: llevas > ideal ? `${formatoCOP(Math.round(llevas - ideal))} arriba` : "vas por debajo",
+                    tono: llevas > ideal ? ("alerta" as const) : ("ingreso" as const),
+                  },
+                ]
+              : []),
+            {
+              etiqueta: "Al cierre",
+              valor: proyeccion,
+              nota: d.limite > 0 ? `límite ${formatoCOP(d.limite)}` : "si sigues así",
+              tono: d.limite > 0 && proyeccion > d.limite ? ("alerta" as const) : undefined,
+            },
+            ...(anteriorHoy !== undefined
+              ? [{ etiqueta: `${nombreMes(d.anterior, true)} a la fecha`, valor: anteriorHoy }]
+              : []),
+          ]}
+        />
       )}
       {d && (
-        <ZonaGrafico>
-          <svg
-            className="cd-chart"
-            viewBox={`0 0 ${W} ${H}`}
-            role="img"
-            aria-label="Gasto acumulado del mes contra el ritmo ideal"
-          >
-            <line className="grid" x1="44" x2={W} y1="20" y2="20" />
-            <line className="grid-dash" x1="44" x2={W} y1="170" y2="170" />
-            <text x="38" y="24" textAnchor="end">
-              {abreviar(tope)}
-            </text>
-            {[1, 8, 15, 22, d.dias].map((dia) => (
-              <text key={dia} x={x(dia)} y="190" textAnchor="middle">
-                {dia}
-              </text>
-            ))}
-            {d.limite > 0 && (
-              <>
-                <line
-                  x1="44"
-                  x2={W - 10}
-                  y1={y(d.limite)}
-                  y2={y(d.limite)}
-                  stroke="var(--ink)"
-                  strokeWidth="1.5"
-                  strokeDasharray="5 4"
-                />
-                <path
-                  d={linea([
-                    [1, d.limite / d.dias],
-                    [d.dias, d.limite],
-                  ])}
-                  stroke="var(--ink-subtle)"
-                  strokeWidth="2"
-                  fill="none"
-                  strokeDasharray="2 4"
-                />
-              </>
-            )}
-            <path className="l3" d={linea(d.serie.map((s) => [s.dia, s.anterior]))} />
-            {actual.length > 0 && <path className="l1" d={linea(actual)} strokeWidth="3" />}
-            {punto?.actual != null && <circle cx={x(punto.dia)} cy={y(punto.actual)} r="5" fill="var(--chart-1)" />}
-            {punto && <circle cx={x(punto.dia)} cy={y(punto.anterior)} r="4" fill="var(--chart-3)" />}
-            <Sensores
-              n={d.dias}
-              x={(i) => x(i + 1)}
-              ancho={(W - 54) / Math.max(1, d.dias - 1)}
-              alto={172}
-              arriba={10}
-              activo={activo}
-              alCambiar={setActivo}
-            />
-          </svg>
-          {punto && activo !== null && (
-            <TooltipGrafico izquierda={(x(punto.dia) / W) * 100}>
-              <b>Día {punto.dia}</b>
-              <span className="fila">
-                <span>
-                  <i className="punto" style={{ background: "var(--chart-1)" }} />
-                  {nombreMes(mes, true)}
-                </span>
-                {punto.actual == null ? "—" : formatoCOP(punto.actual)}
-              </span>
-              <span className="fila">
-                <span>
-                  <i className="punto" style={{ background: "var(--chart-3)" }} />
-                  {nombreMes(d.anterior, true)}
-                </span>
-                {formatoCOP(punto.anterior)}
-              </span>
-              {d.limite > 0 && (
-                <span className="fila">
-                  <span>Ritmo ideal</span>
-                  {formatoCOP(Math.round((d.limite * punto.dia) / d.dias))}
-                </span>
-              )}
-            </TooltipGrafico>
-          )}
-        </ZonaGrafico>
+        <AreaComparada
+          alto={260}
+          titulo={`Gasto acumulado de ${nombreMes(mes)} frente a ${nombreMes(d.anterior)}`}
+          nombre={nombreMes(mes, true)}
+          nombreAnterior={nombreMes(d.anterior, true)}
+          limite={d.limite > 0 ? { valor: d.limite, etiqueta: "Límite" } : undefined}
+          datos={d.serie.map((s) => ({
+            etiqueta: String(s.dia),
+            detalle: `Día ${s.dia}`,
+            valor: s.actual,
+            anterior: s.anterior,
+            ideal: d.limite > 0 ? Math.round((d.limite * s.dia) / d.dias) : undefined,
+          }))}
+        />
       )}
-      <div className="cd-legend">
-        <span>
-          <i className="cd-sw c1" />
-          {nombreMes(mes)}
-        </span>
-        <span>
-          <i className="cd-sw c3" />
-          {d ? nombreMes(d.anterior) : "Mes anterior"}
-        </span>
-        <span>
-          <i className="cd-sw" style={{ background: "var(--ink-subtle)", height: 3 }} />
-          Ritmo ideal
-        </span>
-        <span>
-          <i className="cd-sw" style={{ background: "var(--ink)", height: 3 }} />
-          Límite
-        </span>
-      </div>
     </section>
   );
 }
@@ -554,6 +443,7 @@ export function PresupuestoPage() {
     onSettled: refrescar,
   });
   const d = datos.data;
+  const grupos = (d?.filas ?? []).map((f) => ({ id: f.id, nombre: f.nombre }));
 
   return (
     <>
@@ -563,20 +453,6 @@ export function PresupuestoPage() {
           <p>Cada peso con un destino. Un presupuesto puede reunir varias categorías.</p>
         </div>
         <div className="cd-row">
-          <div className="cd-row" style={{ gap: 4 }}>
-            <button className="cd-icon-btn" aria-label="Mes anterior" onClick={() => setMes(moverMes(mes, -1))}>
-              ‹
-            </button>
-            <span
-              className="cd-select"
-              style={{ height: 40, minWidth: 150, justifyContent: "center", textTransform: "capitalize" }}
-            >
-              {nombreMes(mes)}
-            </span>
-            <button className="cd-icon-btn" aria-label="Mes siguiente" onClick={() => setMes(moverMes(mes, 1))}>
-              ›
-            </button>
-          </div>
           <button className="cd-btn cd-btn--secondary cd-btn--sm" onClick={() => copiar.mutate()}>
             Copiar {nombreMes(moverMes(mes, -1)).split(" ")[0]}
           </button>
@@ -586,37 +462,75 @@ export function PresupuestoPage() {
           </button>
         </div>
       </div>
+      <BarraFiltros etiqueta="Mes del presupuesto">
+        <div className="selector-mes">
+          <button className="cd-icon-btn" aria-label="Mes anterior" onClick={() => setMes(moverMes(mes, -1))}>
+            ‹
+          </button>
+          <span aria-live="polite">{nombreMes(mes)}</span>
+          <button className="cd-icon-btn" aria-label="Mes siguiente" onClick={() => setMes(moverMes(mes, 1))}>
+            ›
+          </button>
+        </div>
+        {d && d.ritmo > 0 && d.ritmo < 1 && (
+          <span className="cd-delta-note">Va el {Math.round(d.ritmo * 100)}% del mes</span>
+        )}
+      </BarraFiltros>
       {datos.isPending && <TarjetaCargando />}
       {datos.isError && <ErrorVista error={datos.error} reintentar={() => void datos.refetch()} />}
       {d && (
         <>
           <div className="cd-bento">
-            {[
-              { etiqueta: "Ingreso de referencia", valor: d.ingreso_referencia, nota: "mínimo de 6 meses" },
-              { etiqueta: "Asignado", valor: d.asignado, nota: `${formatoCOP(d.asignado_fijo)} fijos` },
-              {
-                etiqueta: "Por asignar",
-                valor: d.por_asignar,
-                nota: d.por_asignar < 0 ? "asignaste más de lo que entra" : "disponible",
-              },
-              {
-                etiqueta: "Gastado",
-                valor: d.gastado,
-                nota: d.asignado ? `${Math.round((100 * d.gastado) / d.asignado)} % de lo asignado` : "—",
-              },
-            ].map((k) => (
-              <div key={k.etiqueta} className="cd-card cd-kpi span-3">
-                <span className="cd-kpi-label">{k.etiqueta}</span>
-                <span className="cd-kpi-value">
-                  <Dinero centavos={k.valor} />
-                </span>
-                <span className="cd-delta-note">{k.nota}</span>
-              </div>
-            ))}
+            <div className="span-5 presupuesto-kpis">
+              <KpiCompacto
+                etiqueta="Ingreso de referencia"
+                icono="entra"
+                valor={d.ingreso_referencia}
+                nota="mínimo de 6 meses"
+              />
+              <KpiCompacto
+                etiqueta="Asignado"
+                icono="presupuesto"
+                valor={d.asignado}
+                nota={`${formatoCOP(d.asignado_fijo)} fijos`}
+              />
+              <KpiCompacto
+                etiqueta="Por asignar"
+                icono="cuentas"
+                valor={d.por_asignar}
+                delta={d.por_asignar < 0 ? { valor: 0, sentido: "alerta", texto: "De más" } : undefined}
+                nota={d.por_asignar < 0 ? undefined : "disponible"}
+              />
+              <KpiCompacto
+                className="kpi-gastado"
+                etiqueta="Gastado"
+                icono="sale"
+                valor={d.gastado}
+                nota={d.asignado > 0 ? `${Math.round((d.gastado / d.asignado) * 100)}% de lo asignado` : undefined}
+                indicador={
+                  d.asignado > 0 ? (
+                    <MedioAnillo
+                      titulo="Gastado de lo asignado"
+                      fraccion={d.gastado / d.asignado}
+                      tamano={esMovil() ? 96 : 170}
+                      grosor={esMovil() ? 10 : 16}
+                      detalle="de lo asignado"
+                      severidad
+                    />
+                  ) : undefined
+                }
+              />
+            </div>
+            <div className="span-7">
+              <Historico grupos={grupos} />
+            </div>
           </div>
           <div className="cd-bento">
-            <section className="cd-card span-8">
-              <h3 className="cd-card-title">Presupuestos de {nombreMes(mes)}</h3>
+            <section className="cd-card span-6">
+              <CabeceraTarjeta
+                titulo={`Presupuestos de ${nombreMes(mes)}`}
+                rango={d.ritmo > 0 && d.ritmo < 1 ? "La marca vertical es el ritmo ideal a hoy" : undefined}
+              />
               {d.filas.length === 0 ? (
                 <Vacio
                   titulo="Aún no tienes presupuestos"
@@ -628,51 +542,15 @@ export function PresupuestoPage() {
                   }
                 />
               ) : (
-                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                <ul className="lista-presupuestos">
                   {d.filas.map((f) => (
                     <FilaGrupo key={f.id} f={f} ritmo={d.ritmo} alEditar={() => setForm(f)} />
                   ))}
                 </ul>
               )}
             </section>
-            <section className="cd-card span-4 cd-stack" style={{ gap: 10 }}>
-              <h3 className="cd-card-title">Gastado sin presupuesto</h3>
-              {d.sin_presupuesto.length === 0 && (
-                <span className="cd-delta-note">Todo lo gastado tiene presupuesto.</span>
-              )}
-              {d.sin_presupuesto.map((s) => (
-                <div key={s.categoria_id} className="cd-row" style={{ flexWrap: "nowrap", gap: 8 }}>
-                  <span className="cd-stack" style={{ flex: 1, minWidth: 0, gap: 0 }}>
-                    <span
-                      title={s.ruta.slice(1).join(" › ")}
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {s.ruta.slice(1).join(" › ")}
-                    </span>
-                    <span className="cd-delta-note cd-num">{formatoCOP(s.gastado)} gastados</span>
-                  </span>
-                  <button
-                    className="cd-btn cd-btn--ghost cd-btn--sm"
-                    onClick={() => setForm({ nombre: s.ruta.at(-1), categoria_ids: [s.categoria_id] })}
-                  >
-                    Presupuestar
-                  </button>
-                </div>
-              ))}
-            </section>
-          </div>
-          <div className="cd-bento">
             <div className="span-6">
-              <RitmoMes mes={mes} grupos={d.filas.map((f) => ({ id: f.id, nombre: f.nombre }))} />
-            </div>
-            <div className="span-6">
-              <Historico grupos={d.filas.map((f) => ({ id: f.id, nombre: f.nombre }))} />
+              <RitmoMes mes={mes} grupos={grupos} />
             </div>
           </div>
         </>

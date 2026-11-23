@@ -1,0 +1,345 @@
+/* Cuentas con el sistema compacto. */
+.cuentas-reparto {
+  position: relative;
+  z-index: 1;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: var(--texto-etiqueta);
+}
+.cuentas-reparto li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  opacity: 0.9;
+}
+
+/* Tus cuentas: tarjetas con aspecto de tarjeta bancaria, junto al saldo total */
+.tus-cuentas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.tus-cuentas-cabeza {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tus-cuentas-cabeza b {
+  font-size: var(--texto-titulo);
+}
+.tus-cuentas-cabeza small {
+  font-size: var(--texto-etiqueta);
+  color: var(--ink-muted);
+}
+.cuentas-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--gap-bento);
+}
+.tarjeta-cuenta {
+  --tinte: var(--accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 148px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  color: #fff;
+  /* El color elegido para la cuenta manda sobre el del tema; se oscurece para que el texto blanco se lea. */
+  background:
+    radial-gradient(70% 70% at 100% 0%, color-mix(in srgb, var(--tinte) 80%, #fff) 0%, transparent 60%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--tinte) 60%, #000) 0%,
+      color-mix(in srgb, var(--tinte) 42%, #000) 100%
+    );
+  color: #fff;
+  box-shadow: var(--shadow-card, 0 1px 2px rgb(0 0 0 / 0.08));
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
+}
+/* Brillo diagonal sutil, como el laminado de una tarjeta */
+.tarjeta-cuenta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgb(255 255 255 / 0.08) 50%, transparent 62%);
+}
+.tarjeta-cuenta:hover {
+  transform: translateY(-2px);
+}
+.tarjeta-cuenta.activa {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.tarjeta-cuenta.fuera {
+  opacity: 0.62;
+}
+.tarjeta-cuenta-elegir {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 14px 16px 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tarjeta-cuenta-elegir:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -4px;
+  border-radius: var(--radius-lg);
+}
+/* Saldo y nombre a la izquierda; el logo arriba a la derecha, sin marco oscuro */
+.tarjeta-cuenta-elegir {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr auto;
+  column-gap: 12px;
+}
+.tarjeta-cuenta-logo {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  display: grid;
+  place-items: center;
+}
+.tarjeta-cuenta-logo .logo-cuenta {
+  border: 0;
+  border-radius: 10px;
+}
+.tarjeta-cuenta-logo .cd-kpi-ico {
+  background: color-mix(in srgb, #fff 16%, transparent);
+  color: #fff;
+}
+.tarjeta-cuenta-saldo {
+  grid-column: 1;
+  grid-row: 1;
+}
+.tarjeta-cuenta-nombre {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  min-width: 0;
+}
+
+/* Ahorro: caja fuerte (puerta con marco, bisagras y perilla) */
+.tarjeta-cuenta--caja {
+  background:
+    radial-gradient(70% 70% at 100% 0%, color-mix(in srgb, var(--tinte) 60%, #fff) 0%, transparent 55%),
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--tinte) 58%, #000) 0%,
+      color-mix(in srgb, var(--tinte) 38%, #000) 100%
+    );
+  box-shadow:
+    inset 0 0 0 5px color-mix(in srgb, #fff 10%, transparent),
+    inset 0 0 0 7px color-mix(in srgb, #000 30%, transparent),
+    var(--shadow-card, 0 1px 2px rgb(0 0 0 / 0.08));
+}
+.tarjeta-cuenta--caja::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  width: 6px;
+  height: 56%;
+  background:
+    linear-gradient(#fff, #fff) 0 0 / 6px 16px no-repeat,
+    linear-gradient(#fff, #fff) 0 100% / 6px 16px no-repeat;
+  opacity: 0.35;
+  border-radius: 0 3px 3px 0;
+}
+.caja-dial {
+  position: absolute;
+  right: 54px;
+  bottom: 9px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--tinte) 80%, #fff) 0 5px, transparent 6px),
+    repeating-conic-gradient(color-mix(in srgb, #fff 55%, transparent) 0 2deg, transparent 2deg 30deg),
+    radial-gradient(circle, color-mix(in srgb, #fff 18%, transparent) 0 60%, transparent 61%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, #fff 22%, transparent);
+  pointer-events: none;
+}
+
+/* Efectivo: billetera (solapa y costura) */
+.tarjeta-cuenta--billetera {
+  background:
+    radial-gradient(70% 70% at 100% 100%, color-mix(in srgb, var(--tinte) 60%, #fff) 0%, transparent 55%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--tinte) 60%, #000) 0%,
+      color-mix(in srgb, var(--tinte) 42%, #000) 100%
+    );
+  border-radius: 16px 16px 20px 20px;
+}
+.tarjeta-cuenta--billetera::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1.5px dashed color-mix(in srgb, #fff 30%, transparent);
+  border-radius: 12px 12px 16px 16px;
+  pointer-events: none;
+}
+.tarjeta-cuenta--billetera .tarjeta-cuenta-elegir::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 58%;
+  border-radius: 16px 16px 40% 40% / 16px 16px 22px 22px;
+  background: color-mix(in srgb, #000 16%, transparent);
+  box-shadow: 0 3px 0 color-mix(in srgb, #000 10%, transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+.tarjeta-cuenta-saldo {
+  grid-column: 1;
+  grid-row: 1;
+}
+.tarjeta-cuenta-nombre {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+}
+.tarjeta-cuenta-saldo {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.tarjeta-cuenta-nombre b,
+.tarjeta-cuenta-nombre small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tarjeta-cuenta-nombre b {
+  font-size: var(--texto-cuerpo);
+  letter-spacing: 0.02em;
+}
+.tarjeta-cuenta-nombre small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+.tarjeta-cuenta-pie {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px 8px 16px;
+}
+.tarjeta-cuenta-pie .casilla-suma {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  opacity: 0.9;
+}
+.tarjeta-cuenta-pie input {
+  accent-color: #fff;
+}
+.tarjeta-cuenta-editar {
+  width: var(--control-sm);
+  height: var(--control-sm);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, #fff 18%, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+.tarjeta-cuenta-editar:hover {
+  background: color-mix(in srgb, #fff 30%, transparent);
+}
+:root:not([data-movimiento="maxima"]) .tarjeta-cuenta {
+  transition: none;
+}
+:root:not([data-movimiento="maxima"]) .tarjeta-cuenta:hover {
+  transform: none;
+}
+.cuenta-detalle .cabecera-serie {
+  margin-top: 4px;
+}
+
+.cuentas-total {
+  grid-row: auto;
+  align-self: start;
+}
+
+/* Celular: dos cuentas por fila. El logo va arriba, el saldo ocupa todo el ancho de la tarjeta y su tamaño se
+   ajusta a ella (se lee completo, p. ej. $ 130.401.789) y el nombre usa hasta dos líneas antes de cortarse. */
+@media (max-width: 860px) {
+  .cuentas-rejilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .tarjeta-cuenta {
+    container-type: inline-size;
+    min-height: 0;
+  }
+  .tarjeta-cuenta-elegir {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    row-gap: 4px;
+    padding: 10px 12px 6px;
+  }
+  .tarjeta-cuenta-logo {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    transform: scale(0.75);
+    transform-origin: top left;
+    margin-bottom: -8px;
+  }
+  .tarjeta-cuenta-saldo {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: min(20px, 11.5cqi);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .tarjeta-cuenta-nombre {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .tarjeta-cuenta-nombre b {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 16px;
+  }
+  .tarjeta-cuenta-nombre small {
+    font-size: 11px;
+  }
+  .tarjeta-cuenta-pie {
+    padding: 4px 8px 8px 12px;
+    font-size: 11px;
+  }
+}

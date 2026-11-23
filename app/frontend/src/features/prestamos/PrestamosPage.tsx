@@ -1,234 +1,215 @@
-/** Préstamos personales (RF-PP): me deben / debo, abonos, recordatorio y condonación. */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+/** Préstamos personales (RF-PP): por persona, «Me deben» y «Debo», con el detalle de cada préstamo. */
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { toast } from "sonner";
 
-import type { Prestamo } from "@/shared/api/tipos";
+import type { DireccionPrestamo, Prestamo } from "@/shared/api/tipos";
 import { api } from "@/shared/lib/api";
-import { fechaCorta, formatoCOP, mascaraMonto, parseMonto, porcentaje } from "@/shared/lib/formato";
+import { fechaCorta, formatoCOP } from "@/shared/lib/formato";
+import { mostrarPanel } from "@/shared/lib/panel";
 import { claves } from "@/shared/lib/queryKeys";
-import { Dinero } from "@/shared/ui/Dinero";
 import { ErrorVista, TarjetaCargando, Vacio } from "@/shared/ui/Estados";
+import { BarraFiltros } from "@/shared/ui/BarraFiltros";
+import { Hoja } from "@/shared/ui/Hoja";
+import { KpiCompacto } from "@/shared/ui/Kpi";
 
+import { estadoVisible, TarjetaPrestamo } from "./GestionPrestamo";
 import { NuevoPrestamo } from "./NuevoPrestamo";
+import "./prestamos.css";
 
-type Filtro = "activos" | "me_deben" | "debo" | "cerrados";
-const ORIGEN: Record<Prestamo["origen"], string> = {
-  amigo: "Amigo",
-  familia: "Familia",
-  companero: "Compañero",
-  otra_fuente: "Otra fuente",
-};
+type Pestana = DireccionPrestamo | "cerrados";
 
-function estadoVisible(p: Prestamo): { texto: string; clase: string } {
-  if (p.estado === "pagado") return { texto: "Pagado", clase: "cd-badge--positive" };
-  if (p.estado === "condonado") return { texto: "Condonado", clase: "cd-badge--neutral" };
-  if (p.dias_vencido > 0)
-    return {
-      texto: `Vencido hace ${p.dias_vencido} ${p.dias_vencido === 1 ? "día" : "días"}`,
-      clase: "cd-badge--negative",
+interface Persona {
+  nombre: string;
+  prestamos: Prestamo[];
+  meDebe: number;
+  leDebo: number;
+  proxima: { fecha: string; monto: number } | null;
+  vencido: number;
+}
+
+/** Agrupa por persona (contraparte), con lo pendiente en cada sentido. */
+export function agruparPorPersona(lista: Prestamo[]): Persona[] {
+  const mapa = new Map<string, Persona>();
+  for (const p of lista) {
+    const clave = String(p.contraparte_id ?? p.persona);
+    const persona = mapa.get(clave) ?? {
+      nombre: p.persona,
+      prestamos: [],
+      meDebe: 0,
+      leDebo: 0,
+      proxima: null,
+      vencido: 0,
     };
-  if (p.proxima_cuota) {
-    const dias = Math.round((new Date(`${p.proxima_cuota.fecha}T12:00:00`).getTime() - Date.now()) / 86_400_000);
-    if (dias <= 7)
-      return {
-        texto: dias <= 0 ? "Vence hoy" : `Vence en ${dias} ${dias === 1 ? "día" : "días"}`,
-        clase: "cd-badge--warning",
-      };
+    persona.prestamos.push(p);
+    if (p.estado === "activo") {
+      if (p.direccion === "presto_yo") persona.meDebe += p.pendiente;
+      else persona.leDebo += p.pendiente;
+      if (p.proxima_cuota && (!persona.proxima || p.proxima_cuota.fecha < persona.proxima.fecha))
+        persona.proxima = p.proxima_cuota;
+      persona.vencido = Math.max(persona.vencido, p.dias_vencido);
+    }
+    mapa.set(clave, persona);
   }
-  return { texto: "Al día", clase: "cd-badge--positive" };
+  return [...mapa.values()].sort(
+    (a, b) =>
+      (a.proxima?.fecha ?? "9999").localeCompare(b.proxima?.fecha ?? "9999") || a.nombre.localeCompare(b.nombre),
+  );
 }
 
-function recordatorio(p: Prestamo): string {
-  const monto = formatoCOP(p.proxima_cuota?.monto ?? p.pendiente);
-  const cuando = p.proxima_cuota ? ` del ${fechaCorta(p.proxima_cuota.fecha)}` : "";
-  return `Hola ${p.persona}, te recuerdo los ${monto}${cuando} del préstamo. Gracias.`;
-}
-
-function TarjetaPrestamo({ p }: { p: Prestamo }) {
-  const cliente = useQueryClient();
-  const cuentas = useQuery({ queryKey: claves.cuentas, queryFn: () => api.cuentas() });
-  const [abonando, setAbonando] = useState(false);
-  const [monto, setMonto] = useState("");
-  const [cuentaId, setCuentaId] = useState<number | null>(null);
-  const [confirmarCondonar, setConfirmarCondonar] = useState(false);
-  const refrescar = () => {
-    void cliente.invalidateQueries({ queryKey: ["prestamos"] });
-    void cliente.invalidateQueries({ queryKey: claves.cuentas });
-  };
-  const abonar = useMutation({
-    mutationFn: () => {
-      const centavos = parseMonto(monto);
-      const cuenta = cuentaId ?? cuentas.data?.[0]?.id;
-      if (!centavos || cuenta === undefined) throw new Error("Escribe el monto del abono");
-      return api.abonar(p.id, { monto: centavos, cuenta_id: cuenta });
-    },
-    onSuccess: () => {
-      toast.success(`Abono registrado · ${p.persona}`);
-      setAbonando(false);
-      setMonto("");
-    },
-    onError: (e) => toast.error(e.message),
-    onSettled: refrescar,
-  });
-  const condonar = useMutation({
-    mutationFn: () => api.condonar(p.id),
-    onSuccess: () => toast(`Préstamo con ${p.persona} condonado`),
-    onError: (e) => toast.error(e.message),
-    onSettled: refrescar,
-  });
-  const estado = estadoVisible(p);
-  const iniciales = p.persona
+function iniciales(nombre: string): string {
+  return nombre
     .split(/\s+/)
     .map((x) => x[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const activo = p.estado === "activo";
+}
 
+function FilaPersona({
+  persona,
+  pestana,
+  activa,
+  alElegir,
+}: {
+  persona: Persona;
+  pestana: Pestana;
+  activa: boolean;
+  alElegir: () => void;
+}) {
+  const saldo = pestana === "presto_yo" ? persona.meDebe : pestana === "me_prestaron" ? persona.leDebo : 0;
+  const otro = pestana === "presto_yo" ? persona.leDebo : pestana === "me_prestaron" ? persona.meDebe : 0;
+  const delaPestana = persona.prestamos.filter((p) =>
+    pestana === "cerrados" ? p.estado !== "activo" : p.estado === "activo" && p.direccion === pestana,
+  );
+  const n = delaPestana.length;
   return (
-    <article className="cd-card cd-stack" style={{ gap: 16 }}>
-      <div className="cd-who" style={{ gap: 14 }}>
-        <span
-          className="cd-avatar"
-          style={{ width: 44, height: 44, background: "var(--brand-soft)", color: "var(--on-brand-soft)" }}
-        >
-          {iniciales}
+    <li>
+      <button type="button" className="fila-persona" aria-current={activa ? "true" : undefined} onClick={alElegir}>
+        <span className="cd-avatar avatar-persona" aria-hidden>
+          {iniciales(persona.nombre)}
+        </span>
+        <span className="fila-persona-texto">
+          <b>{persona.nombre}</b>
+          <small>
+            {n} {n === 1 ? "préstamo" : "préstamos"}
+            {persona.vencido > 0 && pestana !== "cerrados"
+              ? ` · vencido hace ${persona.vencido} ${persona.vencido === 1 ? "día" : "días"}`
+              : persona.proxima && pestana !== "cerrados"
+                ? ` · próximo ${fechaCorta(persona.proxima.fecha)}`
+                : ""}
+          </small>
+          {otro > 0 && (
+            <small className="fila-persona-otro">
+              {pestana === "presto_yo" ? `Tú le debes ${formatoCOP(otro)}` : `Te debe ${formatoCOP(otro)}`}
+            </small>
+          )}
+        </span>
+        {pestana !== "cerrados" && (
+          <b className={`cd-num fila-persona-saldo ${pestana === "presto_yo" ? "texto-ingreso" : ""}`}>
+            {formatoCOP(saldo)}
+          </b>
+        )}
+      </button>
+    </li>
+  );
+}
+
+function PanelPersona({
+  persona,
+  pestana,
+  alNuevo,
+  alVolver,
+}: {
+  persona: Persona;
+  pestana: Pestana;
+  alNuevo: () => void;
+  alVolver: () => void;
+}) {
+  // Primero los de la pestaña; después, el otro sentido y los cerrados, para ver todo con esa persona.
+  const orden = (p: Prestamo) =>
+    pestana === "cerrados"
+      ? p.estado === "activo"
+        ? 1
+        : 0
+      : p.estado !== "activo"
+        ? 2
+        : p.direccion === pestana
+          ? 0
+          : 1;
+  const prestamos = [...persona.prestamos].sort((a, b) => orden(a) - orden(b) || b.fecha.localeCompare(a.fecha));
+  const cerrados = prestamos.filter((p) => p.estado !== "activo");
+  const activos = prestamos.filter((p) => p.estado === "activo");
+  return (
+    <section className="panel-persona cd-stack" aria-labelledby="panel-persona-nombre" tabIndex={-1}>
+      <button type="button" className="panel-volver" onClick={alVolver}>
+        ‹ Personas
+      </button>
+      <header className="panel-persona-cabeza">
+        <span className="cd-avatar avatar-persona avatar-persona--grande" aria-hidden>
+          {iniciales(persona.nombre)}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <b style={{ fontSize: 15 }}>{p.persona}</b>
-          <small>
-            {ORIGEN[p.origen]} · {p.direccion === "presto_yo" ? "le prestaste" : "te prestó"} el{" "}
-            {fechaCorta(p.fecha, true)}
-          </small>
+          <h2 id="panel-persona-nombre">{persona.nombre}</h2>
+          <div className="panel-persona-saldos">
+            {activos.length > 1 || (persona.meDebe > 0 && persona.leDebo > 0) ? (
+              <>
+                {persona.meDebe > 0 && (
+                  <span>
+                    Te debe <b className="cd-num texto-ingreso">{formatoCOP(persona.meDebe)}</b>
+                  </span>
+                )}
+                {persona.leDebo > 0 && (
+                  <span>
+                    Le debes <b className="cd-num">{formatoCOP(persona.leDebo)}</b>
+                  </span>
+                )}
+                <span>{activos.length} préstamos activos</span>
+              </>
+            ) : (
+              <span>
+                {activos.length === 1 ? "1 préstamo activo" : "Sin préstamos activos"}
+                {cerrados.length > 0 ? ` · ${cerrados.length} cerrados` : ""}
+              </span>
+            )}
+          </div>
         </div>
-        <span className={`cd-badge ${estado.clase}`}>{estado.texto}</span>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
-        <div className="cd-stack" style={{ gap: 2 }}>
-          <span className="cd-delta-note">{p.direccion === "presto_yo" ? "Prestaste" : "Te prestó"}</span>
-          <span className="cd-amt" style={{ fontSize: 17 }}>
-            {formatoCOP(p.monto)}
-          </span>
-        </div>
-        <div className="cd-stack" style={{ gap: 2 }}>
-          <span className="cd-delta-note">Pendiente</span>
-          <span
-            className="cd-amt"
-            style={{ fontSize: 17, color: p.direccion === "presto_yo" && p.pendiente ? "var(--positive)" : undefined }}
-          >
-            {formatoCOP(p.pendiente)}
-          </span>
-        </div>
-        <div className="cd-stack" style={{ gap: 2 }}>
-          <span className="cd-delta-note">Interés</span>
-          <span className="cd-amt" style={{ fontSize: 17 }}>
-            {p.interes_total ? `${formatoCOP(p.interes_total)} · ${porcentaje(p.tasa_ea, 1)} E.A.` : "Sin interés"}
-          </span>
-        </div>
-      </div>
-      <div
-        className="cd-progress"
-        role="progressbar"
-        aria-label="Pagado"
-        aria-valuenow={p.pagado_pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <i style={{ width: `${p.pagado_pct}%` }} />
-      </div>
-      <span className="cd-delta-note cd-num">
-        {p.cuotas.length === 0
-          ? "Pago libre, sin fecha"
-          : p.cuotas.map((c) => `${fechaCorta(c.fecha)} ${formatoCOP(c.capital + c.interes)}`).join(" · ")}
-      </span>
-      {activo && abonando && (
-        <div className="cd-row" style={{ gap: 8 }}>
-          <input
-            aria-label="Monto del abono"
-            className="cd-input cd-num"
-            style={{ flex: "1 1 140px", width: "auto" }}
-            inputMode="decimal"
-            placeholder={formatoCOP(p.proxima_cuota?.monto ?? p.pendiente)}
-            value={monto}
-            onChange={(e) => setMonto(mascaraMonto(e.target.value))}
-          />
-          <select
-            aria-label="Cuenta"
-            className="cd-input"
-            style={{ flex: "1 1 140px", width: "auto" }}
-            value={cuentaId ?? cuentas.data?.[0]?.id ?? ""}
-            onChange={(e) => setCuentaId(Number(e.target.value))}
-          >
-            {(cuentas.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
+        <button className="cd-btn cd-btn--secondary cd-btn--sm" onClick={alNuevo}>
+          + Otro préstamo
+        </button>
+      </header>
+      {activos.map((p) => (
+        <TarjetaPrestamo key={p.id} p={p} />
+      ))}
+      {activos.length === 0 && <p className="cd-delta-note">No hay préstamos activos con {persona.nombre}.</p>}
+      {cerrados.length > 0 && (
+        <details className="prestamos-cerrados" open={pestana === "cerrados"}>
+          <summary>
+            Cerrados ({cerrados.length}) · {cerrados.map((p) => estadoVisible(p).texto.toLowerCase()).join(", ")}
+          </summary>
+          <div className="cd-stack" style={{ gap: 12, marginTop: 12 }}>
+            {cerrados.map((p) => (
+              <TarjetaPrestamo key={p.id} p={p} />
             ))}
-          </select>
-          <button
-            className="cd-btn cd-btn--primary cd-btn--sm"
-            disabled={abonar.isPending}
-            onClick={() => abonar.mutate()}
-          >
-            Guardar abono
-          </button>
-          <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setAbonando(false)}>
-            Cancelar
-          </button>
-        </div>
+          </div>
+        </details>
       )}
-      {activo && !abonando && (
-        <div className="cd-row" style={{ gap: 8 }}>
-          <button className="cd-btn cd-btn--primary cd-btn--sm" onClick={() => setAbonando(true)}>
-            Registrar abono
-          </button>
-          {p.direccion === "presto_yo" && (
-            <button
-              className="cd-btn cd-btn--secondary cd-btn--sm"
-              onClick={() =>
-                void navigator.clipboard
-                  .writeText(recordatorio(p))
-                  .then(() => toast.success("Recordatorio copiado: pégalo en WhatsApp"))
-                  .catch(() => toast.error("No pude copiar al portapapeles"))
-              }
-            >
-              Copiar recordatorio
-            </button>
-          )}
-          {confirmarCondonar ? (
-            <button
-              className="cd-btn cd-btn--sm"
-              style={{ background: "var(--negative)", color: "var(--card)" }}
-              onClick={() => condonar.mutate()}
-            >
-              Confirmar: condonar {formatoCOP(p.capital_pendiente)}
-            </button>
-          ) : (
-            <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setConfirmarCondonar(true)}>
-              Condonar
-            </button>
-          )}
-        </div>
-      )}
-    </article>
+    </section>
   );
 }
 
 export function PrestamosPage() {
-  const [filtro, setFiltro] = useState<Filtro>("activos");
+  const [pestana, setPestana] = useState<Pestana>("presto_yo");
+  const [elegida, setElegida] = useState<string | null>(null);
+  const [nuevo, setNuevo] = useState<{ persona?: string } | null>(null);
   const resumen = useQuery({ queryKey: claves.resumenPrestamos, queryFn: api.resumenPrestamos });
   const lista = useQuery({ queryKey: claves.prestamos(), queryFn: () => api.prestamos() });
-  const visibles = (lista.data ?? []).filter((p) =>
-    filtro === "activos"
-      ? p.estado === "activo"
-      : filtro === "me_deben"
-        ? p.estado === "activo" && p.direccion === "presto_yo"
-        : filtro === "debo"
-          ? p.estado === "activo" && p.direccion === "me_prestaron"
-          : p.estado !== "activo",
+  const personas = agruparPorPersona(lista.data ?? []);
+  const visibles = personas.filter((x) =>
+    x.prestamos.some((p) =>
+      pestana === "cerrados" ? p.estado !== "activo" : p.estado === "activo" && p.direccion === pestana,
+    ),
   );
-  const cerrados = (lista.data ?? []).filter((p) => p.estado !== "activo").length;
+  const seleccionada = visibles.find((x) => x.nombre === elegida) ?? visibles[0];
   const r = resumen.data;
 
   return (
@@ -236,89 +217,122 @@ export function PrestamosPage() {
       <div className="cd-pagehead">
         <div>
           <h1>Préstamos personales</h1>
-          <p>Con amigos, familia u otras fuentes. Sin interés, salvo que lo pactes.</p>
+          <p>Con amigos, familia u otras fuentes. Cada persona reúne sus préstamos, entregas y abonos.</p>
         </div>
+        <button className="cd-btn cd-btn--primary" onClick={() => setNuevo({})}>
+          + Préstamo
+        </button>
       </div>
+      {nuevo && (
+        <Hoja
+          titulo={nuevo.persona ? `Nuevo préstamo con ${nuevo.persona}` : "Nuevo préstamo"}
+          onCerrar={() => setNuevo(null)}
+        >
+          <NuevoPrestamo
+            personas={personas.map((x) => x.nombre)}
+            personaInicial={nuevo.persona}
+            direccionInicial={pestana === "me_prestaron" ? "me_prestaron" : "presto_yo"}
+            alGuardar={() => setNuevo(null)}
+          />
+        </Hoja>
+      )}
+
       {r && (
-        <div className="cd-bento">
-          <div className="span-3 cd-balance">
-            <div className="cd-balance-top">
-              <span className="cd-balance-label">Me deben</span>
-              <span className="cd-chip-glass">{r.activos} activos</span>
-            </div>
-            <div className="cd-balance-value">
-              <Dinero centavos={r.me_deben} />
-            </div>
-            <div className="cd-balance-foot">
-              <span className="cd-delta">{formatoCOP(r.proximos_7_dias)} en 7 días</span>
-            </div>
-          </div>
-          {[
-            { etiqueta: "Debo", valor: r.debo, insignia: "incluye intereses", clase: "cd-badge--neutral" },
-            {
-              etiqueta: "Próximos 7 días",
-              valor: r.proximos_7_dias,
-              insignia: "por cobrar o pagar",
-              clase: "cd-badge--warning",
-            },
-          ].map((k) => (
-            <div key={k.etiqueta} className="cd-card cd-kpi span-3">
-              <span className="cd-kpi-label">{k.etiqueta}</span>
-              <span className="cd-kpi-value">
-                <Dinero centavos={k.valor} />
-              </span>
-              <span className={`cd-badge ${k.clase}`} style={{ alignSelf: "flex-start" }}>
-                {k.insignia}
-              </span>
-            </div>
-          ))}
-          <div className="cd-card cd-kpi span-3">
-            <span className="cd-kpi-label">Vencidos</span>
-            <span className="cd-kpi-value">{r.vencidos}</span>
-            <span
-              className={`cd-badge ${r.vencidos ? "cd-badge--negative" : "cd-badge--positive"}`}
-              style={{ alignSelf: "flex-start" }}
-            >
-              {r.vencidos ? "Revisar" : "Al día"}
-            </span>
-          </div>
+        <div className="cd-bento prestamos-kpis">
+          <KpiCompacto
+            className="span-3"
+            inversa
+            etiqueta="Me deben"
+            icono="entra"
+            valor={r.me_deben}
+            nota={`${r.activos} activos`}
+          />
+          <KpiCompacto className="span-3" etiqueta="Debo" icono="sale" valor={r.debo} nota="incluye intereses" />
+          <KpiCompacto
+            className="span-3"
+            etiqueta="Próximos 7 días"
+            icono="calendario"
+            valor={r.proximos_7_dias}
+            nota="por cobrar o pagar"
+          />
+          <KpiCompacto
+            className="span-3"
+            etiqueta="Vencidos"
+            icono="alerta"
+            valor={String(r.vencidos)}
+            delta={r.vencidos ? { valor: 0, sentido: "alerta", texto: "Revisa con cada persona" } : undefined}
+            nota={r.vencidos ? undefined : "todo al día"}
+          />
         </div>
       )}
-      <div className="cd-bento">
-        <div className="span-8 cd-stack" style={{ gap: 16 }}>
-          <div className="cd-seg cd-seg--brand" role="tablist" aria-label="Filtro" style={{ alignSelf: "flex-start" }}>
-            {(
-              [
-                ["activos", "Activos"],
-                ["me_deben", "Me deben"],
-                ["debo", "Debo"],
-                ["cerrados", "Pagados"],
-              ] as [Filtro, string][]
-            ).map(([v, t]) => (
-              <button key={v} role="tab" aria-selected={filtro === v} onClick={() => setFiltro(v)}>
-                {t}
-                {v === "cerrados" && cerrados > 0 && <span className="count">{cerrados}</span>}
-              </button>
-            ))}
-          </div>
-          {lista.isPending && <TarjetaCargando />}
-          {lista.isError && <ErrorVista error={lista.error} reintentar={() => void lista.refetch()} />}
-          {lista.isSuccess && visibles.length === 0 && (
-            <section className="cd-card">
-              <Vacio
-                titulo={filtro === "cerrados" ? "Aún no hay préstamos cerrados" : "No tienes préstamos activos"}
-                texto="Registra uno con el formulario."
-              />
-            </section>
-          )}
-          {visibles.map((p) => (
-            <TarjetaPrestamo key={p.id} p={p} />
+
+      <BarraFiltros etiqueta="Sentido de los préstamos">
+        <div className="cd-seg cd-seg--brand" role="tablist" aria-label="Sentido">
+          {(
+            [
+              ["presto_yo", "Me deben"],
+              ["me_prestaron", "Debo"],
+              ["cerrados", "Cerrados"],
+            ] as [Pestana, string][]
+          ).map(([v, t]) => (
+            <button
+              key={v}
+              role="tab"
+              aria-selected={pestana === v}
+              onClick={() => {
+                setPestana(v);
+                setElegida(null);
+              }}
+            >
+              {t}
+            </button>
           ))}
         </div>
-        <div className="span-4">
-          <NuevoPrestamo />
+      </BarraFiltros>
+
+      {lista.isPending && <TarjetaCargando />}
+      {lista.isError && <ErrorVista error={lista.error} reintentar={() => void lista.refetch()} />}
+      {lista.isSuccess && visibles.length === 0 && (
+        <section className="cd-card">
+          <Vacio
+            titulo={
+              pestana === "cerrados"
+                ? "Aún no hay préstamos cerrados"
+                : pestana === "presto_yo"
+                  ? "Nadie te debe ahora"
+                  : "No le debes a nadie"
+            }
+            texto="Registra uno con «+ Préstamo»."
+          />
+        </section>
+      )}
+      {lista.isSuccess && visibles.length > 0 && seleccionada && (
+        <div className="prestamos" data-detalle={elegida !== null ? "si" : "no"}>
+          <section className="cd-card prestamos-lista" aria-label="Personas">
+            <ul>
+              {visibles.map((x) => (
+                <FilaPersona
+                  key={x.nombre}
+                  persona={x}
+                  pestana={pestana}
+                  activa={seleccionada.nombre === x.nombre}
+                  alElegir={() => {
+                    setElegida(x.nombre);
+                    requestAnimationFrame(() => mostrarPanel(".panel-persona"));
+                  }}
+                />
+              ))}
+            </ul>
+          </section>
+          <PanelPersona
+            key={seleccionada.nombre}
+            persona={seleccionada}
+            pestana={pestana}
+            alNuevo={() => setNuevo({ persona: seleccionada.nombre })}
+            alVolver={() => setElegida(null)}
+          />
         </div>
-      </div>
+      )}
     </>
   );
 }

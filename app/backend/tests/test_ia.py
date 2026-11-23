@@ -178,3 +178,37 @@ def test_herramienta_activos_sin_nombres(app: TestClient) -> None:
     resultado = next(m for m in vistas[1]["messages"] if m["role"] == "tool")["content"]
     assert "Inmueble" in resultado and "tía" not in resultado
     assert "tía" not in vistas[0]["messages"][0]["content"]
+
+
+def test_herramienta_arma_el_esquema_sin_ningun_sdk() -> None:
+    from finanzas.infra.herramienta import herramienta
+
+    @herramienta
+    def sumar(a: int, nota: str = "") -> str:
+        """Suma uno.
+
+        Args:
+            a: Número de entrada,
+                en pesos.
+            nota: Texto libre.
+        """
+        return f"{a + 1}{nota}"
+
+    assert sumar.name == "sumar" and sumar.description == "Suma uno."
+    esquema = sumar.input_schema
+    assert esquema["required"] == ["a"] and esquema["additionalProperties"] is False
+    assert esquema["properties"]["a"]["description"] == "Número de entrada, en pesos."
+    assert sumar.call({"a": 2}) == "3"
+    with pytest.raises(ValueError):
+        sumar.call({"a": "x"})
+    with pytest.raises(ValueError):
+        sumar.call({"a": 1, "otro": 2})
+
+
+def test_sin_el_sdk_de_claude_se_explica(app: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+
+    monkeypatch.setitem(sys.modules, "anthropic", None)  # como en una instalación que no lo trae
+    _activar(app, proveedor="anthropic", clave="k")
+    r = app.post("/api/v1/asistente/preguntar", json={"pregunta": "x"})
+    assert r.status_code == 409 and "otro proveedor" in r.json()["detail"]

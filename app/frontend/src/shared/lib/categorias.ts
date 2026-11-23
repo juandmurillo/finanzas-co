@@ -23,7 +23,7 @@ export function opcionesCategoria(nodos: CategoriaNodo[], grupos: string[], hoja
   return salida.sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, "es"));
 }
 
-const plano = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+export const plano = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
 export interface GrupoVisible {
   raiz: CategoriaNodo;

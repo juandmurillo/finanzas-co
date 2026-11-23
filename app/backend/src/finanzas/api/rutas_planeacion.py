@@ -13,6 +13,7 @@ from finanzas.api.dependencias import sesion_lectura, unidad_de_trabajo
 from finanzas.dominio.errores import NoEncontrado
 from finanzas.dominio.prestamos import alerta_costo
 from finanzas.infra import consultas_creditos, consultas_prestamos, consultas_presupuesto
+from finanzas.infra.modelos import PrestamoPersonal
 from finanzas.infra.uow import UnidadDeTrabajo
 from finanzas.servicios import creditos, prestamos, presupuesto
 
@@ -171,6 +172,36 @@ class AbonoIn(BaseModel):
     fecha: str | None = None
 
 
+class CambiosPrestamoIn(BaseModel):
+    """Solo se cambia lo que llega; capital, fecha y condiciones recalculan lo pendiente."""
+
+    persona: str | None = Field(default=None, min_length=1, max_length=80)
+    origen: Literal["amigo", "familia", "companero", "otra_fuente"] | None = None
+    nota: str | None = None
+    fecha: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}")
+    monto_inicial: int | None = Field(default=None, gt=0)
+    tipo_interes: Literal["ninguno", "fijo", "simple_mensual"] | None = None
+    interes_fijo: int | None = Field(default=None, ge=0)
+    tasa_mensual: float | None = Field(default=None, ge=0, le=1)
+    plan: Literal["fecha_unica", "cuotas", "libre"] | None = None
+    frecuencia: Literal["diaria", "semanal", "quincenal", "mensual"] | None = None
+    num_cuotas: int | None = Field(default=None, ge=1, le=120)
+    fecha_limite: str | None = None
+
+
+def _impacto_dict(i: prestamos.Impacto) -> dict[str, Any]:
+    return {
+        "capital_antes": i.capital_antes,
+        "interes_antes": i.interes_antes,
+        "pendiente_antes": i.pendiente_antes,
+        "capital_despues": i.capital_despues,
+        "interes_despues": i.interes_despues,
+        "pendiente_despues": i.pendiente_despues,
+        "interes_total": i.interes_total,
+        "cuotas": [asdict(c) | {"fecha": c.fecha.isoformat(), "total": c.total} for c in i.cuotas],
+    }
+
+
 @router.get("/prestamos", tags=["prestamos"])
 def listar_prestamos(sesion: Lectura, estado: str | None = None) -> list[dict[str, Any]]:
     return consultas_prestamos.listar(sesion, estado)
@@ -221,6 +252,33 @@ def abonar(prestamo_id: int, datos: AbonoIn, uow: Uow) -> dict[str, int]:
     with uow:
         s = prestamos.abonar(uow, prestamo_id, datos.monto, datos.cuenta_id, datos.fecha)
         return {"capital_pendiente": s.capital_pendiente, "interes_pendiente": s.interes_pendiente}
+
+
+@router.post("/prestamos/{prestamo_id}/entregas", tags=["prestamos"], status_code=201)
+def prestar_mas(prestamo_id: int, datos: AbonoIn, uow: Uow) -> dict[str, int]:
+    """Entrega adicional al mismo préstamo (mismas condiciones)."""
+    with uow:
+        s = prestamos.prestar_mas(uow, prestamo_id, datos.monto, datos.cuenta_id, datos.fecha)
+        return {"capital_pendiente": s.capital_pendiente, "interes_pendiente": s.interes_pendiente}
+
+
+@router.post("/prestamos/{prestamo_id}/edicion/vista-previa", tags=["prestamos"])
+def vista_previa_edicion(prestamo_id: int, datos: CambiosPrestamoIn, sesion: Lectura) -> dict[str, Any]:
+    """Cómo quedaría lo pendiente con los cambios, sin guardar."""
+    p = sesion.get(PrestamoPersonal, prestamo_id)
+    if p is None:
+        raise NoEncontrado(f"El préstamo {prestamo_id} no existe")
+    try:
+        return _impacto_dict(prestamos.impacto(sesion, p, prestamos.CambiosPrestamo(**datos.model_dump())))
+    finally:
+        sesion.rollback()
+
+
+@router.patch("/prestamos/{prestamo_id}", tags=["prestamos"])
+def editar_prestamo(prestamo_id: int, datos: CambiosPrestamoIn, uow: Uow) -> dict[str, Any]:
+    with uow:
+        i = prestamos.editar(uow, prestamo_id, prestamos.CambiosPrestamo(**datos.model_dump(exclude_unset=True)))
+        return _impacto_dict(i)
 
 
 @router.post("/prestamos/{prestamo_id}/condonar", tags=["prestamos"], status_code=204)

@@ -1,6 +1,7 @@
 /** Configuración (fase 5): reglas de categorización, precisión de las sugerencias, respaldos e instalación. */
 import { useSistema } from "@/shared/lib/useSistema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useSearch } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
@@ -13,8 +14,14 @@ import { TarjetaCargando, Vacio } from "@/shared/ui/Estados";
 import { Hoja } from "@/shared/ui/Hoja";
 import { SelectorCategoria } from "@/shared/ui/SelectorCategoria";
 
+import { Icono, type NombreIcono } from "@/shared/ui/Icono";
+
+import { ContenidoLegal } from "@/features/mas/Legal";
+import { Apariencia } from "./Apariencia";
+import "./configuracion.css";
 import { TusDatos } from "./TusDatos";
 
+import { Desplegable } from "@/shared/ui/Desplegable";
 function describir(c: CondicionRegla): string {
   if (c.campo === "descripcion") return `descripción ${c.op} “${c.valor}”`;
   if (c.campo === "tipo") return c.valor === "gasto" ? "es un gasto" : "es un ingreso";
@@ -30,7 +37,7 @@ function Precision() {
   return (
     <section className="cd-card cd-stack" style={{ gap: 12 }}>
       <div className="cd-card-head">
-        <h3 className="cd-card-title">Sugerencias de categoría</h3>
+        <h2 className="cd-card-title">Sugerencias de categoría</h2>
         <span className="cd-badge cd-badge--neutral">meta {porcentaje(meta, 0)}</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
@@ -169,7 +176,7 @@ function Reglas() {
   return (
     <section className="cd-card cd-stack" style={{ gap: 14 }}>
       <div className="cd-card-head">
-        <h3 className="cd-card-title">Reglas</h3>
+        <h2 className="cd-card-title">Reglas</h2>
         <span className="cd-delta-note">Se aplican antes que las sugerencias, en orden</span>
       </div>
       {reglas.data?.length === 0 && (
@@ -214,7 +221,7 @@ function Reglas() {
           <div className="cd-stack" style={{ gap: 6, gridColumn: "1 / -1" }}>
             {etiqueta("texto", "Si la descripción")}
             <div className="cd-row" style={{ gap: 6, flexWrap: "nowrap" }}>
-              <select
+              <Desplegable
                 aria-label="Cómo compara el texto"
                 className="cd-input"
                 style={{ width: "auto" }}
@@ -224,7 +231,7 @@ function Reglas() {
                 <option value="contiene">contiene</option>
                 <option value="empieza">empieza con</option>
                 <option value="igual">es igual a</option>
-              </select>
+              </Desplegable>
               <input
                 id={`${id}-texto`}
                 className="cd-input"
@@ -236,7 +243,7 @@ function Reglas() {
           </div>
           <div className="cd-stack" style={{ gap: 6 }}>
             {etiqueta("tipo", "Y es")}
-            <select
+            <Desplegable
               id={`${id}-tipo`}
               className="cd-input"
               value={f.tipo}
@@ -245,7 +252,7 @@ function Reglas() {
               <option value="">gasto o ingreso</option>
               <option value="gasto">un gasto</option>
               <option value="ingreso">un ingreso</option>
-            </select>
+            </Desplegable>
           </div>
           <div className="cd-stack" style={{ gap: 6 }}>
             {etiqueta("minimo", "Monto entre (opcional)")}
@@ -352,7 +359,7 @@ function Respaldos() {
   return (
     <section className="cd-card cd-stack" style={{ gap: 12 }}>
       <div className="cd-card-head">
-        <h3 className="cd-card-title">Respaldos</h3>
+        <h2 className="cd-card-title">Respaldos</h2>
         <button
           className="cd-btn cd-btn--secondary cd-btn--sm"
           disabled={respaldar.isPending}
@@ -426,7 +433,7 @@ function Perfil() {
   if (!d) return <TarjetaCargando filas={3} />;
   return (
     <section className="cd-card cd-stack" style={{ gap: 12 }}>
-      <h3 className="cd-card-title">Tu perfil</h3>
+      <h2 className="cd-card-title">Tu perfil</h2>
       <label className="cd-stack" style={{ gap: 6 }}>
         <span className="cd-kpi-label">Nombre (para el saludo)</span>
         <input
@@ -452,7 +459,7 @@ function Perfil() {
       </label>
       <label className="cd-stack" style={{ gap: 6 }}>
         <span className="cd-kpi-label">Secciones de apuestas</span>
-        <select
+        <Desplegable
           className="cd-input"
           value={d.modulo_apuestas}
           onChange={(e) => guardar.mutate({ modulo_apuestas: e.target.value as typeof d.modulo_apuestas })}
@@ -460,43 +467,127 @@ function Perfil() {
           <option value="auto">Solo si registro apuestas</option>
           <option value="si">Mostrar siempre</option>
           <option value="no">Ocultar siempre</option>
-        </select>
+        </Desplegable>
       </label>
     </section>
   );
 }
 
+type Seccion = "perfil" | "apariencia" | "reglas" | "datos" | "instalacion" | "legal";
+
+const SECCIONES: { id: Seccion; titulo: string; detalle: string; icono: NombreIcono }[] = [
+  { id: "perfil", titulo: "Perfil", detalle: "Nombre, contexto para el asistente y apuestas", icono: "persona" },
+  { id: "apariencia", titulo: "Apariencia", detalle: "Modo, tema de color, estilo y animaciones", icono: "paleta" },
+  {
+    id: "reglas",
+    titulo: "Reglas y sugerencias",
+    detalle: "Categorización automática y su precisión",
+    icono: "categorias",
+  },
+  {
+    id: "datos",
+    titulo: "Datos y respaldos",
+    detalle: "Exportar, cargar, restaurar y copias diarias",
+    icono: "descargar",
+  },
+  {
+    id: "instalacion",
+    titulo: "Instalación",
+    detalle: "Usar Caudal como app en el PC o el celular",
+    icono: "telefono",
+  },
+  { id: "legal", titulo: "Acerca de y legal", detalle: "Versión, aviso, privacidad y licencia", icono: "documento" },
+];
+
+function Instalacion() {
+  return (
+    <section className="cd-card cd-stack" style={{ gap: 8 }}>
+      <h2 className="cd-card-title">Instalarla como app</h2>
+      <p className="cd-delta-note" style={{ margin: 0 }}>
+        En el PC, el navegador ofrece «Instalar Caudal» en la barra de direcciones: abre en su propia ventana y la
+        interfaz carga sin red (tus datos siempre vienen de la base local).
+      </p>
+      <p className="cd-delta-note" style={{ margin: 0 }}>
+        En el celular: <code>npm run dev:lan</code>, abre la dirección de tu PC y elige «Agregar a la pantalla de
+        inicio». Por la red local queda como acceso directo; la instalación completa pide HTTPS. Por seguridad, debes
+        agregar tu dirección en <code>FINANZAS_HOSTS_PERMITIDOS</code> y <code>FINANZAS_ORIGENES_CORS</code>. Úsalo solo
+        en tu Wi-Fi de confianza: aún no tiene PIN.
+      </p>
+    </section>
+  );
+}
+
+function ContenidoSeccion({ seccion }: { seccion: Seccion }) {
+  switch (seccion) {
+    case "legal":
+      return (
+        <div className="cd-stack config-legal" style={{ gap: "var(--space-4)" }}>
+          <ContenidoLegal />
+        </div>
+      );
+    case "perfil":
+      return <Perfil />;
+    case "apariencia":
+      return <Apariencia />;
+    case "reglas":
+      return (
+        <>
+          <Precision />
+          <Reglas />
+        </>
+      );
+    case "datos":
+      return (
+        <>
+          <TusDatos />
+          <Respaldos />
+        </>
+      );
+    case "instalacion":
+      return <Instalacion />;
+  }
+}
+
 export function ConfiguracionPage() {
+  const busqueda = useSearch({ strict: false }) as { seccion?: string };
+  const elegida = SECCIONES.find((s) => s.id === busqueda.seccion);
+  const seccion = elegida?.id ?? "perfil";
+  const titulo = SECCIONES.find((s) => s.id === seccion)?.titulo ?? "";
   return (
     <>
       <div className="cd-pagehead">
         <div>
           <h1>Configuración</h1>
-          <p>Reglas de categorización, qué tan bien acierta la app, tus datos y tus respaldos.</p>
+          <p>Tu perfil, cómo se ve Caudal, las reglas de categorías y tus datos.</p>
         </div>
       </div>
-      <div className="cd-bento">
-        <div className="span-8 cd-stack" style={{ gap: 16 }}>
-          <Precision />
-          <Reglas />
-          <TusDatos />
-        </div>
-        <div className="span-4 cd-stack" style={{ gap: 16 }}>
-          <Perfil />
-          <Respaldos />
-          <section className="cd-card cd-stack" style={{ gap: 8 }}>
-            <h3 className="cd-card-title">Instalarla como app</h3>
-            <p className="cd-delta-note" style={{ margin: 0 }}>
-              En el PC, el navegador ofrece «Instalar Caudal» en la barra de direcciones: abre en su propia ventana y la
-              interfaz carga sin red (tus datos siempre vienen de la base local).
-            </p>
-            <p className="cd-delta-note" style={{ margin: 0 }}>
-              En el celular: <code>npm run dev:lan</code>, abre la dirección de tu PC y elige «Agregar a la pantalla de
-              inicio». Por la red local queda como acceso directo; la instalación completa pide HTTPS. Por seguridad,
-              debes agregar tu dirección en <code>FINANZAS_HOSTS_PERMITIDOS</code> y <code>FINANZAS_ORIGENES_CORS</code>
-              . Úsalo solo en tu Wi-Fi de confianza: aún no tiene PIN.
-            </p>
-          </section>
+      <div className="config" data-detalle={elegida ? "si" : "no"}>
+        <nav className="config-indice cd-card" aria-label="Secciones de configuración">
+          {SECCIONES.map((s) => (
+            <Link
+              key={s.id}
+              to="/configuracion"
+              search={{ seccion: s.id }}
+              className="config-fila"
+              aria-current={s.id === seccion ? "page" : undefined}
+            >
+              <span className="config-ico">
+                <Icono nombre={s.icono} />
+              </span>
+              <span className="config-texto">
+                <b>{s.titulo}</b>
+                <small>{s.detalle}</small>
+              </span>
+              <Icono nombre="flecha" />
+            </Link>
+          ))}
+        </nav>
+        <div className="config-detalle cd-stack" style={{ gap: 16 }}>
+          <Link to="/configuracion" search={{}} className="config-volver">
+            ‹ Configuración
+          </Link>
+          <h2 className="config-titulo">{titulo}</h2>
+          <ContenidoSeccion seccion={seccion} />
         </div>
       </div>
     </>

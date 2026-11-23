@@ -175,6 +175,10 @@ def test_valor_neto_y_mapa_de_calor_cuadran(cliente: TestClient) -> None:
     for escala in ("mes", "dia"):
         puntos = cliente.get(f"/api/v1/reportes/valor-neto?escala={escala}").json()["puntos"]
         assert puntos and puntos[-1]["saldo"] == total  # el último punto es el saldo de hoy
+    # Por cuenta: el último punto es el saldo de esa cuenta.
+    saldo_nequi = next(c for c in cliente.get("/api/v1/cuentas").json() if c["id"] == nequi)["saldo"]
+    solo = cliente.get(f"/api/v1/reportes/valor-neto?escala=movimiento&cuenta_id={nequi}").json()["puntos"]
+    assert solo and solo[-1]["saldo"] == saldo_nequi
     mes = hoy[:7]
     calor = cliente.get(f"/api/v1/reportes/calor?desde={mes}&hasta={mes}").json()
     flujo = cliente.get(f"/api/v1/reportes/mensual?desde={mes}&hasta={mes}").json()["totales"]
@@ -236,3 +240,61 @@ def test_confirmar_programada_con_fecha_y_hora_como_el_editor(cliente: TestClien
     assert r.status_code == 204, r.text
     pago = cliente.get(f"/api/v1/transacciones/{programada['id']}").json()
     assert pago["estado"] == "confirmada" and pago["fecha"].startswith(fecha)
+
+
+def test_simbolo_propio_en_cuenta_y_categoria(cliente) -> None:
+    """Fase 10 (rediseño): emoji o imagen pequeña como símbolo y color de la paleta en cuentas y categorías."""
+    cuenta = cliente.get("/api/v1/cuentas").json()[0]
+    imagen = (
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJ"
+        "RU5ErkJggg=="
+    )
+    assert cliente.patch(f"/api/v1/cuentas/{cuenta['id']}", json={"icono": imagen, "color": "cat-3"}).status_code == 204
+    actual = next(c for c in cliente.get("/api/v1/cuentas").json() if c["id"] == cuenta["id"])
+    assert actual["icono"] == imagen and actual["color"] == "cat-3"
+    assert cliente.patch(f"/api/v1/cuentas/{cuenta['id']}", json={"icono": "🏦"}).status_code == 204
+    assert cliente.patch(f"/api/v1/cuentas/{cuenta['id']}", json={"icono": "<script>"}).status_code == 422
+    assert cliente.patch(f"/api/v1/cuentas/{cuenta['id']}", json={"color": "rojo"}).status_code == 422
+    assert (
+        cliente.patch(f"/api/v1/cuentas/{cuenta['id']}", json={"icono": "data:text/html;base64,AAAA"}).status_code
+        == 422
+    )
+
+
+def test_editar_color_y_simbolo_de_categoria(cliente) -> None:
+    """El editor de categorías envía nombre, icono y color de la paleta nueva (cat-1…8) o un emoji."""
+    cat = cliente.get("/api/v1/categorias").json()[0]["hijos"][0]
+    url = f"/api/v1/categorias/{cat['id']}"
+    assert cliente.patch(url, json={"nombre": cat["nombre"], "icono": None, "color": "cat-3"}).status_code == 204
+    assert (
+        cliente.patch(url, json={"nombre": cat["nombre"], "icono": "\U0001f354", "color": "cat-8"}).status_code == 204
+    )
+    assert cliente.patch(url, json={"nombre": cat["nombre"], "icono": "comida", "color": "chart-2"}).status_code == 204
+    assert cliente.patch(url, json={"color": "rojo"}).status_code == 400
+    nodo = cliente.get("/api/v1/categorias").json()[0]["hijos"][0]
+    assert (nodo["icono"], nodo["color"]) == ("comida", "chart-2")
+
+
+def test_categoria_nueva_recibe_color_e_icono_sugeridos(cliente) -> None:
+    """Sin elegir estilo, la categoría recibe el color y el ícono que sugiere su nombre (editables después)."""
+    raiz = next(r for r in cliente.get("/api/v1/categorias").json() if r["grupo"] == "gasto_vida")
+    r = cliente.post("/api/v1/categorias", json={"padre_id": raiz["id"], "nombre": "Mercado del mes"})
+    assert r.status_code == 201
+    nodo = next(
+        h
+        for h in cliente.get("/api/v1/categorias").json()[0]["hijos"]
+        + [h for x in cliente.get("/api/v1/categorias").json() for h in x["hijos"]]
+        if h["id"] == r.json()["id"]
+    )
+    assert nodo["icono"] == "comida" and nodo["color"].startswith("cat-")
+
+
+def test_pago_programado_guarda_la_hora() -> None:
+    """Pagar un recurrente con fecha sin hora (o a las 00:00) toma la hora actual; con hora, la respeta."""
+    from finanzas.servicios.recurrentes import _con_hora
+    from finanzas.servicios.transacciones import ahora
+
+    hora = ahora()[11:16]
+    assert _con_hora("2026-11-15")[:16] == f"2026-11-15T{hora}" or _con_hora("2026-11-15")[11:16] >= hora
+    assert _con_hora("2026-11-15T00:00")[:10] == "2026-11-15"
+    assert _con_hora("2026-11-15T13:34") == "2026-11-15T13:34:00-05:00"

@@ -20,7 +20,8 @@ from finanzas.dominio.creditos import (
 )
 from finanzas.dominio.fechas import hoy_bogota
 from finanzas.dominio.prestamos import fecha_cuota
-from finanzas.infra.modelos import Categoria, Credito, CreditoExtracto, CreditoPago, Parametro, Transaccion
+from finanzas.infra.modelos import Credito, CreditoExtracto, CreditoPago, Parametro, Transaccion
+from finanzas.servicios.creditos import categoria_abono
 
 
 def _ultimo_extracto(sesion: Session, credito_id: int) -> CreditoExtracto | None:
@@ -110,11 +111,7 @@ def detalle_credito(sesion: Session, c: Credito) -> dict[str, Any]:
         "cuenta_pago_id": c.cuenta_pago_id,
         "cuenta_desembolso_id": (sesion.get(Transaccion, c.desembolso_id).cuenta_id if c.desembolso_id else None),  # type: ignore[union-attr]
         "categoria_id": c.categoria_id,
-        "categoria_abono_id": sesion.scalar(
-            select(Categoria.id).where(Categoria.padre_id == c.categoria_id, Categoria.nombre == "Abono a capital")
-        )
-        if c.categoria_id
-        else None,
+        "categoria_abono_id": abono.id if (abono := categoria_abono(sesion, c)) else None,
         "estado": c.estado,
         "intereses_por_pagar": sum(f.interes + f.seguro for f in filas),
         "fecha_fin": fin.isoformat(),
@@ -198,7 +195,7 @@ def amortizacion(sesion: Session, credito_id: int) -> dict[str, Any] | None:
             select(CreditoPago, Transaccion.fecha, Transaccion.monto)
             .join(Transaccion, Transaccion.id == CreditoPago.transaccion_id)
             .where(CreditoPago.credito_id == c.id)
-            .order_by(Transaccion.fecha.desc())
+            .order_by(Transaccion.fecha.desc(), Transaccion.id.desc())
         ).all()
     ]
     datos["extractos"] = [

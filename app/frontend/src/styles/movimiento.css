@@ -1,0 +1,287 @@
+/*
+ * Movimiento de toda la app según la intensidad elegida (Configuración › Apariencia → data-movimiento en <html>,
+ * ver shared/lib/movimiento.ts). Un solo lugar: duraciones, curvas y qué se mueve en páginas, tarjetas,
+ * gráficos, filtros, menús y botones.
+ *
+ *   maxima    todas las transiciones, microinteracciones y entradas de los gráficos.
+ *   reducida  breves y discretas: solo opacidad y color, sin desplazamientos ni escalas.
+ *   ninguna   instantáneo: ninguna transición ni animación.
+ *
+ * Los importes y controles nunca esperan a una animación: todo entra ya visible (opacidad parcial) y es
+ * interactivo desde el primer fotograma; las transiciones se redirigen si el usuario cambia algo varias veces.
+ */
+:root {
+  --mov-rapida: 140ms;
+  --mov-media: 220ms;
+  --mov-pagina: 260ms;
+  --mov-grafico: 420ms;
+  --mov-escalon: 28ms;
+  --mov-salida: cubic-bezier(0.23, 1, 0.32, 1);
+  --mov-mover: cubic-bezier(0.77, 0, 0.175, 1);
+  --mov-desplaz: 8px;
+}
+:root[data-movimiento="reducida"] {
+  --mov-rapida: 90ms;
+  --mov-media: 120ms;
+  --mov-pagina: 140ms;
+  --mov-grafico: 160ms;
+  --mov-escalon: 0ms;
+  --mov-desplaz: 0px;
+}
+:root[data-movimiento="ninguna"] {
+  --mov-rapida: 0ms;
+  --mov-media: 0ms;
+  --mov-pagina: 0ms;
+  --mov-grafico: 0ms;
+  --mov-escalon: 0ms;
+  --mov-desplaz: 0px;
+}
+/* Ninguna: todo llega a su estado final al instante (duración cero, sin quitar el estado final). */
+:root[data-movimiento="ninguna"] *,
+:root[data-movimiento="ninguna"] *::before,
+:root[data-movimiento="ninguna"] *::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+/* ---------- Páginas ---------- */
+/* El envoltorio de la página reparte sus secciones con el mismo espacio que .cd-content (var(--space-6) en
+   escritorio, --gap-bento en el sistema compacto): sin esto, las secciones de cada página quedaban pegadas. */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  min-width: 0;
+  animation: mov-pagina var(--mov-pagina) var(--mov-salida) both;
+}
+@keyframes mov-pagina {
+  from {
+    opacity: 0.4;
+    transform: translateY(var(--mov-desplaz));
+  }
+}
+
+/* ---------- Tarjetas: entrada escalonada (solo máximo) ---------- */
+:root[data-movimiento="maxima"] .pagina :is(.cd-bento, .inicio-kpis, .categorias-kpis) > * {
+  animation: mov-tarjeta 360ms var(--mov-salida) both;
+}
+:root[data-movimiento="maxima"] .pagina :is(.cd-bento, .inicio-kpis, .categorias-kpis) > :nth-child(2) {
+  animation-delay: 30ms;
+}
+:root[data-movimiento="maxima"] .pagina :is(.cd-bento, .inicio-kpis, .categorias-kpis) > :nth-child(3) {
+  animation-delay: 60ms;
+}
+:root[data-movimiento="maxima"] .pagina :is(.cd-bento, .inicio-kpis, .categorias-kpis) > :nth-child(4) {
+  animation-delay: 90ms;
+}
+:root[data-movimiento="maxima"] .pagina :is(.cd-bento, .inicio-kpis, .categorias-kpis) > :nth-child(n + 5) {
+  animation-delay: 120ms;
+}
+@keyframes mov-tarjeta {
+  from {
+    opacity: 0.35;
+    transform: translateY(10px) scale(0.99);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  :root[data-movimiento="maxima"] :is(.kpi-c, .tarjeta-cuenta, .ajustes-grupo > ul) {
+    transition:
+      transform var(--mov-media) var(--mov-salida),
+      box-shadow var(--mov-media) var(--mov-salida);
+  }
+  :root[data-movimiento="maxima"] :is(.kpi-c:has(.kpi-c-pie, .kpi-c-abrir), .tarjeta-cuenta):hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* ---------- Gráficos: entrada, cambio de periodo y selección ---------- */
+/* Las columnas crecen desde su base, escalonadas; nunca desde cero (parten de 30 %). */
+:root[data-movimiento="maxima"] .grafico .columna {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: mov-columna var(--mov-grafico) var(--mov-salida) both;
+  animation-delay: calc(var(--i, 0) * var(--mov-escalon));
+}
+@keyframes mov-columna {
+  from {
+    opacity: 0.3;
+    transform: scaleY(0.3);
+  }
+}
+:root[data-movimiento="reducida"] .grafico .columna {
+  animation: mov-aparece var(--mov-grafico) ease both;
+}
+@keyframes mov-aparece {
+  from {
+    opacity: 0.4;
+  }
+}
+/* Las líneas se dibujan de izquierda a derecha; el área bajo ellas aparece con opacidad. */
+:root[data-movimiento="maxima"] .grafico .linea-principal {
+  stroke-dasharray: 1;
+  animation: mov-linea 700ms var(--mov-salida) both;
+}
+@keyframes mov-linea {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+:root:not([data-movimiento="ninguna"]) .grafico svg {
+  animation: mov-aparece var(--mov-grafico) ease both;
+}
+/* Selección: la parte elegida se destaca y las demás se atenúan con transición (se redirige al cambiar). */
+.grafico :is(.columna, .barra, .punto-activo, .banda-activa) {
+  transition: opacity var(--mov-rapida) ease;
+}
+.grafico .banda-activa {
+  animation: mov-aparece var(--mov-rapida) ease both;
+}
+.grafico-globo {
+  animation: mov-globo var(--mov-rapida) var(--mov-salida) both;
+}
+@keyframes mov-globo {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+:root[data-movimiento="reducida"] .grafico-globo {
+  animation-name: mov-aparece;
+}
+
+/* Zona deslizable de periodos: la página conserva el desplazamiento vertical; el horizontal es del gráfico. */
+.zona-periodo {
+  position: relative;
+  touch-action: pan-y;
+}
+.zona-periodo-contenido {
+  transition: opacity var(--mov-media) ease;
+}
+.zona-periodo.actualizando .zona-periodo-contenido {
+  opacity: 0.45;
+}
+.zona-periodo-aviso {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  z-index: 6;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--card);
+  font: 600 12px var(--font-sans);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity var(--mov-rapida) ease,
+    transform var(--mov-rapida) var(--mov-salida);
+}
+.zona-periodo-aviso.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.zona-periodo-aviso:empty {
+  display: none;
+}
+
+/* ---------- Filtros y controles ---------- */
+.cd-seg button,
+.mov-chip,
+.periodo-boton,
+.cd-icon-btn,
+.cd-btn,
+.movil-item,
+.fab-registrar {
+  transition:
+    background-color var(--mov-rapida) ease,
+    color var(--mov-rapida) ease,
+    border-color var(--mov-rapida) ease,
+    box-shadow var(--mov-rapida) ease,
+    opacity var(--mov-rapida) ease,
+    transform var(--mov-rapida) var(--mov-salida);
+}
+/* Respuesta al presionar: solo en máximo (en reducida basta el cambio de color). */
+:root[data-movimiento="maxima"]
+  :is(.cd-btn, .cd-icon-btn, .mov-chip, .periodo-boton, .movil-item):not(:disabled):active {
+  transform: scale(0.97);
+}
+:root[data-movimiento="maxima"] .fab-registrar:active {
+  transform: scale(0.94);
+}
+:root[data-movimiento="maxima"] .movil-item[aria-current="page"] svg {
+  animation: mov-icono var(--mov-media) var(--mov-salida);
+}
+@keyframes mov-icono {
+  from {
+    transform: translateY(2px) scale(0.92);
+  }
+}
+
+/* ---------- Menús, paneles y hojas ---------- */
+.periodo-pop,
+.menu-acciones-lista,
+.alertas-panel {
+  transform-origin: top;
+  animation: mov-panel var(--mov-media) var(--mov-salida) both;
+}
+@keyframes mov-panel {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+:root[data-movimiento="reducida"] :is(.periodo-pop, .menu-acciones-lista, .alertas-panel, .flotante) {
+  animation-name: mov-aparece;
+}
+.hoja-panel {
+  animation: mov-hoja var(--mov-media) var(--mov-salida) both;
+}
+@keyframes mov-hoja {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+:root[data-movimiento="reducida"] .hoja-panel {
+  animation-name: mov-aparece;
+}
+
+/* ---------- Cambios de estado ---------- */
+.resalte-cambio {
+  animation-duration: calc(var(--mov-grafico) + 200ms);
+}
+:root:not([data-movimiento="maxima"]) :is(.skeleton, .chat-pensando span, .dona-animada) {
+  animation: none;
+}
+:root[data-movimiento="reducida"] .pagina {
+  animation-name: mov-aparece;
+}
+/* Un contenedor con desplazamiento horizontal propio (el mapa diario) se quedaría con el gesto: dentro de la
+   zona no se desplaza (sus celdas ya se ajustan al ancho) y el gesto horizontal es del cambio de periodo. */
+.zona-periodo .grafico-lienzo {
+  overflow-x: visible;
+  touch-action: pan-y;
+}
+/* El mapa diario recorta su rejilla (que se desliza) sin volverse un contenedor desplazable. */
+.zona-periodo .mapa-calor {
+  overflow-x: clip;
+  touch-action: pan-y;
+}
+.capa-desliza {
+  will-change: transform;
+}
+/* Durante el arrastre de periodos (y justo después) el toque no consulta datos: sin globo ni resaltado. */
+.zona-periodo:is([data-gesto="arrastrando"], [data-gesto="deslizado"])
+  :is(.grafico-globo, .banda-activa, .guia-activa, .punto-activo, .calor-globo) {
+  display: none;
+}

@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./caudal.css";
+@import "./compacto.css";
+@import "./estilos.css";
+@import "./movimiento.css";
 
 /* Tokens de Caudal disponibles como utilidades de Tailwind (bg-card, text-ink-muted, rounded-lg…). */
 @theme inline {
@@ -22,6 +25,10 @@
   --radius-xl: 28px;
 }
 
+/* WebView y navegadores móviles: sin el destello gris al tocar; cada control trae su propio estado :active. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
 html,
 body,
 #root {
@@ -46,13 +53,16 @@ a {
     display: none;
   }
   .cd-topbar {
-    padding: 0 16px;
+    padding: 0 12px;
   }
   .cd-content {
-    padding: 0 16px 120px;
+    /* La barra inferior mide 76 px más el área segura (navegación por gestos): el final de la página la libra. */
+    /* El final de cada pantalla libra la barra inferior y el «+» flotante (más su aire) y el área segura. */
+    padding: 0 12px
+      calc(var(--nav-movil-alto) + var(--fab-tam) + 2 * var(--fab-aire) + env(safe-area-inset-bottom, 0px));
   }
   .cd-bento {
-    gap: 16px;
+    gap: var(--gap-bento);
   }
   .app-movil-nav {
     display: grid;
@@ -103,11 +113,7 @@ a {
     opacity: 0.55;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .skeleton {
-    animation: none;
-  }
-}
+
 .resalte-cambio {
   animation: resalte 0.6s ease-out;
 }
@@ -798,11 +804,39 @@ input[type="checkbox"]:not(.nativa):disabled {
   display: grid;
   gap: 4px;
 }
-.flujo-subcategorias li {
+.flujo-detalle {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  padding: 0 0 8px;
+}
+.flujo-sub-enlace {
+  flex: 1;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto auto 14px;
+  align-items: center;
   gap: 12px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
   font-size: 13px;
+  text-decoration: none;
+}
+.flujo-sub-enlace:hover,
+.flujo-sub-enlace:focus-visible {
+  background: var(--accent-soft);
+}
+.flujo-ver-movs {
+  margin-left: 44px;
+  justify-self: start;
+}
+
+/* Un globo de gráfico nunca queda debajo de la tarjeta siguiente (vidrio y otros crean capas propias). */
+.cd-card:has(.grafico-globo),
+.cd-bento > :has(.grafico-globo) {
+  position: relative;
+  z-index: 30;
 }
 .flujo-mes {
   display: grid;
@@ -816,6 +850,32 @@ input[type="checkbox"]:not(.nativa):disabled {
   text-align: left;
   font: inherit;
   cursor: pointer;
+}
+.flujo-mes-barras {
+  display: grid;
+  gap: 3px;
+}
+.flujo-mes-barras i {
+  display: block;
+  height: 5px;
+  min-width: 2px;
+  border-radius: var(--radius-pill);
+}
+.flujo-mes-barras .entra {
+  background: var(--positive);
+}
+.flujo-mes-barras .sale {
+  background: var(--negative);
+}
+.flujo-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap-bento);
+}
+@media (max-width: 1280px) {
+  .flujo-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .flujo-mes:hover,
 .flujo-mes.activo {
@@ -1054,11 +1114,7 @@ input[type="checkbox"]:not(.nativa):disabled {
     transform: translateY(-3px);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .chat-pensando span {
-    animation: none;
-  }
-}
+
 .chat-entrada {
   position: sticky;
   bottom: 12px;
@@ -1157,11 +1213,6 @@ input[type="checkbox"]:not(.nativa):disabled {
   from {
     opacity: 0;
     transform: rotate(-35deg) scale(0.94);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .dona-animada {
-    animation: none;
   }
 }
 
@@ -1401,5 +1452,745 @@ html {
   }
   .tabla-apilable td:first-child::before {
     content: none;
+  }
+}
+
+/* ---------- Crear categoría desde el selector ---------- */
+.selector-crear {
+  border-style: dashed;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.alta-categoria {
+  gap: 14px;
+}
+.alta-titulo {
+  margin: 0;
+  font-size: 15px;
+}
+.alta-pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Lista + detalle (Deudas, Préstamos, Configuración) ---------- */
+.panel-volver {
+  display: none;
+  align-self: flex-start;
+  align-items: center;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: 600 14px var(--font-sans);
+  cursor: pointer;
+}
+.campo-etiqueta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.texto-ingreso {
+  color: var(--positive);
+}
+.texto-error {
+  color: var(--negative);
+}
+
+/* Categorías con el sistema compacto */
+.categoria-barra {
+  display: block;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--chart-track);
+  overflow: hidden;
+}
+.categoria-barra i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.ranking-num {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--card-raised);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+@media (max-width: 1100px) {
+  .categorias-kpis > * {
+    grid-column: span 6;
+  }
+}
+
+/* Renta y aportes con el sistema compacto */
+.renta-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--gap-bento);
+}
+.renta-tope + .renta-tope {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.renta-tope-nombre {
+  font-size: var(--texto-cuerpo);
+  font-weight: 600;
+}
+
+/* Asistente con el sistema compacto */
+.chat-sugerencias button {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+}
+.chat-sugerencias button:hover {
+  border-color: var(--accent);
+  background: var(--card);
+}
+.chat-sugerencia-ico {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+.chat-sugerencia-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.chat-sugerencia-texto b {
+  font-size: var(--texto-cuerpo);
+  color: var(--ink);
+}
+.chat-avatar {
+  background: var(--grad-heroe);
+}
+.chat-burbuja {
+  border-radius: 14px;
+  font-size: var(--texto-cuerpo);
+}
+.chat-inicio h2 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.chat-entrada {
+  border-radius: 18px;
+}
+
+/* Recurrentes: tablas de programados y vencidos; KPIs 2×2 en la columna derecha */
+.recurrentes-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-bento);
+}
+.tabla-rec {
+  overflow-x: auto;
+}
+.tabla-rec .cd-table td {
+  padding: 10px 8px;
+}
+.tabla-rec .cd-table th {
+  padding: 8px;
+}
+.tabla-rec-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.tabla-rec .fila-recurrente-nombre {
+  max-width: 200px;
+}
+.tabla-rec-acciones {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+}
+@media (max-width: 720px) {
+  .tabla-rec .tabla-apilable td[data-etiqueta="Acciones"]::before {
+    content: none;
+  }
+  .tabla-rec .tabla-apilable td[data-etiqueta="Acciones"] {
+    padding-top: 6px;
+  }
+}
+
+.cd-catlist .fila-sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Revisión mensual: seis indicadores, cambios divergentes y apuestas */
+.revision-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap-bento);
+}
+@media (min-width: 1680px) {
+  .revision-kpis {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+.revision-kpis .kpi-c-valor {
+  white-space: normal;
+  font-size: 19px;
+  line-height: 24px;
+}
+@media (max-width: 640px) {
+  .revision-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.revision-mes-datos,
+.apuestas-kpis {
+  display: grid;
+  gap: var(--gap-bento);
+  align-content: start;
+}
+.apuestas-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.apuestas-kpis .kpi-c {
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+.cambios-div {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.cambios-div li {
+  display: grid;
+  grid-template-columns: minmax(90px, 1.1fr) minmax(0, 2fr) minmax(84px, auto);
+  align-items: center;
+  gap: 12px;
+  font-size: var(--texto-cuerpo);
+}
+.cambios-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cambios-pista {
+  position: relative;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--chart-track);
+}
+.cambios-pista::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--border-strong);
+}
+.cambios-pista i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--radius-pill);
+}
+.cambios-pista i.sube,
+.cambios-leyenda i.sube {
+  background: var(--warning);
+}
+.cambios-pista i.baja,
+.cambios-leyenda i.baja {
+  background: var(--positive);
+}
+.cambios-div b {
+  text-align: right;
+}
+.texto-sube {
+  color: var(--ink);
+}
+.texto-baja {
+  color: var(--positive);
+}
+.cambios-leyenda {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0 0;
+}
+.cambios-leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cambios-leyenda i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.revision-apoyo .fila-metricas {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 0;
+}
+.revision-apoyo .fila-metricas > div:nth-child(odd) {
+  padding-left: 0;
+  border-left: 0;
+}
+.tabla-rec-queda {
+  display: block;
+  font-size: 11px;
+}
+.tabla-rec td[data-etiqueta="Monto"] {
+  text-align: right;
+}
+.tabla-rec-fecha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: nowrap;
+}
+.tabla-rec .acciones-fila {
+  gap: 2px;
+}
+.tabla-rec .fila-recurrente-nombre {
+  max-width: 150px;
+}
+.tabla-rec td:first-child {
+  max-width: 170px;
+  white-space: normal;
+}
+.tabla-rec .tabla-rec-sub {
+  white-space: normal;
+}
+@media (max-width: 720px) {
+  .tabla-rec .tabla-apilable td:first-child {
+    display: block;
+    max-width: none;
+    text-align: left !important;
+  }
+  .tabla-rec .fila-recurrente-nombre {
+    max-width: 100%;
+  }
+  .tabla-rec .tabla-rec-fecha {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+}
+.tabla-rec-pagar {
+  width: 1%;
+  text-align: right;
+}
+@media (max-width: 720px) {
+  .tabla-rec .tabla-apilable td.tabla-rec-pagar::before {
+    content: none;
+  }
+}
+
+/* Administrar categorías con el sistema compacto */
+.admin-cat-grupo + .admin-cat-grupo {
+  margin-top: 10px;
+}
+.admin-cat-grupo-cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.admin-cat-grupo ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.admin-cat-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: var(--radius-md);
+}
+.admin-cat-fila:hover {
+  background: var(--card-raised);
+}
+.admin-cat-fila.sub {
+  padding-left: 42px;
+}
+.admin-cat-nombre {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.admin-cat-nombre b {
+  font-size: var(--texto-cuerpo);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-cat-fila.sub .admin-cat-nombre b {
+  font-weight: 500;
+}
+.admin-cat-nombre small {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.admin-cat-fila .acciones-fila {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.admin-cat-fila:hover .acciones-fila,
+.admin-cat-fila:focus-within .acciones-fila {
+  opacity: 1;
+}
+@media (hover: none) {
+  .admin-cat-fila .acciones-fila {
+    opacity: 1;
+  }
+}
+/* Revisión: los datos del mes llenan la altura de «Qué cambió» sin dejar hueco */
+.revision-mes-datos {
+  grid-auto-rows: 1fr;
+  height: 100%;
+}
+
+/* ---------- Categorías en el celular ---------- */
+.reparto-columna {
+  display: none;
+}
+@media (max-width: 860px) {
+  /* KPIs de dos en dos */
+  .cd-bento.categorias-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cd-bento.categorias-kpis > * {
+    grid-column: span 1;
+  }
+  /* El reparto pasa de barra horizontal a barra vertical junto a la lista: fija a la vista mientras se recorre,
+     entre la barra superior y la inferior, con el mismo orden y color de cada categoría. */
+  .reparto-tarjeta {
+    display: none;
+  }
+  .lista-con-reparto {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 14px;
+    column-gap: 10px;
+    align-items: stretch;
+  }
+  .lista-con-reparto-lista {
+    min-width: 0;
+  }
+  .reparto-columna {
+    display: block;
+  }
+  .reparto-vertical {
+    position: sticky;
+    top: calc(var(--topbar-height) + 12px);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 14px;
+    height: min(
+      100%,
+      calc(100dvh - var(--topbar-height) - var(--nav-movil-alto) - env(safe-area-inset-bottom, 0px) - 40px)
+    );
+  }
+  .reparto-vertical-tramo {
+    min-height: 3px;
+    border-radius: 4px;
+  }
+}
+
+/* Revisión mensual en el celular: «Días con algún gasto» y «Gasto más grande» en la misma fila, alineadas; la
+   cifra se ajusta al ancho de su tarjeta (KpiCompacto usa cqi), así un importe largo se lee completo. */
+@media (max-width: 860px) {
+  .revision-mes-datos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    align-items: stretch;
+    height: auto;
+  }
+  .revision-mes-datos .kpi-c-nota {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+}
+
+/* ---------- Recurrentes en el celular ---------- */
+@media (max-width: 860px) {
+  /* KPIs y saldo proyectado arriba; luego vencidos, programados, detectados y en pausa. */
+  .rec-principal,
+  .rec-lado {
+    display: contents;
+  }
+  /* Sin sus columnas, cada tarjeta ocupa todo el ancho de la rejilla del bento. */
+  .rec-principal > *,
+  .rec-lado > * {
+    grid-column: 1 / -1;
+  }
+  .recurrentes-kpis {
+    order: -2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .recurrentes-kpis .kpi-c-nota {
+    display: none;
+  }
+  .rec-saldo {
+    order: -1;
+  }
+}
+/* Lista compacta con columnas alineadas (pago, próximo, monto); las acciones están en el detalle de cada fila. */
+.tabla-rec-compacta {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.tabla-rec-compacta thead th {
+  padding: 4px 4px 6px;
+  color: var(--ink-muted);
+  font: 700 11px var(--font-sans);
+  text-align: left;
+}
+.tabla-rec-compacta th:nth-child(1),
+.tabla-rec-compacta td:nth-child(1) {
+  width: auto;
+}
+.tabla-rec-compacta th:nth-child(2),
+.tabla-rec-compacta td:nth-child(2) {
+  width: 74px;
+}
+.tabla-rec-compacta th:nth-child(3),
+.tabla-rec-compacta td:nth-child(3) {
+  width: 108px;
+  text-align: right;
+}
+.tabla-rec-compacta :is(th, td):nth-child(n + 4) {
+  display: none;
+}
+.tabla-rec .tabla-rec-compacta td {
+  padding: 8px 4px;
+  vertical-align: top;
+  border-top: 1px solid var(--border);
+}
+.tabla-rec .tabla-rec-compacta td:first-child {
+  max-width: none;
+}
+.tabla-rec-compacta .fila-recurrente-nombre {
+  display: block;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tabla-rec-compacta .tabla-rec-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tabla-rec-compacta .tabla-rec-fecha {
+  font-size: 12px;
+}
+.tabla-rec-compacta .cd-amt {
+  white-space: nowrap;
+  font-size: 13px;
+}
+/* Detalle de un pago (hoja) */
+.detalle-resumen {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.detalle-resumen > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.detalle-resumen dt {
+  color: var(--ink-muted);
+}
+.detalle-resumen dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+.detalle-acciones {
+  display: grid;
+  gap: 8px;
+}
+.detalle-acciones .cd-btn {
+  justify-content: center;
+  min-height: 44px;
+}
+/* Fila que se toca entera para abrir su detalle o edición (celular). */
+.fila-tocable {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.fila-tocable:active {
+  background: var(--card-raised);
+}
+.fila-tocable:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* Filas con desplazamiento horizontal: el contenido se funde con el fondo solo en el lado donde queda más por
+   ver (useDesvanecido marca data-mas-izq / data-mas-der). Es una máscara: sirve con cualquier tema o estilo y
+   las tarjetas se pueden tocar y deslizar hasta el borde. */
+.desvanece-lados {
+  --desv-izq: 0px;
+  --desv-der: 0px;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--desv-izq),
+    #000 calc(100% - var(--desv-der)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--desv-izq),
+    #000 calc(100% - var(--desv-der)),
+    transparent 100%
+  );
+}
+.desvanece-lados[data-mas-izq="1"] {
+  --desv-izq: 32px;
+}
+.desvanece-lados[data-mas-der="1"] {
+  --desv-der: 32px;
+}
+
+/* Categorías: la fila elegida (desde la lista o desde el reparto) se resalta y trae su dato y «Ver movimientos»;
+   explorar (tocar la fila o el tramo) y abrir el detalle (el botón) son acciones distintas. */
+.cat-fila {
+  scroll-margin-top: calc(var(--topbar-height) + 16px);
+  scroll-margin-bottom: calc(var(--nav-movil-alto, 0px) + 24px);
+  border-radius: var(--radius-md);
+  transition: background-color var(--mov-rapida, 120ms) ease;
+}
+.cat-fila--sel {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 6px var(--accent-soft);
+}
+.cat-fila-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+  padding-left: 44px;
+}
+.fila-sub .cat-fila-acciones {
+  padding-left: 0;
+}
+.cat-fila-dato {
+  flex: 1 1 100%;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.cat-fila-dato b {
+  color: var(--ink);
+}
+.reparto-vertical-tramo {
+  min-height: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    opacity var(--mov-rapida, 120ms) ease,
+    transform var(--mov-rapida, 120ms) var(--mov-salida, ease-out);
+}
+.reparto-vertical-tramo.atenuado {
+  opacity: 0.3;
+}
+.reparto-vertical-tramo.activo {
+  transform: scaleX(1.5);
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+/* Avisos: superficie y tinta del tema activo (cualquier paleta); el tipo se lee por el ícono y su color, más una
+   franja lateral, sin teñir todo el fondo (los textos mantienen contraste en los 18 temas). */
+.avisos[data-sonner-toaster] {
+  --normal-bg: var(--card);
+  --normal-text: var(--ink);
+  --normal-border: var(--border-strong);
+  --width: 380px;
+  font-family: var(--font-sans);
+}
+.avisos [data-sonner-toast][data-styled="true"] {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+  font-size: 14px;
+  padding: 14px 16px;
+  gap: 10px;
+}
+.avisos [data-sonner-toast] [data-description] {
+  color: var(--ink-muted);
+}
+.avisos [data-sonner-toast][data-type="success"] {
+  --tono: var(--positive);
+}
+.avisos [data-sonner-toast][data-type="info"] {
+  --tono: var(--info);
+}
+.avisos [data-sonner-toast][data-type="warning"] {
+  --tono: var(--warning);
+}
+.avisos [data-sonner-toast][data-type="error"] {
+  --tono: var(--negative);
+}
+.avisos [data-sonner-toast][data-type]:not([data-type="default"]):not([data-type="loading"]) {
+  border-left: 4px solid var(--tono);
+}
+.avisos [data-sonner-toast] [data-icon] {
+  color: var(--tono, var(--ink-muted));
+}
+.avisos [data-sonner-toast] [data-close-button] {
+  background: var(--card);
+  color: var(--ink-muted);
+  border-color: var(--border-strong);
+}
+.avisos [data-sonner-toast] [data-button] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+@media (max-width: 860px) {
+  /* Arriba, a lo ancho y apilados sin superponerse (la barra de estado y el área segura quedan libres). */
+  .avisos[data-sonner-toaster][data-y-position="top"] {
+    --width: auto;
   }
 }

@@ -1,0 +1,628 @@
+/* Gráficos compactos (§3.3 y skill dataviz): marcas finas, cuadrícula continua y recesiva, texto en tinta. */
+
+.grafico {
+  margin: 0;
+  min-width: 0;
+}
+.grafico-lienzo {
+  position: relative;
+  width: 100%;
+}
+.grafico-lienzo svg {
+  display: block;
+  overflow: visible;
+  outline: none;
+  touch-action: pan-y;
+}
+.grafico-lienzo svg:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+/* Cuadrícula y ejes */
+.grafico-cuadricula line {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.grafico-cuadricula line.cero {
+  stroke: var(--border-strong);
+}
+.grafico-cuadricula text,
+.grafico-eje-x text,
+.grafico-etiqueta-h {
+  fill: var(--ink-muted);
+  font-size: var(--texto-eje);
+  font-variant-numeric: tabular-nums;
+}
+.grafico-eje-x text.activo {
+  fill: var(--ink);
+  font-weight: 650;
+}
+.grafico-eje-x .chip-eje {
+  fill: var(--card);
+  stroke: var(--border-strong);
+}
+.grafico-etiqueta-h {
+  font-size: var(--texto-etiqueta);
+  fill: var(--ink);
+}
+
+/* Marcas */
+.banda-activa {
+  fill: color-mix(in srgb, var(--chart-1) 8%, transparent);
+}
+.grafico-valor {
+  fill: var(--ink);
+  font-size: var(--texto-eje);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+/* Texto dentro de una barra rellena: blanco sobre la marca oscura (claro), casi negro sobre la clara (oscuro). */
+.grafico-valor.dentro {
+  fill: #ffffff;
+}
+[data-theme="dark"] .grafico-valor.dentro {
+  fill: #0f1a15;
+}
+.linea-principal {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.linea-anterior {
+  fill: none;
+  stroke: var(--ink-subtle);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+.guia-activa {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.punto-activo circle {
+  fill: var(--chart-1);
+  stroke: var(--card);
+  stroke-width: 2;
+}
+.punto-activo .halo {
+  fill: color-mix(in srgb, var(--chart-1) 20%, transparent);
+  stroke: none;
+}
+
+/* Globo y etiqueta flotante */
+.grafico-globo {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  /* Mismo fondo que las tarjetas del tema: blanco en claro, oscuro en oscuro */
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  font-size: var(--texto-eje);
+  line-height: 16px;
+  pointer-events: none;
+  box-shadow: var(--shadow-pop);
+}
+.grafico-globo > span:first-child {
+  color: var(--ink-muted);
+  text-transform: capitalize;
+}
+.grafico-globo b {
+  font-size: var(--texto-cuerpo);
+  font-variant-numeric: tabular-nums;
+}
+.globo-fila {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.globo-fila b {
+  margin-left: auto;
+  padding-left: 10px;
+}
+.globo-fila i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+.globo-fila i.linea {
+  height: 2px;
+  background: var(--ink-subtle);
+}
+.globo-total {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.grafico-etiqueta-flotante {
+  position: absolute;
+  translate: -50% 0;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  font-size: var(--texto-eje);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Leyenda */
+.grafico-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--texto-eje);
+  color: var(--ink-muted);
+}
+.grafico-leyenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.grafico-leyenda i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.grafico-leyenda i.linea {
+  height: 2px;
+  width: 14px;
+  background: var(--ink-subtle);
+}
+.grafico-leyenda i.rayado {
+  background-image: var(--rayado);
+  border: 1px solid var(--chart-track);
+}
+
+/* Medidores */
+.medidor {
+  position: relative;
+  margin: 0;
+  display: inline-block;
+}
+.medidor svg {
+  display: block;
+}
+.medidor-pista {
+  fill: none;
+  stroke: var(--chart-track);
+  stroke-linecap: round;
+}
+.medidor-lleno {
+  fill: none;
+  stroke-linecap: round;
+}
+.medidor-punto {
+  stroke: var(--card);
+  stroke-width: 3;
+}
+.medidor-centro {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+.medidor-centro b {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.medidor-centro small {
+  font-size: var(--texto-eje);
+  color: var(--ink-muted);
+}
+.anillo-centro {
+  top: 0;
+  bottom: 0;
+  justify-content: center;
+}
+
+/* Globo de los medidores: aparece al pasar o enfocar */
+.medidor {
+  outline: none;
+}
+.medidor:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+}
+.medidor-globo {
+  left: 50%;
+  top: 100%;
+  translate: -50% 6px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s;
+}
+.medidor:hover .medidor-globo,
+.medidor:focus-visible .medidor-globo {
+  opacity: 1;
+  visibility: visible;
+}
+/* Oculto no ocupa espacio: así no ensancha la página cuando el medidor está junto al borde. */
+.medidor:not(:hover):not(:focus-visible) .medidor-globo {
+  display: none;
+}
+/* Medidores pequeños al borde derecho de un KPI: el globo se abre hacia la izquierda. */
+.kpi-c .medidor-globo {
+  left: auto;
+  right: 0;
+  translate: 0 6px;
+}
+
+/* Serie en el tiempo (referencia «Revenue over time») */
+.guia-alta {
+  stroke: var(--ink-muted);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+.cabecera-serie {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+.cabecera-serie-etiqueta {
+  display: block;
+  font-size: var(--texto-etiqueta);
+  color: var(--ink-muted);
+}
+.cabecera-serie-valor {
+  display: block;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.cabecera-serie-lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.cabecera-serie-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--texto-etiqueta);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cabecera-serie-delta i {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 8px;
+  font-style: normal;
+}
+.cabecera-serie-delta.sube {
+  color: var(--positive);
+}
+.cabecera-serie-delta.sube i {
+  background: var(--positive-soft);
+}
+.cabecera-serie-delta.baja {
+  color: var(--ink);
+}
+.cabecera-serie-delta.baja i {
+  background: var(--card-raised);
+}
+.cabecera-serie-delta small {
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+/* Composición de un total: barra segmentada + lista */
+.distribucion {
+  position: relative;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+/* Selección de una parte: la elegida se engrosa, las demás se atenúan y un marcador se desliza bajo ella.
+   Transiciones (no keyframes) para que una selección rápida tras otra se redirija y termine en la última. */
+.distribucion {
+  --mov-salida: cubic-bezier(0.23, 1, 0.32, 1);
+  --mov-desliz: cubic-bezier(0.77, 0, 0.175, 1);
+}
+.distribucion-pista {
+  position: relative;
+  padding-bottom: 8px;
+}
+.distribucion-barra {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 4px;
+  outline: none;
+}
+.distribucion-barra:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+}
+.distribucion-parte {
+  position: relative;
+  min-width: 3px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    opacity 140ms ease,
+    transform 160ms var(--mov-salida);
+}
+/* Zona de toque de 36 px de alto aunque la barra mida 12 (WCAG 2.5.8). */
+.distribucion-parte::before {
+  content: "";
+  position: absolute;
+  inset: -12px 0;
+}
+.distribucion-parte.activa {
+  transform: scaleY(1.5);
+}
+.distribucion-parte.atenuada,
+.distribucion-lista button.atenuada {
+  opacity: 0.35;
+}
+.distribucion-lista button {
+  transition: opacity 140ms ease;
+}
+.distribucion-lista button.atenuada {
+  opacity: 0.5;
+}
+.distribucion-marcador {
+  position: absolute;
+  left: -4px;
+  bottom: 0;
+  width: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink);
+  pointer-events: none;
+  transition: transform 180ms var(--mov-desliz);
+}
+@starting-style {
+  .distribucion-marcador {
+    opacity: 0;
+  }
+}
+.distribucion-detalle {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px 10px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--card-raised);
+  font-size: var(--texto-cuerpo);
+}
+.distribucion-detalle[hidden] {
+  display: none;
+}
+.distribucion-detalle i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.distribucion-detalle-nombre {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.distribucion-detalle-ir {
+  grid-column: 2 / -1;
+  justify-self: start;
+}
+/* Animaciones reducidas o ninguna: el marcador salta y la parte no crece; se conserva el atenuado, que explica
+   el cambio. */
+:root:not([data-movimiento="maxima"]) .distribucion-parte {
+  transition: opacity 140ms ease;
+}
+:root:not([data-movimiento="maxima"]) .distribucion-parte.activa {
+  transform: none;
+  box-shadow:
+    0 0 0 2px var(--card),
+    0 0 0 3px var(--ink);
+}
+:root:not([data-movimiento="maxima"]) .distribucion-marcador {
+  transition: none;
+}
+.distribucion-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.distribucion-lista button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) 40px auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  font: 500 var(--texto-cuerpo) var(--font-sans);
+  text-align: left;
+  cursor: default;
+}
+/* Hover solo con mouse: en el celular un toque dejaría la fila resaltada. El toque recibe :active al instante. */
+@media (hover: hover) and (pointer: fine) {
+  .distribucion-lista button:hover {
+    background: var(--card-raised);
+  }
+}
+.distribucion-lista button:focus-visible,
+.distribucion-lista button:active {
+  background: var(--card-raised);
+}
+/* Controles de la barra y la lista: sin espera de doble toque ni selección del texto al mantener pulsado. */
+.distribucion-parte,
+.distribucion-lista button,
+.distribucion-detalle-ir {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.distribucion-lista i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.distribucion-nombre {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 17px;
+}
+.distribucion-pct {
+  text-align: right;
+  color: var(--ink-muted);
+  font-size: var(--texto-etiqueta);
+  font-variant-numeric: tabular-nums;
+}
+.distribucion-mas {
+  align-self: center;
+}
+.distribucion-vacia {
+  padding: 16px 0;
+}
+.distribucion-lista button.elegible {
+  cursor: pointer;
+}
+.distribucion-lista button.elegible::after {
+  content: "›";
+  margin-left: 6px;
+  color: var(--ink-subtle);
+}
+.distribucion-lista button.elegible {
+  grid-template-columns: 10px minmax(0, 1fr) 40px auto 10px;
+}
+.grafico-globo small {
+  color: var(--ink-muted);
+}
+
+/* Referencias: ritmo ideal (punteado: es una proyección) y límite (línea fina continua con su rótulo) */
+.linea-ideal {
+  fill: none;
+  stroke: var(--ink-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
+  stroke-linecap: round;
+}
+.linea-limite line {
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+.linea-limite text {
+  fill: var(--ink-muted);
+  font-size: var(--texto-eje);
+  font-weight: 600;
+}
+
+/* Medio anillo pequeño (MedioAnillo) */
+.circulo {
+  position: relative;
+  margin: 0;
+  flex: none;
+}
+.circulo svg {
+  display: block;
+}
+.circulo figcaption {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.circulo-anillo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.circulo-punta {
+  position: absolute;
+  border-radius: 50%;
+}
+.medio-anillo {
+  position: relative;
+  margin: 0;
+  flex: none;
+}
+.medio-anillo svg {
+  display: block;
+}
+.medio-anillo figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.medio-anillo figcaption b {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.medio-anillo figcaption small {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+/* Los gráficos se recorren con las flechas: su foco de teclado debe verse. */
+.grafico svg:focus-visible,
+.medidor:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* En el reparto el globo nombra una categoría, no una fecha: sin mayúscula en cada palabra. */
+.distribucion .grafico-globo > span:first-child {
+  text-transform: none;
+}
+
+/* Los importes del globo nunca se parten en dos renglones. */
+.grafico-globo b {
+  white-space: nowrap;
+}

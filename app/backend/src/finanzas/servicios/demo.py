@@ -183,7 +183,7 @@ def generar(uow: UnidadDeTrabajo, hoy: date | None = None) -> dict[str, int]:
         if primero == desembolso_a.replace(day=1):
             mov(nomina, -5_000_000, cat(Grupo.GASTO_VIDA, "Hogar"), desembolso_a, "Muebles y arreglos")
         if indice == 6:  # un abono extra a la deuda más cara
-            abono = cat(Grupo.SERVICIO_DEUDA, credito_a.nombre, creditos.ABONO)
+            abono = cat(Grupo.SERVICIO_DEUDA, creditos.CREDITOS, creditos.nombre_abono(credito_a.nombre))
             mov(nomina, -400_000, abono, primero.replace(day=15), "Abono a capital")
 
     # Recurrentes: arrancan el mes siguiente al último pagado.

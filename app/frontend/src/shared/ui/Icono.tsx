@@ -14,6 +14,12 @@ const RUTAS = {
   activos: "M3 17l6-6 4 4 8-8M15 7h6v6",
   ajustes: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
   mas: "M12 5v14M5 12h14",
+  barra: "M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM9 4v16",
+  flecha: "M9 6l6 6-6 6",
+  lapiz: "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4",
+  copiar: "M9 9h11v11H9zM5 15H4V4h11v1",
+  paleta:
+    "M12 21a9 9 0 1 1 9-9c0 2-1.5 3-3.5 3H16a2 2 0 0 0-1.5 3.3A1.6 1.6 0 0 1 12 21zM7.5 11h.01M10 7.5h.01M14.5 7.5h.01",
   buscar: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-3.5-3.5",
   cerrar: "M6 6l12 12M18 6 6 18",
   luna: "M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z",
@@ -42,6 +48,11 @@ const RUTAS = {
 } as const;
 
 export type NombreIcono = keyof typeof RUTAS;
+
+/** ¿Es un nombre del set de íconos? (los símbolos guardados también pueden ser emoji o imagen). */
+export function esIcono(n: string | null | undefined): n is NombreIcono {
+  return Boolean(n && Object.prototype.hasOwnProperty.call(RUTAS, n));
+}
 
 export function Icono({ nombre, pequeno, etiqueta }: { nombre: NombreIcono; pequeno?: boolean; etiqueta?: string }) {
   return (

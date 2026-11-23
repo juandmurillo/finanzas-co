@@ -58,12 +58,13 @@ def test_crear_credito_pagar_cuota_y_abonar_recalcula(cliente: TestClient) -> No
     assert cliente.post(f"/api/v1/programadas/{prox['transaccion_id']}/pagar", json={}).status_code == 204
     tras_cuota = next(d for d in cliente.get("/api/v1/creditos").json() if d["id"] == c["id"])
     assert tras_cuota["saldo"] == c["capital_inicial"] - prox["capital"] and tras_cuota["avance"] > 0
-    # un abono extra en la subcategoría «Abono a capital» va todo a capital
+    # un abono extra en la subcategoría «Abono · Moto» va todo a capital.
+    # Desde 0012: Servicio de deuda › Créditos › {crédito}, con la hermana «Abono · {crédito}».
     arbol = cliente.get("/api/v1/categorias").json()
     deuda = next(n for n in arbol if n["grupo"] == "servicio_deuda")
-    abono = next(
-        s for k in deuda["hijos"] if k["nombre"] == "Moto" for s in k["hijos"] if s["nombre"] == "Abono a capital"
-    )
+    creditos = next(k for k in deuda["hijos"] if k["nombre"] == "Créditos")
+    assert any(s["nombre"] == "Moto" for s in creditos["hijos"])
+    abono = next(s for s in creditos["hijos"] if s["nombre"] == "Abono · Moto")
     cliente.post(
         "/api/v1/transacciones",
         json={

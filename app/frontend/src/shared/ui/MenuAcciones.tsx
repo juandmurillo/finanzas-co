@@ -1,6 +1,9 @@
 /** Menú «⋮» de una tarjeta: acciones secundarias (editar, cerrar, eliminar…). Escape o un clic fuera lo cierran. */
 import { useEffect, useRef, useState } from "react";
 
+import { useCapa } from "@/shared/lib/capas";
+
+import { dentroDeFlotante } from "@/shared/ui/Flotante";
 export interface AccionMenu {
   texto: string;
   alElegir: () => void;
@@ -10,9 +13,11 @@ export interface AccionMenu {
 export function MenuAcciones({ acciones, etiqueta = "Más acciones" }: { acciones: AccionMenu[]; etiqueta?: string }) {
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
+  useCapa(abierto, () => setAbierto(false));
   useEffect(() => {
     if (!abierto) return;
-    const fuera = (e: MouseEvent) => !caja.current?.contains(e.target as Node) && setAbierto(false);
+    const fuera = (e: MouseEvent) =>
+      !dentroDeFlotante(e.target) && !caja.current?.contains(e.target as Node) && setAbierto(false);
     const escape = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
     document.addEventListener("mousedown", fuera);
     window.addEventListener("keydown", escape);

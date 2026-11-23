@@ -1,51 +1,35 @@
-/** Shell de Caudal: sidebar + topbar en escritorio; barra inferior con "+" en móvil. */
-import { useSistema } from "@/shared/lib/useSistema";
-import { PrimerUso } from "@/features/sistema/PrimerUso";
-import { Link, Outlet } from "@tanstack/react-router";
+/**
+ * Shell de Caudal: barra lateral contraíble + barra superior en escritorio. En el celular, barra inferior de
+ * cinco accesos (elegidos y ordenados en «Más › Personalizar menú», con «Más» siempre presente) y el botón «+»
+ * flotante a la derecha, justo encima de ella. Cada página entra con la transición que fija la intensidad de
+ * animación (Configuración › Apariencia).
+ */
+import { Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { useCaptura } from "@/features/captura";
-import { aplicarTema, temaInicial, type Tema } from "@/shared/lib/tema";
+import { PrimerUso } from "@/features/sistema/PrimerUso";
+import { useMenuMovil, type Posicion } from "@/shared/lib/menuMovil";
+import { GRUPOS_ESCRITORIO, SECCIONES, type ItemNav } from "@/shared/lib/secciones";
 import type { EstadoConexion } from "@/shared/lib/useEventosDominio";
 import { useEventosDominio } from "@/shared/lib/useEventosDominio";
-import { Icono, type NombreIcono } from "@/shared/ui/Icono";
+import { useSistema } from "@/shared/lib/useSistema";
+import { Icono } from "@/shared/ui/Icono";
 
 import { Alertas } from "./Alertas";
+import "./navegacion.css";
 
-interface ItemNav {
-  a: string;
-  etiqueta: string;
-  icono: NombreIcono;
+const CLAVE_BARRA = "caudal-barra-contraida";
+
+function barraInicial(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_BARRA) === "1";
+  } catch {
+    return false;
+  }
 }
 
-const MENU: ItemNav[] = [
-  { a: "/", etiqueta: "Inicio", icono: "inicio" },
-  { a: "/movimientos", etiqueta: "Movimientos", icono: "movimientos" },
-  { a: "/presupuesto", etiqueta: "Presupuesto", icono: "presupuesto" },
-  { a: "/deudas", etiqueta: "Deudas", icono: "deudas" },
-  { a: "/prestamos", etiqueta: "Préstamos", icono: "persona" },
-  { a: "/activos", etiqueta: "Activos", icono: "activos" },
-  { a: "/recurrentes", etiqueta: "Recurrentes", icono: "recurrentes" },
-  { a: "/metas", etiqueta: "Metas y hábitos", icono: "meta" },
-];
-const ANALISIS: ItemNav[] = [
-  { a: "/flujo", etiqueta: "Flujo de caja", icono: "flujo" },
-  { a: "/categorias", etiqueta: "Categorías", icono: "categorias" },
-  { a: "/revision", etiqueta: "Revisión mensual", icono: "documento" },
-  { a: "/impuestos", etiqueta: "Renta y aportes", icono: "escudo" },
-  { a: "/asistente", etiqueta: "Asistente", icono: "info" },
-  { a: "/cuentas", etiqueta: "Cuentas", icono: "cuentas" },
-  { a: "/configuracion", etiqueta: "Configuración", icono: "ajustes" },
-];
-const MOVIL: ItemNav[] = [
-  { a: "/", etiqueta: "Inicio", icono: "inicio" },
-  { a: "/movimientos", etiqueta: "Movimientos", icono: "movimientos" },
-  { a: "/deudas", etiqueta: "Deudas", icono: "deudas" },
-];
-// En el celular, "Más" abre el resto de secciones (todo lo que no cabe en la barra).
-const EN_MAS: ItemNav[] = [...MENU, ...ANALISIS].filter((i) => !MOVIL.some((m) => m.a === i.a));
-
-function Nav({ items, etiqueta }: { items: ItemNav[]; etiqueta: string }) {
+function Nav({ items, etiqueta, contraida }: { items: ItemNav[]; etiqueta: string; contraida: boolean }) {
   return (
     <div>
       <div className="cd-nav-group">{etiqueta}</div>
@@ -56,9 +40,11 @@ function Nav({ items, etiqueta }: { items: ItemNav[]; etiqueta: string }) {
             to={item.a}
             activeOptions={{ exact: item.a === "/" }}
             activeProps={{ "aria-current": "page" }}
+            aria-label={contraida ? item.etiqueta : undefined}
+            data-etiqueta={item.etiqueta}
           >
             <Icono nombre={item.icono} />
-            {item.etiqueta}
+            <span className="nav-texto">{item.etiqueta}</span>
           </Link>
         ))}
       </nav>
@@ -72,35 +58,96 @@ const TEXTO_CONEXION: Record<EstadoConexion, string> = {
   "sin-conexion": "Sin conexión",
 };
 
+export function Logo() {
+  return (
+    <span className="cd-logo">
+      <span className="cd-logo-mark" aria-hidden>
+        <i />
+      </span>
+      <span className="nav-texto">Caudal</span>
+    </span>
+  );
+}
+
 export function Layout() {
   const conexion = useEventosDominio();
   const sistema = useSistema();
   const { abrir } = useCaptura();
-  const [tema, setTema] = useState<Tema>(temaInicial);
-  const [masAbierto, setMasAbierto] = useState(false);
+  const router = useRouter();
+  // «Atrás» solo si hay a dónde volver dentro de la app (la primera página no tiene anterior).
+  const puedeVolver = useRouterState({ select: (e) => e.location.state.__TSR_index > 0 });
+  const [contraida, setContraida] = useState(barraInicial);
+  const menu = useMenuMovil();
+  const ruta = useRouterState({ select: (e) => e.location.pathname });
 
-  useEffect(() => aplicarTema(tema), [tema]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLAVE_BARRA, contraida ? "1" : "0");
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, [contraida]);
 
   if (sistema.data?.primer_uso) return <PrimerUso />;
 
   return (
-    <div className="cd-app">
+    <div className="cd-app" data-barra={contraida ? "contraida" : "expandida"}>
+      <a className="saltar-contenido" href="#contenido">
+        Saltar al contenido
+      </a>
       <aside className="cd-sidebar">
-        <div className="cd-logo">
-          <span className="cd-logo-mark">
-            <i />
-          </span>
-          Caudal
+        <div className="barra-cabeza">
+          <Link to="/" className="barra-logo" aria-label="Caudal, ir a Inicio">
+            <Logo />
+          </Link>
+          <button
+            className="cd-icon-btn barra-alternar"
+            aria-label={contraida ? "Expandir la barra lateral" : "Contraer la barra lateral"}
+            aria-expanded={!contraida}
+            title={contraida ? "Expandir" : "Contraer"}
+            onClick={() => setContraida((c) => !c)}
+          >
+            <Icono nombre="barra" />
+          </button>
         </div>
-        <Nav items={MENU} etiqueta="Menú" />
-        <Nav items={ANALISIS} etiqueta="Análisis" />
+        {GRUPOS_ESCRITORIO.map((g) => (
+          <Nav key={g.etiqueta} items={g.items} etiqueta={g.etiqueta} contraida={contraida} />
+        ))}
       </aside>
 
       <div className="cd-main">
         <header className="cd-topbar">
+          <span className="solo-movil">
+            <Logo />
+          </span>
+          <nav className="historial-nav" aria-label="Historial">
+            <button
+              type="button"
+              className="cd-icon-btn"
+              aria-label="Página anterior"
+              title="Atrás"
+              disabled={!puedeVolver}
+              onClick={() => router.history.back()}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="cd-icon-btn"
+              aria-label="Página siguiente"
+              title="Adelante"
+              onClick={() => router.history.forward()}
+            >
+              ›
+            </button>
+          </nav>
           <span
-            className={`cd-badge ${conexion === "en-vivo" ? "cd-badge--positive" : conexion === "conectando" ? "cd-badge--warning" : "cd-badge--negative"}`}
-            title="Los datos se actualizan solos cuando registras algo, en cualquier pestaña o dispositivo"
+            className={`cd-badge conexion-${conexion} ${conexion === "en-vivo" ? "cd-badge--positive" : conexion === "conectando" ? "cd-badge--warning" : "cd-badge--negative"}`}
+            title={
+              conexion === "sin-conexion"
+                ? "No hay conexión con el servidor de Caudal. Lo que ves puede estar desactualizado; se reconecta solo."
+                : "Los datos se actualizan solos cuando registras algo, en cualquier pestaña o dispositivo"
+            }
           >
             {TEXTO_CONEXION[conexion]}
           </span>
@@ -112,156 +159,54 @@ export function Layout() {
           )}
           <div className="cd-user">
             <Alertas />
-            <button
-              className="cd-icon-btn"
-              aria-label={tema === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
-              onClick={() => setTema(tema === "dark" ? "light" : "dark")}
-            >
-              <Icono nombre={tema === "dark" ? "sol" : "luna"} />
-            </button>
             <button className="cd-btn cd-btn--primary solo-escritorio" onClick={() => abrir()}>
               <Icono nombre="mas" />
               Registrar
-              <kbd style={{ opacity: 0.7, font: "600 12px var(--font-sans)" }}>N</kbd>
+              <kbd className="atajo">N</kbd>
             </button>
           </div>
         </header>
-        <main className="cd-content">
-          <Outlet />
+        {conexion === "sin-conexion" && (
+          <div className="aviso-conexion" role="status">
+            <Icono nombre="wifi" />
+            <span>
+              Se perdió la conexión con el servidor de Caudal. Lo que ves puede estar desactualizado y los cambios no se
+              guardarán hasta que vuelva; se reconecta solo.
+            </span>
+          </div>
+        )}
+        <main className="cd-content" id="contenido" tabIndex={-1}>
+          {/* La página nueva entra con su transición; la clave la reinicia en cada cambio de ruta. */}
+          <div className="pagina" key={ruta}>
+            <Outlet />
+          </div>
         </main>
       </div>
 
-      <nav
-        className="app-movil-nav"
-        aria-label="Principal"
-        style={{
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 84,
-          padding: "8px 8px 20px",
-          background: "var(--card)",
-          borderTop: "1px solid var(--border)",
-          gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-          alignItems: "center",
-          zIndex: 20,
-        }}
-      >
-        {[MOVIL[0], MOVIL[1], null, MOVIL[2], "mas" as const].map((item, i) =>
-          item === "mas" ? (
-            <button
-              key="mas"
-              aria-expanded={masAbierto}
-              aria-controls="menu-mas"
-              onClick={() => setMasAbierto((x) => !x)}
-              className="cd-stack"
-              style={{
-                alignItems: "center",
-                gap: 4,
-                border: 0,
-                background: "none",
-                color: masAbierto ? "var(--ink)" : "var(--ink-muted)",
-                fontSize: 11,
-                fontWeight: 600,
-                font: "inherit",
-              }}
-            >
-              <Icono nombre="menu" />
-              <span style={{ fontSize: 11, fontWeight: 600 }}>Más</span>
-            </button>
-          ) : item ? (
-            <Link
-              key={item.a}
-              to={item.a}
-              activeOptions={{ exact: item.a === "/" }}
-              className="cd-stack"
-              style={{
-                alignItems: "center",
-                gap: 4,
-                textDecoration: "none",
-                color: "var(--ink-muted)",
-                fontSize: 11,
-                fontWeight: 600,
-              }}
-              activeProps={{ style: { color: "var(--ink)" }, "aria-current": "page" }}
-            >
-              <Icono nombre={item.icono} />
-              {item.etiqueta}
-            </Link>
-          ) : (
-            <button
-              key={`mas-${i}`}
-              aria-label="Registrar"
-              onClick={() => abrir()}
-              style={{
-                justifySelf: "center",
-                width: 56,
-                height: 56,
-                marginTop: -26,
-                borderRadius: 999,
-                border: 0,
-                background: "var(--accent)",
-                color: "var(--on-accent)",
-                display: "grid",
-                placeItems: "center",
-                boxShadow: "var(--shadow-pop)",
-              }}
-            >
-              <Icono nombre="mas" />
-            </button>
-          ),
-        )}
+      <nav className="app-movil-nav" aria-label="Principal">
+        {menu.map((p) => (
+          <EnlaceMovil key={p} posicion={p} />
+        ))}
       </nav>
-      {masAbierto && (
-        <div className="app-movil-mas" onClick={() => setMasAbierto(false)}>
-          <nav
-            id="menu-mas"
-            aria-label="Más secciones"
-            className="cd-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: "fixed",
-              left: 12,
-              right: 12,
-              bottom: 96,
-              display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-              gap: 6,
-              padding: 12,
-              zIndex: 30,
-              boxShadow: "var(--shadow-pop)",
-            }}
-          >
-            {EN_MAS.map((item) => (
-              <Link
-                key={item.a}
-                to={item.a}
-                onClick={() => setMasAbierto(false)}
-                className="cd-stack"
-                style={{
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "12px 4px",
-                  borderRadius: "var(--radius-md)",
-                  textDecoration: "none",
-                  color: "var(--ink-muted)",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  textAlign: "center",
-                }}
-                activeProps={{
-                  style: { color: "var(--ink)", background: "var(--card-raised)" },
-                  "aria-current": "page",
-                }}
-              >
-                <Icono nombre={item.icono} />
-                {item.etiqueta}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
+      <button className="fab-registrar" aria-label="Registrar movimiento" onClick={() => abrir()}>
+        <Icono nombre="mas" />
+      </button>
     </div>
+  );
+}
+
+/** Un acceso de la barra inferior. «Más» abre su pantalla completa (y queda activo en sus subpantallas). */
+function EnlaceMovil({ posicion }: { posicion: Posicion }) {
+  const item: ItemNav = posicion === "mas" ? { a: "/mas", etiqueta: "Más", icono: "menu" } : SECCIONES[posicion];
+  return (
+    <Link
+      to={item.a}
+      activeOptions={{ exact: item.a === "/" }}
+      className="movil-item"
+      activeProps={{ "aria-current": "page" }}
+    >
+      <Icono nombre={item.icono} />
+      <span>{item.corta ?? item.etiqueta}</span>
+    </Link>
   );
 }

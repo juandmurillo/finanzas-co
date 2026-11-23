@@ -1,0 +1,143 @@
+/* Presupuesto con el sistema compacto. */
+.lista-presupuestos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fila-presupuesto {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+.fila-presupuesto + .fila-presupuesto {
+  border-top: 1px solid var(--border);
+}
+.fila-presupuesto-cabeza {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+.fila-presupuesto-cabeza .cd-kpi-ico {
+  width: 32px;
+  height: 32px;
+}
+.fila-presupuesto-texto b,
+.fila-presupuesto-texto small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fila-presupuesto-texto b {
+  font-size: var(--texto-cuerpo);
+}
+.fila-presupuesto-texto b .cd-badge {
+  margin-left: 6px;
+}
+.fila-presupuesto-texto small {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.fila-presupuesto-pct {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.fila-presupuesto-pct b {
+  font-size: 16px;
+}
+.fila-presupuesto-pct small {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+@media (max-width: 600px) {
+  .fila-presupuesto-cabeza {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .fila-presupuesto-cabeza .acciones-fila {
+    grid-column: 2 / -1;
+    justify-self: end;
+  }
+}
+
+/* KPIs 2 × 2 en media pantalla, como en Inicio */
+.presupuesto-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-bento);
+}
+.presupuesto-kpis > * {
+  grid-column: 1;
+}
+.presupuesto-kpis > .kpi-gastado {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+.kpi-gastado .kpi-c-cuerpo {
+  flex: 1;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.kpi-gastado .kpi-c-cifra {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.ritmo-mes .fila-metricas {
+  margin: 4px 0 12px;
+}
+@media (max-width: 420px) {
+  .presupuesto-kpis {
+    gap: 8px;
+  }
+}
+
+/* Celular: KPIs de dos en dos (Ingreso | Asignado, Por asignar | Gastado), como antes de dar a «Gastado» la fila
+   entera. El medio anillo no se muestra aquí (en media fila se montaba sobre el importe; el % sigue en escritorio):
+   «Gastado» queda como los demás KPIs y la lista sigue sin hueco. Cada presupuesto se toca entero para editarlo. */
+@media (max-width: 860px) {
+  .presupuesto-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .presupuesto-kpis > *,
+  .presupuesto-kpis > .kpi-gastado {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .presupuesto-kpis .kpi-c-nota,
+  .kpi-gastado .kpi-c-indicador {
+    display: none;
+  }
+  .kpi-gastado .kpi-c-cuerpo {
+    flex: 0 1 auto;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .kpi-gastado .kpi-c-cifra {
+    flex-direction: row;
+    align-items: baseline;
+    text-align: left;
+  }
+}
+.fila-tocable {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  touch-action: manipulation;
+}
+.fila-tocable:active {
+  background: var(--card-raised);
+}
+.fila-tocable:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.pie-confirmar {
+  flex: 1 1 100%;
+  font-size: var(--texto-cuerpo);
+  font-weight: 600;
+}

@@ -15,6 +15,7 @@ from finanzas.api.dependencias import sesion_lectura, unidad_de_trabajo
 from finanzas.config import obtener_config
 from finanzas.dominio.errores import NoEncontrado
 from finanzas.dominio.fechas import hoy_bogota
+from finanzas.dominio.simbolos import MAX_IMAGEN
 from finanzas.infra import consultas_creditos, consultas_impuestos, respaldos, trm
 from finanzas.infra.modelos import Categoria, Parametro
 from finanzas.infra.uow import UnidadDeTrabajo
@@ -186,13 +187,15 @@ def editar_credito(credito_id: int, datos: CreditoIn, uow: Uow) -> None:
 class CategoriaNueva(BaseModel):
     padre_id: int = Field(description="Grupo (nivel 1) para una categoría, o categoría para una subcategoría")
     nombre: str = Field(min_length=1, max_length=80)
-    icono: str | None = Field(default=None, max_length=40)
+    # El servicio valida símbolo y color (400 con el motivo).
+    icono: str | None = Field(default=None, max_length=MAX_IMAGEN)
     color: str | None = Field(default=None, max_length=20)
 
 
 class CategoriaCambios(BaseModel):
     nombre: str | None = Field(default=None, min_length=1, max_length=80)
-    icono: str | None = Field(default=None, max_length=40)
+    # El servicio valida símbolo y color (400 con el motivo).
+    icono: str | None = Field(default=None, max_length=MAX_IMAGEN)
     color: str | None = Field(default=None, max_length=20)
     es_fijo: bool | None = None
     padre_id: int | None = Field(

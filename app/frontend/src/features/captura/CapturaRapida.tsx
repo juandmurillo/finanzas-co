@@ -6,6 +6,8 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+
+import { useAtraparFoco } from "@/shared/lib/useAtraparFoco";
 import { toast } from "sonner";
 
 import type { Sugerencia, Transaccion } from "@/shared/api/tipos";
@@ -17,10 +19,13 @@ import { Icono } from "@/shared/ui/Icono";
 import { SelectorCategoria } from "@/shared/ui/SelectorCategoria";
 import { SelectorCuenta } from "@/shared/ui/SelectorCuenta";
 
+import { useCapa } from "@/shared/lib/capas";
+
 import type { TipoMovimiento } from "./CapturaContexto";
 import { validar, type Borrador, type Errores } from "./modelo";
 import { useGuardarMovimiento } from "./useGuardarMovimiento";
 
+import { CampoFecha } from "@/shared/ui/CampoFecha";
 const GRUPOS_POR_TIPO: Record<Exclude<TipoMovimiento, "transferencia">, string[]> = {
   gasto: ["gasto_vida", "servicio_deuda", "apuestas", "prestamos_personales", "ahorro_inversion"],
   ingreso: ["ingreso", "prestamos_personales", "apuestas"],
@@ -45,12 +50,23 @@ export interface Edicion {
 
 const aTexto = (centavos: number) => mascaraMonto(String(Math.abs(centavos) / 100).replace(".", ","));
 
+/** Fecha programada de un pago con la hora en que se registra: los programados vienen sin hora (00:00). */
+function fechaProgramadaConHora(fecha: string): string {
+  const hora = fecha.slice(11, 16);
+  return `${fecha.slice(0, 10)}T${!hora || hora === "00:00" ? ahoraLocal().slice(11, 16) : hora}`;
+}
+
 function desdeMovimiento({ tx, par }: Edicion): Borrador {
   const salida = par && tx.monto > 0 ? par : tx;
   const entrada = par && tx.monto > 0 ? tx : par;
-  // Un programado futuro se confirma por defecto con la fecha de hoy; uno vencido, con su fecha programada.
+  // Un programado futuro se confirma por defecto con la fecha de hoy; uno vencido, con su fecha programada y la
+  // hora actual (si no, quedaría a las 00:00).
   const fecha =
-    tx.estado === "pendiente" && tx.fecha.slice(0, 16) > ahoraLocal() ? ahoraLocal() : tx.fecha.slice(0, 16);
+    tx.estado !== "pendiente"
+      ? tx.fecha.slice(0, 16)
+      : tx.fecha.slice(0, 16) > ahoraLocal()
+        ? ahoraLocal()
+        : fechaProgramadaConHora(tx.fecha);
   return {
     tipo: par ? "transferencia" : tx.monto > 0 ? "ingreso" : "gasto",
     monto: aTexto(tx.monto),
@@ -100,6 +116,8 @@ export function CapturaRapida({
 }) {
   const id = useId();
   const montoRef = useRef<HTMLInputElement>(null);
+  const dialogo = useRef<HTMLDivElement>(null);
+  useAtraparFoco(dialogo);
   const cliente = useQueryClient();
   const tx = edicion?.tx;
   const pendiente = tx?.estado === "pendiente";
@@ -155,6 +173,8 @@ export function CapturaRapida({
   const trmUsada = Number((trmTexto || (trm.data ? String(trm.data.valor) : "")).replace(",", ".")) || 0;
   const montoUsd = usd ? (parseMonto(b.monto) ?? 0) : 0;
 
+  // Atrás en Android cierra la captura (o la hoja que tenga encima, que se registra después).
+  useCapa(true, onCerrar);
   useEffect(() => {
     montoRef.current?.focus();
     const alEscape = (e: globalThis.KeyboardEvent) => e.key === "Escape" && onCerrar();
@@ -305,10 +325,10 @@ export function CapturaRapida({
   const campoFecha = (
     <div className="cd-stack" style={{ gap: 6 }}>
       {etiqueta("fecha", pendiente ? "Fecha del pago" : "Fecha y hora")}
-      <input
+      <CampoFecha
         id={`${id}-fecha`}
         type="datetime-local"
-        className="cd-input"
+        className="cd-input selector-disparador"
         value={b.fecha}
         max={edicion ? undefined : `${hoyISO()}T23:59`}
         onChange={(e) => cambiar("fecha", e.target.value)}
@@ -318,14 +338,15 @@ export function CapturaRapida({
           <button
             type="button"
             className="cd-btn cd-btn--sm cd-btn--ghost"
-            aria-pressed={b.fecha === tx.fecha.slice(0, 16)}
-            onClick={() => cambiar("fecha", tx.fecha.slice(0, 16))}
+            aria-pressed={b.fecha.slice(0, 10) === tx.fecha.slice(0, 10)}
+            onClick={() => cambiar("fecha", fechaProgramadaConHora(tx.fecha))}
           >
             Programada · {fechaCorta(tx.fecha)}
           </button>
           <button
             type="button"
             className="cd-btn cd-btn--sm cd-btn--ghost"
+            aria-pressed={b.fecha.slice(0, 10) === hoyISO()}
             onClick={() => cambiar("fecha", ahoraLocal())}
           >
             Hoy
@@ -338,7 +359,7 @@ export function CapturaRapida({
 
   return (
     <div className="captura-fondo" onMouseDown={(e) => e.target === e.currentTarget && onCerrar()}>
-      <div role="dialog" aria-modal="true" aria-labelledby={`${id}-titulo`} className="captura-panel">
+      <div ref={dialogo} role="dialog" aria-modal="true" aria-labelledby={`${id}-titulo`} className="captura-panel">
         <form onSubmit={alEnviar} onKeyDown={alTeclear} className="cd-stack" style={{ gap: 16 }} noValidate>
           <div className="cd-row" style={{ justifyContent: "space-between" }}>
             <h2 id={`${id}-titulo`} className="cd-card-title">
@@ -515,6 +536,7 @@ export function CapturaRapida({
                 valor={categoriaFinal}
                 sugerida={sugerida?.categoria_id}
                 invalido={Boolean(errores.categoriaId)}
+                permitirCrear
                 alCambiar={(ident) => cambiar("categoriaId", ident)}
               />
               {error("categoriaId")}

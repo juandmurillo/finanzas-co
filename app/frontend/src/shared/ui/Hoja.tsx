@@ -5,6 +5,9 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { useCapa } from "@/shared/lib/capas";
+import { useAtraparFoco } from "@/shared/lib/useAtraparFoco";
+
 import { Icono } from "./Icono";
 
 export function Hoja({
@@ -19,8 +22,15 @@ export function Hoja({
   pie?: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  useCapa(true, onCerrar);
+  useAtraparFoco(panel);
   useEffect(() => {
+    // Al cerrar, el foco vuelve a donde estaba (p. ej. el campo de la captura que abrió la hoja).
+    const previo = document.activeElement as HTMLElement | null;
     panel.current?.querySelector<HTMLElement>("input, button")?.focus();
+    return () => {
+      if (previo?.isConnected) previo.focus({ preventScroll: true });
+    };
   }, []);
   // Portal al body: dentro de un panel con transform/overflow (la captura) un fixed quedaría recortado.
   return createPortal(
@@ -36,7 +46,7 @@ export function Hoja({
     >
       <div ref={panel} role="dialog" aria-modal="true" aria-label={titulo} className="hoja-panel cd-stack">
         <div className="cd-row" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
-          <h3 className="cd-card-title">{titulo}</h3>
+          <h2 className="cd-card-title">{titulo}</h2>
           <button
             type="button"
             className="cd-icon-btn"

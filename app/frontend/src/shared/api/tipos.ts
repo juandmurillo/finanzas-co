@@ -280,7 +280,44 @@ export interface Prestamo {
   proxima_cuota: { numero: number; fecha: string; monto: number } | null;
   dias_vencido: number;
   cuotas: CuotaPrestamo[];
-  movimientos?: { id: number; fecha: string; monto: number; descripcion: string; cuenta: string }[];
+  contraparte_id: number;
+  movimientos?: MovimientoPrestamo[];
+}
+
+export interface MovimientoPrestamo {
+  id: number;
+  fecha: string;
+  monto: number;
+  descripcion: string;
+  cuenta: string;
+  tipo: "entrega" | "abono" | "interes" | "condonacion";
+}
+
+/** Cambios de un préstamo: solo se envía lo que cambia. */
+export interface CambiosPrestamo {
+  persona?: string;
+  origen?: Prestamo["origen"];
+  nota?: string;
+  fecha?: string;
+  monto_inicial?: number;
+  tipo_interes?: Prestamo["tipo_interes"];
+  interes_fijo?: number;
+  tasa_mensual?: number;
+  plan?: Prestamo["plan"];
+  frecuencia?: "diaria" | "semanal" | "quincenal" | "mensual";
+  num_cuotas?: number;
+  fecha_limite?: string;
+}
+
+export interface ImpactoPrestamo {
+  capital_antes: number;
+  interes_antes: number;
+  pendiente_antes: number;
+  capital_despues: number;
+  interes_despues: number;
+  pendiente_despues: number;
+  interes_total: number;
+  cuotas: (CuotaPrestamo & { total: number })[];
 }
 
 export interface ResumenPrestamos {
@@ -324,6 +361,7 @@ export interface Sankey {
 
 export interface SubcategoriaReporte {
   subcategoria: string;
+  id?: number | null;
   total: number;
   n: number;
   ticket: number;
@@ -334,6 +372,7 @@ export interface SubcategoriaReporte {
 
 export interface CategoriaReporte {
   categoria: string;
+  id?: number | null;
   total: number;
   n: number;
   promedio_mensual: number;
@@ -867,4 +906,6 @@ export interface Sistema {
   es_demo: boolean;
   modulo_apuestas: "auto" | "si" | "no";
   modulos: { apuestas: boolean };
+  /** Mes (AAAA-MM) del movimiento confirmado más antiguo; null sin movimientos. */
+  primer_mes?: string | null;
 }

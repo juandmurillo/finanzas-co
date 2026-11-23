@@ -1,0 +1,271 @@
+/* Navegación de Caudal: barra lateral contraíble, barra inferior del celular y hoja «Más». */
+
+/* ---------- Logo ---------- */
+/* El logotipo conserva sus colores aunque cambie el acento o el modo. */
+.cd-logo-mark {
+  flex: none;
+  background: #1e4d3b;
+}
+.cd-logo-mark i {
+  background: #b9f046;
+}
+.barra-cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.barra-logo {
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+.barra-alternar {
+  flex: none;
+}
+
+/* ---------- Barra lateral contraída ---------- */
+.cd-app[data-barra="contraida"] > .cd-sidebar {
+  flex: none;
+  width: var(--sidebar-collapsed);
+  max-width: var(--sidebar-collapsed);
+  padding-inline: var(--space-3);
+  overflow: visible;
+  z-index: 30;
+}
+.cd-app[data-barra="contraida"] .nav-texto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.cd-app[data-barra="contraida"] .barra-cabeza {
+  flex-direction: column;
+}
+.cd-app[data-barra="contraida"] .cd-logo {
+  padding: 0;
+}
+.cd-app[data-barra="contraida"] .cd-nav-group {
+  font-size: 0;
+  height: 1px;
+  margin: 0 var(--space-2) var(--space-2);
+  padding: 0;
+  background: var(--border);
+}
+.cd-app[data-barra="contraida"] .cd-nav a {
+  position: relative;
+  justify-content: center;
+  padding: 0;
+  height: 42px;
+}
+/* Etiqueta al pasar el puntero o enfocar con teclado */
+.cd-app[data-barra="contraida"] .cd-nav a::after {
+  content: attr(data-etiqueta);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  translate: 0 -50%;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--tooltip);
+  color: var(--on-tooltip);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 40;
+}
+.cd-app[data-barra="contraida"] .cd-nav a:hover::after,
+.cd-app[data-barra="contraida"] .cd-nav a:focus-visible::after {
+  opacity: 1;
+}
+:root[data-movimiento="maxima"] .cd-app > .cd-sidebar {
+  transition:
+    width 0.18s ease,
+    max-width 0.18s ease;
+}
+
+/* ---------- Barra superior ---------- */
+.atajo {
+  opacity: 0.7;
+  font: 600 12px var(--font-sans);
+}
+.solo-movil {
+  display: none;
+}
+
+/* ---------- Celular ---------- */
+/* Alturas compartidas: la barra inferior, el botón «+» y el aire que dejan al final de cada pantalla. */
+:root {
+  --nav-movil-alto: 60px;
+  --fab-tam: 52px;
+  --fab-aire: 12px;
+}
+.app-movil-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  height: calc(var(--nav-movil-alto) + env(safe-area-inset-bottom, 0px));
+  padding: 4px 4px env(safe-area-inset-bottom, 0px);
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+}
+.movil-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ink-muted);
+  font: 600 10.5px var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.movil-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.movil-item[aria-current="page"] {
+  color: var(--ink);
+}
+.movil-item[aria-current="page"] svg {
+  color: var(--accent-ink);
+}
+.movil-item:active {
+  background: var(--card-raised);
+}
+
+/* «+» flotante: a la derecha, justo encima de la barra inferior y del área segura. */
+.fab-registrar {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--nav-movil-alto) + env(safe-area-inset-bottom, 0px) + var(--fab-aire));
+  z-index: 21;
+  width: var(--fab-tam);
+  height: var(--fab-tam);
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-pop);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.fab-registrar:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+@media (max-width: 860px) {
+  .fab-registrar {
+    display: grid;
+  }
+}
+
+@media (max-width: 860px) {
+  /* En el celular, «En vivo» solo ocupa espacio cuando hay algo que avisar. */
+  .cd-topbar .conexion-en-vivo {
+    display: none;
+  }
+  .cd-topbar {
+    gap: 10px;
+  }
+  .solo-movil {
+    display: inline-flex;
+  }
+  .cd-topbar .cd-logo {
+    padding: 0;
+    font-size: 17px;
+  }
+  .cd-topbar .cd-logo-mark {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* Aviso cuando se pierde la conexión con la API (PWA o Android sin servidor). */
+.aviso-conexion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 var(--space-8) var(--space-4);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.aviso-conexion svg {
+  color: var(--warning);
+  flex: none;
+}
+@media (max-width: 860px) {
+  .aviso-conexion {
+    margin: 0 16px 12px;
+  }
+}
+
+/* Atrás / adelante en la barra superior */
+.historial-nav {
+  display: inline-flex;
+  gap: 4px;
+}
+.historial-nav .cd-icon-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  line-height: 1;
+}
+.historial-nav .cd-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+@media (max-width: 860px) {
+  .historial-nav {
+    display: none;
+  }
+}
+
+/* Enlace para saltar la navegación con el teclado: aparece solo al enfocarlo. */
+.saltar-contenido {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--brand);
+  color: var(--on-brand);
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-160%);
+}
+.saltar-contenido:focus {
+  transform: none;
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+#contenido:focus {
+  outline: none;
+}

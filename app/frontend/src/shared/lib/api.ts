@@ -11,6 +11,8 @@ import type {
   CreditoCerrado,
   CreditoDetalle,
   CreditoNuevo,
+  CambiosPrestamo,
+  ImpactoPrestamo,
   Prestamo,
   PrestamoNuevo,
   PresupuestoMes,
@@ -218,9 +220,18 @@ export const api = {
   abonar: (id: number, datos: { monto: number; cuenta_id: number; fecha?: string }) =>
     pedir<unknown>(`/prestamos/${id}/abonos`, { method: "POST", body: JSON.stringify(datos) }),
   condonar: (id: number) => pedir<undefined>(`/prestamos/${id}/condonar`, { method: "POST" }),
-  valorNeto: (p: Periodo, escala: "mes" | "dia" | "movimiento") =>
+  prestarMas: (id: number, datos: { monto: number; cuenta_id: number; fecha?: string }) =>
+    pedir<unknown>(`/prestamos/${id}/entregas`, { method: "POST", body: JSON.stringify(datos) }),
+  vistaPreviaEdicion: (id: number, cambios: CambiosPrestamo) =>
+    pedir<ImpactoPrestamo>(`/prestamos/${id}/edicion/vista-previa`, {
+      method: "POST",
+      body: JSON.stringify(cambios),
+    }),
+  editarPrestamo: (id: number, cambios: CambiosPrestamo) =>
+    pedir<ImpactoPrestamo>(`/prestamos/${id}`, { method: "PATCH", body: JSON.stringify(cambios) }),
+  valorNeto: (p: Periodo, escala: "mes" | "dia" | "movimiento", cuentaId?: number) =>
     pedir<{ escala: string; puntos: { fecha: string; saldo: number }[]; cuentas: string[] }>(
-      `/reportes/valor-neto${query({ ...p, escala })}`,
+      `/reportes/valor-neto${query({ ...p, escala, cuenta_id: cuentaId })}`,
     ),
   calor: (p: Periodo) =>
     pedir<{

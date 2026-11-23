@@ -1,0 +1,191 @@
+/* Pantalla «Más» y sus subpantallas: lista vertical compacta al estilo de los ajustes del teléfono. */
+.ajustes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 640px;
+}
+.ajustes-cabeza {
+  justify-content: flex-start;
+  align-items: center;
+}
+.ajustes-cabeza .cd-icon-btn {
+  font-size: 20px;
+  text-decoration: none;
+}
+.ajustes-grupo h2 {
+  margin: 0 0 6px 4px;
+  color: var(--ink-muted);
+  font: 700 11px var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ajustes-grupo > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.ajustes-grupo > ul > li + li {
+  border-top: 1px solid var(--border);
+}
+.ajuste-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 12px;
+  color: var(--ink);
+  font: 600 var(--texto-cuerpo) var(--font-sans);
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background var(--mov-rapida, 120ms) ease;
+}
+a.ajuste-fila:active {
+  background: var(--card-raised);
+}
+@media (hover: hover) and (pointer: fine) {
+  a.ajuste-fila:hover {
+    background: var(--card-raised);
+  }
+}
+a.ajuste-fila:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.ajuste-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  color: var(--on-brand-soft);
+}
+.ajuste-texto {
+  flex: 1;
+  min-width: 0;
+}
+.ajuste-detalle {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+.ajuste-flecha {
+  color: var(--ink-subtle, var(--ink-muted));
+  font-size: 18px;
+}
+.ajustes-nota {
+  margin: -8px 0 0;
+  color: var(--ink-muted);
+  font-size: var(--texto-cuerpo);
+}
+
+/* Personalizar menú */
+.menu-posiciones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.menu-posicion {
+  display: grid;
+  grid-template-columns: 44px 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 12px 6px 4px;
+  background: var(--card);
+  transition: transform var(--mov-media, 200ms) var(--mov-salida, ease-out);
+}
+.menu-posicion + .menu-posicion {
+  border-top: 1px solid var(--border);
+}
+/* Mientras se arrastra, la fila levantada sigue al dedo sin transición; las demás se corren con ella. */
+.menu-posicion.levantada {
+  position: relative;
+  z-index: 2;
+  transition: none;
+  box-shadow: var(--shadow-pop);
+  border-radius: var(--radius-md);
+}
+.menu-posiciones.arrastrando {
+  user-select: none;
+}
+.menu-asa {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ink-muted);
+  cursor: grab;
+  touch-action: none;
+}
+.menu-asa:active {
+  cursor: grabbing;
+  background: var(--card-raised);
+}
+.menu-asa:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+/* Asa de seis puntos (dos columnas de tres) */
+.menu-asa-puntos {
+  width: 10px;
+  height: 16px;
+  background-image: radial-gradient(currentColor 1.6px, transparent 1.7px);
+  background-size: 5px 5.5px;
+}
+.menu-posicion-ico {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  color: var(--on-brand-soft);
+}
+.menu-posicion-fija {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-left: 4px;
+  font-weight: 700;
+}
+.menu-posicion-fija small {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+.menu-posicion-destino {
+  height: 40px;
+}
+
+/* Información legal */
+.legal p,
+.legal-lista {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  font-size: var(--texto-cuerpo);
+  line-height: 1.5;
+}
+.legal p + p {
+  margin-top: 8px;
+}
+.legal-lista {
+  padding-left: 30px;
+  display: grid;
+  gap: 6px;
+}

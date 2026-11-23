@@ -17,14 +17,13 @@ from pathlib import Path
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
-import anthropic
-from anthropic import beta_tool
 from sqlalchemy.orm import Session
 
 from finanzas.config import Config, obtener_config
 from finanzas.dominio.errores import ErrorValidacion
 from finanzas.infra import herramientas_asistente as h
 from finanzas.infra import ia_proveedores as ia
+from finanzas.infra.herramienta import herramienta
 from finanzas.infra.modelos import Categoria, Parametro
 from finanzas.servicios.sistema import guardar, leer
 
@@ -157,7 +156,9 @@ def credenciales_disponibles() -> bool:
     return _credenciales_anthropic(obtener_config())
 
 
-def _cliente(config: Config) -> anthropic.Anthropic:
+def _cliente(config: Config) -> Any:
+    import anthropic
+
     clave = ia.clave(config, "anthropic")
     return anthropic.Anthropic(api_key=clave) if clave else anthropic.Anthropic()
 
@@ -179,7 +180,7 @@ def _herramientas(sesion: Session, usadas: list[str], propuestas: list[dict[str,
         usadas.append(nombre)
         return json.dumps(datos, ensure_ascii=False)
 
-    @beta_tool
+    @herramienta
     def resumen_mensual(desde: str = "", hasta: str = "") -> str:
         """Ingresos, gasto de vida, cuotas de deuda, apuestas (neto) y flujo operativo por mes, en pesos.
 
@@ -189,7 +190,7 @@ def _herramientas(sesion: Session, usadas: list[str], propuestas: list[dict[str,
         """
         return registrar("resumen_mensual", h.resumen_mensual(sesion, desde or None, hasta or None))
 
-    @beta_tool
+    @herramienta
     def gasto_por_categoria(grupo: str = "gasto_vida", desde: str = "", hasta: str = "") -> str:
         """Totales por categoría y subcategoría de un grupo en un periodo, en pesos.
 
@@ -200,7 +201,7 @@ def _herramientas(sesion: Session, usadas: list[str], propuestas: list[dict[str,
         """
         return registrar("gasto_por_categoria", h.gasto_por_categoria(sesion, desde or None, hasta or None, grupo))
 
-    @beta_tool
+    @herramienta
     def buscar_movimientos(texto: str, desde: str = "", hasta: str = "") -> str:
         """Movimientos cuya descripción o categoría contiene un texto: cantidad, total y hasta 15 ejemplos.
 
@@ -211,12 +212,12 @@ def _herramientas(sesion: Session, usadas: list[str], propuestas: list[dict[str,
         """
         return registrar("buscar_movimientos", h.buscar_movimientos(sesion, texto, desde or None, hasta or None))
 
-    @beta_tool
+    @herramienta
     def deudas() -> str:
         """Créditos activos: saldo, tasa pactada y costo real E.A., cuota y fecha estimada de fin."""
         return registrar("deudas", h.deudas(sesion))
 
-    @beta_tool
+    @herramienta
     def presupuesto(mes: str) -> str:
         """Presupuesto de un mes: asignado y gastado por categoría, e ingreso de referencia.
 
@@ -225,12 +226,12 @@ def _herramientas(sesion: Session, usadas: list[str], propuestas: list[dict[str,
         """
         return registrar("presupuesto", h.presupuesto(sesion, mes))
 
-    @beta_tool
+    @herramienta
     def recurrentes() -> str:
         """Pagos fijos y suscripciones: monto, frecuencia, estado (activo, pausado, cancelado) y próxima fecha."""
         return registrar("recurrentes", h.recurrentes(sesion))
 
-    @beta_tool
+    @herramienta
     def calendario(dias: int = 45) -> str:
         """Pagos e ingresos programados de los próximos días, vencidos sin registrar y saldo líquido proyectado.
 
@@ -239,12 +240,12 @@ def _herramientas(sesion: Session, usadas: list[str], propuestas: list[dict[str,
         """
         return registrar("calendario", h.calendario(sesion, dias))
 
-    @beta_tool
+    @herramienta
     def metas() -> str:
         """Metas de ahorro, deuda, topes de gasto y hábitos con su progreso."""
         return registrar("metas", h.metas(sesion))
 
-    @beta_tool
+    @herramienta
     def revision_mensual(mes: str) -> str:
         """Revisión de un mes: hallazgos, comparativo con el promedio y KPIs (tasa de ahorro, carga de deuda,
         cobertura de fijos, meses de colchón, costo financiero, gasto hormiga, racha sin apostar).
@@ -254,22 +255,22 @@ def _herramientas(sesion: Session, usadas: list[str], propuestas: list[dict[str,
         """
         return registrar("revision_mensual", h.revision(sesion, mes))
 
-    @beta_tool
+    @herramienta
     def termometro_renta() -> str:
         """Termómetro de renta del año: topes en UVT para declarar y qué tan cerca está cada uno."""
         return registrar("termometro_renta", h.termometro_renta(sesion))
 
-    @beta_tool
+    @herramienta
     def prestamos_personales() -> str:
         """Préstamos con personas (sin nombres): si debo o me deben, pendiente, tasa equivalente y próxima cuota."""
         return registrar("prestamos_personales", h.prestamos_personales(sesion))
 
-    @beta_tool
+    @herramienta
     def activos() -> str:
         """Patrimonio neto y activos por clase: valor, aportado, ganancia, rentabilidad y vencimiento (sin nombres)."""
         return registrar("activos", h.activos(sesion))
 
-    @beta_tool
+    @herramienta
     def proponer_movimiento(
         tipo: str, monto_pesos: int, descripcion: str = "", categoria: str = "", fecha: str = ""
     ) -> str:
@@ -300,7 +301,7 @@ def _herramientas(sesion: Session, usadas: list[str], propuestas: list[dict[str,
         usadas.append("proponer_movimiento")
         return json.dumps({"estado": "borrador listo: la persona debe revisarlo y confirmarlo; aún no está guardado"})
 
-    @beta_tool
+    @herramienta
     def proponer_abrir(seccion: str) -> str:
         """Ofrece un botón para ir a una sección de la app. NO cambia nada.
 
@@ -361,6 +362,12 @@ def _con_anthropic(
     hoy: str,
 ) -> tuple[str, str, str]:
     """Bucle de herramientas con el tool runner del SDK."""
+    # El SDK es opcional: hay instalaciones (Android) que solo traen los proveedores compatibles con OpenAI.
+    try:
+        import anthropic
+        from anthropic import beta_tool
+    except ModuleNotFoundError as exc:
+        raise AsistenteNoDisponible("Claude no está disponible en esta instalación. Elige otro proveedor.") from exc
     try:
         cliente = _cliente(config)
         runner = cliente.beta.messages.tool_runner(
@@ -372,7 +379,7 @@ def _con_anthropic(
             # Si el modelo declina, la API reintenta con el modelo de respaldo dentro de la misma llamada.
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
-            tools=herramientas,
+            tools=[beta_tool(h_.funcion) for h_ in herramientas],
             messages=cast(Any, mensajes),
         )
         final = None

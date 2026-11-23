@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from finanzas.dominio import prestamos as dominio
@@ -245,3 +246,228 @@ def condonar(uow: UnidadDeTrabajo, prestamo_id: int) -> None:
             )
     prestamo.estado = "condonado"
     uow.registrar(DominioCambio(INVALIDA, "condonar", (prestamo.id,)))
+
+
+# ---------- Prestar más y editar (rediseño nov-2026) ----------
+def _cuenta_de_dinero(sesion: Session, cuenta_id: int) -> int:
+    cuenta = obtener_cuenta(sesion, cuenta_id)
+    if cuenta.tipo in ("por_cobrar", "por_pagar", "credito"):
+        raise ErrorValidacion("Elige una cuenta de dinero (billetera, ahorros, efectivo…)")
+    return cuenta.id
+
+
+def prestamo_movimientos(sesion: Session, prestamo_id: int) -> list[Transaccion]:
+    return list(sesion.scalars(select(Transaccion).where(Transaccion.prestamo_id == prestamo_id)))
+
+
+def prestar_mas(uow: UnidadDeTrabajo, prestamo_id: int, monto: int, cuenta_id: int, fecha: str | None = None) -> Saldos:
+    """Entrega adicional con las mismas condiciones: suma capital y queda como operación propia.
+
+    No cambia el interés pactado; con condiciones distintas se crea otro préstamo a la misma persona.
+    Un préstamo ya pagado vuelve a quedar activo.
+    """
+    if monto <= 0:
+        raise ErrorValidacion("El monto debe ser mayor que cero")
+    sesion = uow.sesion
+    prestamo = sesion.get(PrestamoPersonal, prestamo_id)
+    if prestamo is None:
+        raise NoEncontrado(f"El préstamo {prestamo_id} no existe")
+    if prestamo.estado == "condonado":
+        raise Conflicto("El préstamo fue condonado: registra uno nuevo")
+    cuenta = _cuenta_de_dinero(sesion, cuenta_id)
+    fecha_iso = normalizar_fecha(fecha)
+    puente = cuenta_puente(sesion, prestamo.direccion)
+    categoria = _categoria(sesion, Grupo.PRESTAMOS_PERSONALES, "Préstamo personal", "Desembolso")
+    persona = prestamo.contraparte.nombre
+    if prestamo.direccion == "presto_yo":
+        _par(uow, cuenta, puente.id, monto, categoria, fecha_iso, f"Entrega adicional a {persona}", prestamo)
+    else:
+        _par(uow, puente.id, cuenta, monto, categoria, fecha_iso, f"Recibí más de {persona}", prestamo)
+    prestamo.monto += monto
+    nuevos = dominio.repartir_entrega(
+        [(date.fromisoformat(c.fecha), c.capital) for c in prestamo.cuotas], monto, date.fromisoformat(fecha_iso[:10])
+    )
+    for cuota, capital in zip(prestamo.cuotas, nuevos, strict=True):
+        cuota.capital = capital
+    prestamo.estado = "activo"
+    uow.registrar(DominioCambio(INVALIDA, "prestar_mas", (prestamo.id,)))
+    return saldos(sesion, prestamo)
+
+
+@dataclass
+class CambiosPrestamo:
+    """Campos opcionales: lo que llega en None no cambia."""
+
+    persona: str | None = None
+    origen: str | None = None
+    nota: str | None = None
+    fecha: str | None = None
+    monto_inicial: int | None = None
+    tipo_interes: str | None = None
+    interes_fijo: int | None = None
+    tasa_mensual: float | None = None
+    plan: str | None = None
+    frecuencia: str | None = None
+    num_cuotas: int | None = None
+    fecha_limite: str | None = None
+
+    def toca_condiciones(self) -> bool:
+        return any(
+            v is not None
+            for v in (
+                self.fecha,
+                self.monto_inicial,
+                self.tipo_interes,
+                self.interes_fijo,
+                self.tasa_mensual,
+                self.plan,
+                self.frecuencia,
+                self.num_cuotas,
+                self.fecha_limite,
+            )
+        )
+
+
+@dataclass(frozen=True)
+class Impacto:
+    capital_antes: int
+    interes_antes: int
+    capital_despues: int
+    interes_despues: int
+    interes_total: int
+    cuotas: list[dominio.CuotaPlan]
+
+    @property
+    def pendiente_antes(self) -> int:
+        return self.capital_antes + self.interes_antes
+
+    @property
+    def pendiente_despues(self) -> int:
+        return self.capital_despues + self.interes_despues
+
+
+def _desembolso_inicial(sesion: Session, prestamo: PrestamoPersonal) -> tuple[Transaccion, Transaccion]:
+    """El par del primer desembolso (el de la creación); las entregas adicionales vienen después."""
+    categoria = _categoria(sesion, Grupo.PRESTAMOS_PERSONALES, "Préstamo personal", "Desembolso")
+    movs = sorted(
+        (t for t in prestamo_movimientos(sesion, prestamo.id) if t.categoria_id == categoria.id),
+        key=lambda t: t.id,
+    )
+    if len(movs) < 2:
+        raise Conflicto("No se encontró el desembolso original de este préstamo")
+    return movs[0], movs[1]
+
+
+def _datos_actuales(prestamo: PrestamoPersonal) -> DatosPrestamo:
+    limite = prestamo.cuotas[-1].fecha if prestamo.plan == "fecha_unica" and prestamo.cuotas else None
+    return DatosPrestamo(
+        direccion=prestamo.direccion,
+        persona=prestamo.contraparte.nombre,
+        monto=prestamo.monto,
+        cuenta_id=prestamo.cuenta_id,
+        fecha=prestamo.fecha[:10],
+        origen=prestamo.origen,
+        tipo_interes=prestamo.tipo_interes,
+        interes_fijo=prestamo.interes_total if prestamo.tipo_interes == "fijo" else 0,
+        tasa_mensual=prestamo.tasa_mensual or 0.0,
+        plan=prestamo.plan,
+        frecuencia=prestamo.frecuencia or "mensual",
+        num_cuotas=prestamo.num_cuotas or max(len(prestamo.cuotas), 1),
+        fecha_limite=limite,
+        nota=prestamo.nota,
+    )
+
+
+def impacto(sesion: Session, prestamo: PrestamoPersonal, c: CambiosPrestamo) -> Impacto:
+    """Cómo quedaría lo pendiente con los cambios, sin escribir nada."""
+    actual = saldos(sesion, prestamo)
+    if not c.toca_condiciones():
+        return Impacto(
+            actual.capital_pendiente,
+            actual.interes_pendiente,
+            actual.capital_pendiente,
+            actual.interes_pendiente,
+            prestamo.interes_total,
+            [],
+        )
+    salida, _ = _desembolso_inicial(sesion, prestamo)
+    delta = (c.monto_inicial - abs(salida.monto)) if c.monto_inicial is not None else 0
+    capital = actual.capital_pendiente + delta
+    if capital < 0:
+        raise ErrorValidacion("Con ese monto, lo ya abonado superaría el capital del préstamo")
+    datos = _datos_actuales(prestamo)
+    datos.monto = prestamo.monto + delta
+    for campo in ("fecha", "tipo_interes", "tasa_mensual", "plan", "frecuencia", "num_cuotas", "fecha_limite"):
+        valor = getattr(c, campo)
+        if valor is not None:
+            setattr(datos, campo, valor)
+    if c.interes_fijo is not None:
+        datos.interes_fijo = c.interes_fijo
+    calculo = calcular(datos)
+    if calculo.interes_total < actual.interes_pagado:
+        raise ErrorValidacion("El interés pactado no puede quedar por debajo del interés ya pagado")
+    return Impacto(
+        actual.capital_pendiente,
+        actual.interes_pendiente,
+        capital,
+        calculo.interes_total - actual.interes_pagado,
+        calculo.interes_total,
+        calculo.cuotas,
+    )
+
+
+def editar(uow: UnidadDeTrabajo, prestamo_id: int, c: CambiosPrestamo) -> Impacto:
+    """Corrige datos del préstamo. Abonos e historial se conservan; capital, fecha y condiciones
+    recalculan el plan y lo pendiente en la misma transacción."""
+    sesion = uow.sesion
+    prestamo = sesion.get(PrestamoPersonal, prestamo_id)
+    if prestamo is None:
+        raise NoEncontrado(f"El préstamo {prestamo_id} no existe")
+    if c.toca_condiciones() and prestamo.estado == "condonado":
+        raise Conflicto("Un préstamo condonado solo admite cambios de nombre, origen o nota")
+    resultado = impacto(sesion, prestamo, c)
+    if c.persona is not None:
+        nombre = c.persona.strip().title()
+        if not nombre:
+            raise ErrorValidacion("Escribe con quién es el préstamo")
+        contraparte = contraparte_por_nombre(sesion, nombre, "persona")
+        assert contraparte is not None
+        prestamo.contraparte_id = contraparte.id
+        for t in prestamo_movimientos(sesion, prestamo.id):
+            t.contraparte_id = contraparte.id
+    if c.origen is not None:
+        prestamo.origen = c.origen
+    if c.nota is not None:
+        prestamo.nota = c.nota.strip()
+    if c.toca_condiciones():
+        salida, entrada = _desembolso_inicial(sesion, prestamo)
+        if c.monto_inicial is not None:
+            delta = c.monto_inicial - abs(salida.monto)
+            salida.monto = -c.monto_inicial if salida.monto < 0 else c.monto_inicial
+            entrada.monto = -c.monto_inicial if entrada.monto < 0 else c.monto_inicial
+            prestamo.monto += delta
+        if c.fecha is not None:
+            fecha = normalizar_fecha(c.fecha)
+            prestamo.fecha = fecha
+            salida.fecha = entrada.fecha = fecha
+        prestamo.tipo_interes = c.tipo_interes or prestamo.tipo_interes
+        if c.tasa_mensual is not None:
+            prestamo.tasa_mensual = c.tasa_mensual
+        if prestamo.tipo_interes != "simple_mensual":
+            prestamo.tasa_mensual = None
+        prestamo.plan = c.plan or prestamo.plan
+        prestamo.frecuencia = (c.frecuencia or prestamo.frecuencia or "mensual") if prestamo.plan == "cuotas" else None
+        prestamo.interes_total = resultado.interes_total
+        prestamo.num_cuotas = len(resultado.cuotas) or None
+        # Primero se borran las cuotas viejas: insertar antes chocaría con (prestamo_id, numero) único.
+        prestamo.cuotas.clear()
+        sesion.flush()
+        prestamo.cuotas.extend(
+            PrestamoCuota(numero=q.numero, fecha=q.fecha.isoformat(), capital=q.capital, interes=q.interes)
+            for q in resultado.cuotas
+        )
+        sesion.flush()
+        if prestamo.estado != "condonado":
+            prestamo.estado = "pagado" if saldos(sesion, prestamo).pendiente == 0 else "activo"
+    uow.registrar(DominioCambio(INVALIDA, "editar", (prestamo.id,)))
+    return resultado

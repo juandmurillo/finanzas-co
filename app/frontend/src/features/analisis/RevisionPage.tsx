@@ -4,14 +4,21 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { CambioCategoria, RevisionMensual } from "@/shared/api/tipos";
+import { BarrasAgrupadas } from "@/shared/charts";
 import { api } from "@/shared/lib/api";
 import { fechaCorta, formatoCOP, hoyISO, moverMes, nombreMes } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
-import { Dinero } from "@/shared/ui/Dinero";
+import { BarraFiltros } from "@/shared/ui/BarraFiltros";
 import { ErrorVista, TarjetaCargando } from "@/shared/ui/Estados";
+import { CabeceraTarjeta, KpiCompacto } from "@/shared/ui/Kpi";
 
 import { KpisEstrategicos } from "./KpisRevision";
 import { aPeriodo } from "./Periodo";
+
+function diasDelMes(mes: string): number {
+  const [a, m] = mes.split("-").map(Number);
+  return new Date(a ?? 2000, m ?? 1, 0).getDate();
+}
 
 const INDICADORES: Record<RevisionMensual["indicadores"][number]["clave"], string> = {
   ingresos: "Ingresos",
@@ -21,115 +28,112 @@ const INDICADORES: Record<RevisionMensual["indicadores"][number]["clave"], strin
   flujo_operativo: "Flujo operativo",
 };
 
-function Diferencia({ actual, base }: { actual: number; base: number }) {
-  const d = actual - base;
-  if (d === 0) return <span className="cd-badge cd-badge--plain">igual</span>;
+/** Barras divergentes: a la derecha lo que subió frente al promedio, a la izquierda lo que bajó. */
+function Cambios({ subidas, bajadas }: { subidas: CambioCategoria[]; bajadas: CambioCategoria[] }) {
+  const filas = [...subidas.slice(0, 6), ...bajadas.slice(0, 6)].sort((a, b) => b.diferencia - a.diferencia);
+  const maximo = Math.max(1, ...filas.map((c) => Math.abs(c.diferencia)));
   return (
-    <span className="cd-badge cd-badge--neutral cd-num">
-      {d > 0 ? "↑" : "↓"} {formatoCOP(Math.abs(d))}
-    </span>
-  );
-}
-
-function ListaCambios({ titulo, cambios, vacio }: { titulo: string; cambios: CambioCategoria[]; vacio: string }) {
-  return (
-    <section className="cd-card cd-stack" style={{ gap: 12 }}>
-      <h3 className="cd-card-title">{titulo}</h3>
-      {cambios.length === 0 && <span className="cd-delta-note">{vacio}</span>}
-      {cambios.map((c) => (
-        <div key={c.categoria} className="cd-row" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
-          <span>
-            <b style={{ fontSize: 14 }}>{c.categoria}</b>
-            <span className="cd-delta-note cd-num">
-              {" "}
-              · {formatoCOP(c.actual)} contra {formatoCOP(c.promedio)}
-            </span>
-          </span>
-          <span className="cd-amt">
-            {c.diferencia > 0 ? "+" : "−"}
-            {formatoCOP(Math.abs(c.diferencia))}
-          </span>
-        </div>
-      ))}
+    <section className="cd-card">
+      <CabeceraTarjeta titulo="Qué cambió" rango="cada categoría frente a su promedio de 3 meses" />
+      {filas.length === 0 ? (
+        <p className="cd-delta-note">Ninguna categoría cambió frente a tu promedio.</p>
+      ) : (
+        <ul className="cambios-div" aria-label="Cambios por categoría">
+          {filas.map((c) => {
+            const ancho = `${(Math.abs(c.diferencia) / maximo) * 50}%`;
+            const sube = c.diferencia > 0;
+            return (
+              <li
+                key={c.categoria}
+                title={`${c.categoria}: ${formatoCOP(c.actual)} contra ${formatoCOP(c.promedio)} de promedio`}
+              >
+                <span className="cambios-nombre">{c.categoria}</span>
+                <span className="cambios-pista" aria-hidden>
+                  <i
+                    className={sube ? "sube" : "baja"}
+                    style={sube ? { left: "50%", width: ancho } : { right: "50%", width: ancho }}
+                  />
+                </span>
+                <b className={`cd-num ${sube ? "texto-sube" : "texto-baja"}`}>
+                  {sube ? "+" : "−"}
+                  {formatoCOP(Math.abs(c.diferencia))}
+                </b>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="cd-delta-note cambios-leyenda">
+        <span>
+          <i className="baja" /> gastaste menos
+        </span>
+        <span>
+          <i className="sube" /> gastaste más
+        </span>
+      </p>
     </section>
   );
 }
 
-function Apuestas() {
+function Apuestas({ mes }: { mes: string }) {
   const periodo = aPeriodo("12m");
   const consulta = useQuery({ queryKey: claves.apuestas(periodo), queryFn: () => api.apuestas(periodo) });
   const a = consulta.data;
   if (!a) return consulta.isError ? <ErrorVista error={consulta.error} /> : <TarjetaCargando filas={3} />;
-  const maximo = Math.max(1, ...a.por_mes.map((m) => Math.abs(m.neto)));
+  const delMes = a.por_mes.find((m) => m.mes === mes);
+  const anteriores = a.por_mes.filter((m) => m.mes < mes);
+  const promedio = anteriores.length ? anteriores.reduce((t, m) => t + m.apostado, 0) / anteriores.length : 0;
+  const meses = a.por_mes.slice(-8);
   return (
-    <section className="cd-card cd-stack" style={{ gap: 16 }} aria-label="Apuestas de los últimos 12 meses">
-      <div className="cd-card-head">
-        <h3 className="cd-card-title">Apuestas · últimos 12 meses</h3>
-        <span className="cd-delta-note">Meta: $0</span>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12 }}>
-        {[
-          {
-            etiqueta: "Días sin apostar",
-            valor: a.racha_actual ?? "—",
-            nota: a.ultima ? `última: ${fechaCorta(a.ultima, true)}` : "sin registros",
-          },
-          { etiqueta: "Mejor racha", valor: `${a.racha_mayor} días`, nota: "sin apostar" },
-          { etiqueta: "Apostado", valor: formatoCOP(a.apostado), nota: `${a.n} registros` },
-          {
-            etiqueta: "Neto",
-            valor: formatoCOP(a.neto, { signo: true }),
-            nota: `ganado ${formatoCOP(a.ganado)}`,
-          },
-        ].map((k) => (
-          <div key={k.etiqueta} className="cd-stack" style={{ gap: 2 }}>
-            <span className="cd-delta-note">{k.etiqueta}</span>
-            <span className="cd-amt" style={{ fontSize: 20 }}>
-              {k.valor}
-            </span>
-            <span className="cd-delta-note">{k.nota}</span>
-          </div>
-        ))}
-      </div>
-      {a.por_mes.length > 0 && (
-        <div className="cd-stack" style={{ gap: 6 }}>
-          <div className="cd-spark" style={{ height: 48, gap: 6 }} aria-hidden>
-            {a.por_mes.map((m) => (
-              <i
-                key={m.mes}
-                className={m.neto < 0 ? "neg" : "on"}
-                style={{ height: `${Math.max(6, (Math.abs(m.neto) / maximo) * 100)}%`, width: 14 }}
-                title={`${nombreMes(m.mes)}: ${formatoCOP(m.neto, { signo: true })}`}
-              />
-            ))}
-          </div>
-          <span className="cd-delta-note">Neto por mes (más alto = más movimiento; rojo = pérdida)</span>
+    <div className="cd-bento" aria-label="Apuestas">
+      <section className="cd-card span-5">
+        <CabeceraTarjeta titulo={`Apuestas de ${nombreMes(mes)}`} rango="Meta: $0" />
+        <div className="apuestas-kpis">
+          <KpiCompacto
+            etiqueta="Apostado"
+            icono="dado"
+            valor={delMes?.apostado ?? 0}
+            nota={
+              delMes
+                ? `${delMes.n} ${delMes.n === 1 ? "apuesta" : "apuestas"} · promedio ${formatoCOP(Math.round(promedio))}`
+                : "nada este mes"
+            }
+          />
+          <KpiCompacto
+            etiqueta="Neto"
+            icono={delMes && delMes.neto < 0 ? "sale" : "entra"}
+            valor={formatoCOP(delMes?.neto ?? 0, { signo: true })}
+            delta={delMes && delMes.neto < 0 ? { valor: 0, sentido: "alerta", texto: "Pérdida" } : undefined}
+            nota={`ganado ${formatoCOP(delMes?.ganado ?? 0)}`}
+          />
+          <KpiCompacto
+            etiqueta="Días sin apostar"
+            icono="calendario"
+            valor={String(a.racha_actual ?? "—")}
+            nota={a.ultima ? `última: ${fechaCorta(a.ultima, true)}` : "sin registros"}
+          />
+          <KpiCompacto etiqueta="Mejor racha" icono="check" valor={`${a.racha_mayor} días`} nota="sin apostar" />
         </div>
-      )}
-      <div className="sr-only">
-        <table>
-          <caption>Apuestas por mes</caption>
-          <thead>
-            <tr>
-              <th>Mes</th>
-              <th>Apostado</th>
-              <th>Ganado</th>
-              <th>Neto</th>
-            </tr>
-          </thead>
-          <tbody>
-            {a.por_mes.map((m) => (
-              <tr key={m.mes}>
-                <td>{nombreMes(m.mes)}</td>
-                <td>{formatoCOP(m.apostado)}</td>
-                <td>{formatoCOP(m.ganado)}</td>
-                <td>{formatoCOP(m.neto)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+      </section>
+      <section className="cd-card span-7">
+        <CabeceraTarjeta titulo="Frente a meses anteriores" rango="apostado y ganado por mes" />
+        {meses.length === 0 ? (
+          <p className="cd-delta-note">Sin apuestas en los últimos 12 meses.</p>
+        ) : (
+          <BarrasAgrupadas
+            titulo="Apuestas por mes"
+            alto={220}
+            relativo
+            etiquetas={meses.map((m) => nombreMes(m.mes, true))}
+            detalles={meses.map((m) => nombreMes(m.mes))}
+            series={[
+              { nombre: "Apostado", color: "var(--chart-2)", valores: meses.map((m) => m.apostado) },
+              { nombre: "Ganado", color: "var(--positive)", valores: meses.map((m) => m.ganado) },
+            ]}
+          />
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -138,6 +142,10 @@ export function RevisionPage() {
   const consulta = useQuery({ queryKey: claves.revision(mes), queryFn: () => api.revision(mes) });
   const r = consulta.data;
   const flujo = r?.indicadores.find((i) => i.clave === "flujo_operativo");
+  // El gráfico compara montos positivos; el flujo ya está en los indicadores y las apuestas, al final.
+  const comparables = (r?.indicadores ?? []).filter((i) =>
+    ["ingresos", "gasto_vida", "servicio_deuda"].includes(i.clave),
+  );
   const apuestas = useApuestasVisibles();
 
   return (
@@ -147,16 +155,13 @@ export function RevisionPage() {
           <h1>Revisión mensual</h1>
           <p>Cómo vas frente a tus metas, qué cambió frente al mes anterior y a tu promedio de 3 meses.</p>
         </div>
-        <div className="cd-row" style={{ gap: 4 }}>
+      </div>
+      <BarraFiltros etiqueta="Mes de la revisión">
+        <div className="selector-mes">
           <button className="cd-icon-btn" aria-label="Mes anterior" onClick={() => setMes(moverMes(mes, -1))}>
             ‹
           </button>
-          <span
-            className="cd-select"
-            style={{ height: 40, minWidth: 150, justifyContent: "center", textTransform: "capitalize" }}
-          >
-            {nombreMes(mes)}
-          </span>
+          <span aria-live="polite">{nombreMes(mes)}</span>
           <button
             className="cd-icon-btn"
             aria-label="Mes siguiente"
@@ -166,13 +171,14 @@ export function RevisionPage() {
             ›
           </button>
         </div>
-      </div>
-
+      </BarraFiltros>
       {consulta.isPending && <TarjetaCargando />}
       {consulta.isError && <ErrorVista error={consulta.error} reintentar={() => void consulta.refetch()} />}
       {r && flujo && (
         <>
           <KpisEstrategicos
+            mes={mes}
+            flujo={flujo}
             kpis={
               apuestas
                 ? r.kpis
@@ -180,22 +186,26 @@ export function RevisionPage() {
             }
           />
           <div className="cd-bento">
-            <div className="span-4 cd-balance">
-              <div className="cd-balance-top">
-                <span className="cd-balance-label">Flujo operativo</span>
-                <span className="cd-chip-glass" style={{ textTransform: "capitalize" }}>
-                  {nombreMes(mes)}
-                </span>
-              </div>
-              <div className="cd-balance-value">
-                <Dinero centavos={flujo.actual} signo />
-              </div>
-              <div className="cd-balance-foot">
-                <span className="cd-delta">promedio {formatoCOP(flujo.promedio, { signo: true })}</span>
-              </div>
-            </div>
-            <section className="cd-card span-8 cd-stack" style={{ gap: 12 }}>
-              <h3 className="cd-card-title">Lo más importante</h3>
+            <section className="cd-card span-7">
+              <CabeceraTarjeta titulo="Comparativo" rango="este mes, el anterior y tu promedio de 3 meses" />
+              <BarrasAgrupadas
+                titulo="Comparativo del mes"
+                alto={240}
+                relativo
+                etiquetas={comparables.map((i) => INDICADORES[i.clave])}
+                series={[
+                  { nombre: nombreMes(mes), color: "var(--chart-1)", valores: comparables.map((i) => i.actual) },
+                  { nombre: "Mes anterior", color: "var(--chart-3)", valores: comparables.map((i) => i.anterior) },
+                  {
+                    nombre: "Promedio 3 meses",
+                    color: "var(--chart-track)",
+                    valores: comparables.map((i) => i.promedio),
+                  },
+                ]}
+              />
+            </section>
+            <section className="cd-card span-5 cd-stack" style={{ gap: 12 }}>
+              <CabeceraTarjeta titulo="Lo más importante" rango={`${r.hallazgos.length} hallazgos`} />
               <ol className="cd-stack" style={{ gap: 10, margin: 0, padding: 0, listStyle: "none" }}>
                 {r.hallazgos.map((h, i) => (
                   <li key={h} className="cd-row" style={{ flexWrap: "nowrap", alignItems: "flex-start", gap: 12 }}>
@@ -213,79 +223,29 @@ export function RevisionPage() {
           </div>
 
           <div className="cd-bento">
-            <section className="cd-card span-8" style={{ overflowX: "auto" }}>
-              <h3 className="cd-card-title">Comparativo</h3>
-              <table className="cd-table cd-num tabla-apilable">
-                <thead>
-                  <tr>
-                    <th>Indicador</th>
-                    <th style={{ textAlign: "right" }}>Este mes</th>
-                    <th style={{ textAlign: "right" }}>Mes anterior</th>
-                    <th style={{ textAlign: "right" }}>Promedio 3 meses</th>
-                    <th style={{ textAlign: "right" }}>Frente al promedio</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {r.indicadores
-                    .filter((i) => apuestas || i.clave !== "apuestas_neto")
-                    .map((i) => (
-                      <tr key={i.clave}>
-                        <td
-                          data-etiqueta="<tr>
-                    <th>Indicador"
-                        >
-                          {INDICADORES[i.clave]}
-                        </td>
-                        <td data-etiqueta="Este mes" style={{ textAlign: "right", fontWeight: 700 }}>
-                          {formatoCOP(i.actual)}
-                        </td>
-                        <td data-etiqueta="Mes anterior" style={{ textAlign: "right" }}>
-                          {formatoCOP(i.anterior)}
-                        </td>
-                        <td data-etiqueta="Promedio 3 meses" style={{ textAlign: "right" }}>
-                          {formatoCOP(i.promedio)}
-                        </td>
-                        <td data-etiqueta="Frente al promedio" style={{ textAlign: "right" }}>
-                          <Diferencia actual={i.actual} base={i.promedio} />
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </section>
-            <section className="cd-card span-4 cd-stack" style={{ gap: 12 }}>
-              <h3 className="cd-card-title">El mes en datos</h3>
-              <div className="cd-stack" style={{ gap: 2 }}>
-                <span className="cd-delta-note">Días con algún gasto</span>
-                <span className="cd-amt" style={{ fontSize: 20 }}>
-                  {r.dias_con_gasto}
-                </span>
-              </div>
-              {r.mayor_gasto && (
-                <div className="cd-stack" style={{ gap: 2 }}>
-                  <span className="cd-delta-note">Gasto más grande</span>
-                  <span className="cd-amt" style={{ fontSize: 20 }}>
-                    {formatoCOP(r.mayor_gasto.monto)}
-                  </span>
-                  <span className="cd-delta-note">
-                    {r.mayor_gasto.descripcion || r.mayor_gasto.categoria} · {fechaCorta(r.mayor_gasto.fecha)}
-                  </span>
-                </div>
-              )}
-            </section>
-          </div>
-
-          <div className="cd-bento">
-            <div className="span-6">
-              <ListaCambios titulo="Subió frente a tu promedio" cambios={r.subidas} vacio="Ninguna categoría subió." />
+            <div className="span-8">
+              <Cambios subidas={r.subidas} bajadas={r.bajadas} />
             </div>
-            <div className="span-6">
-              <ListaCambios titulo="Bajó frente a tu promedio" cambios={r.bajadas} vacio="Ninguna categoría bajó." />
+            <div className="span-4 revision-mes-datos">
+              <KpiCompacto
+                etiqueta="Días con algún gasto"
+                icono="calendario"
+                valor={String(r.dias_con_gasto)}
+                nota={`de ${diasDelMes(mes)} días del mes`}
+              />
+              {r.mayor_gasto && (
+                <KpiCompacto
+                  etiqueta="Gasto más grande"
+                  icono="sale"
+                  valor={r.mayor_gasto.monto}
+                  nota={`${r.mayor_gasto.descripcion || r.mayor_gasto.categoria} · ${fechaCorta(r.mayor_gasto.fecha)}`}
+                />
+              )}
             </div>
           </div>
         </>
       )}
-      {apuestas && <Apuestas />}
+      {apuestas && <Apuestas mes={mes} />}
     </>
   );
 }

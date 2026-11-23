@@ -1,0 +1,104 @@
+/* Celdas de la tabla de movimientos (Movimientos e Inicio). */
+.mov-fecha {
+  white-space: nowrap;
+}
+.mov-fecha small {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.mov-concepto {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 420px;
+}
+.mov-ico {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  color: var(--on-brand-soft);
+}
+.mov-texto {
+  min-width: 0;
+}
+.mov-texto b,
+.mov-texto small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mov-texto b {
+  font-weight: 600;
+}
+.mov-texto small {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.mov-texto .estado-punto {
+  font-size: 11px;
+  margin-top: 2px;
+}
+.mov-dia {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mov-dia span:first-child {
+  text-transform: capitalize;
+  color: var(--ink);
+}
+
+/* Celular: concepto y monto arriba; hora/fecha y acciones abajo */
+@media (max-width: 600px) {
+  .mov-texto b,
+  .mov-texto small {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .tabla-densa tbody tr:not(.tabla-grupo) td:first-child {
+    grid-row: 2;
+    grid-column: 1;
+    padding-left: 38px;
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .tabla-densa tbody td:first-child .mov-fecha small {
+    display: inline;
+    margin-left: 6px;
+  }
+}
+
+/* Celular: sin botones en la fila (tocarla abre sus acciones en una hoja). */
+@media (max-width: 860px) {
+  .tabla-densa :is(th, td).acciones {
+    display: none;
+  }
+}
+.mov-acciones-resumen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--texto-cuerpo);
+}
+.mov-acciones-lista {
+  display: grid;
+  gap: 8px;
+}
+.mov-acciones-lista .cd-btn {
+  justify-content: flex-start;
+  min-height: 44px;
+}

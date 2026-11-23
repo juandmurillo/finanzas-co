@@ -1,16 +1,20 @@
+// La fuente va empaquetada: la app no pide nada a internet y funciona sin conexión (también en Android).
+import "@fontsource-variable/plus-jakarta-sans/wght.css";
 import "./styles/app.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Toaster } from "sonner";
 
 import { router } from "./app/router";
 import { CapturaProvider } from "./features/captura";
-import { aplicarTema, temaInicial } from "./shared/lib/tema";
+import { Avisos } from "./shared/ui/Avisos";
+import { intensidadActual } from "./shared/lib/movimiento";
+import { acentoInicial, pintarApariencia, temaInicial } from "./shared/lib/tema";
 
-aplicarTema(temaInicial());
+pintarApariencia(temaInicial(), acentoInicial());
+intensidadActual(); // fija data-movimiento en <html> antes del primer render
 
 // Los datos se refrescan por eventos SSE; no hace falta refetch al volver a la ventana.
 const cliente = new QueryClient({
@@ -26,7 +30,7 @@ createRoot(contenedor).render(
       <CapturaProvider>
         <RouterProvider router={router} />
       </CapturaProvider>
-      <Toaster position="bottom-left" richColors closeButton theme="system" />
+      <Avisos />
     </QueryClientProvider>
   </StrictMode>,
 );

@@ -152,7 +152,7 @@ export function TusDatos() {
   return (
     <section className="cd-card cd-stack" style={{ gap: 14 }}>
       <div>
-        <h3 className="cd-card-title">Tus datos</h3>
+        <h2 className="cd-card-title">Tus datos</h2>
         <p className="cd-delta-note" style={{ margin: "4px 0 0" }}>
           Son tuyos y viven en este computador. Antes de cargar o borrar se guarda un respaldo automático.
         </p>

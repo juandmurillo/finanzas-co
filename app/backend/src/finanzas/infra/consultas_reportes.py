@@ -37,6 +37,8 @@ class Mov:
     subcategoria: str | None  # nivel 3
     descripcion: str
     monto: int
+    categoria_id: int | None = None  # nivel 2
+    subcategoria_id: int | None = None  # nivel 3
 
 
 def _movimientos(sesion: Session, desde: str | None, hasta: str | None) -> list[Mov]:
@@ -47,7 +49,9 @@ def _movimientos(sesion: Session, desde: str | None, hasta: str | None) -> list[
                    COALESCE(c.grupo, CASE WHEN t.monto > 0 THEN 'ingreso' ELSE 'gasto_vida' END) AS grupo,
                    CASE WHEN c.id IS NULL THEN 'Sin categoría' WHEN c.nivel = 3 THEN p.nombre ELSE c.nombre END
                        AS categoria,
-                   CASE WHEN c.nivel = 3 THEN c.nombre END AS subcategoria
+                   CASE WHEN c.nivel = 3 THEN c.nombre END AS subcategoria,
+                   CASE WHEN c.nivel = 3 THEN p.id ELSE c.id END AS categoria_id,
+                   CASE WHEN c.nivel = 3 THEN c.id END AS subcategoria_id
             FROM transaccion t
             LEFT JOIN categoria c ON c.id = t.categoria_id
             LEFT JOIN categoria p ON p.id = c.padre_id
@@ -60,7 +64,17 @@ def _movimientos(sesion: Session, desde: str | None, hasta: str | None) -> list[
         {"desde": desde, "hasta": hasta},
     ).mappings()
     return [
-        Mov(f["fecha"], f["mes"], Grupo(f["grupo"]), f["categoria"], f["subcategoria"], f["descripcion"], f["monto"])
+        Mov(
+            f["fecha"],
+            f["mes"],
+            Grupo(f["grupo"]),
+            f["categoria"],
+            f["subcategoria"],
+            f["descripcion"],
+            f["monto"],
+            f["categoria_id"],
+            f["subcategoria_id"],
+        )
         for f in filas
     ]
 
@@ -204,13 +218,15 @@ def categorias(
 
     cats: dict[str, dict[str, Any]] = {}
     for m in del_grupo:
-        c = cats.setdefault(m.categoria, {"total": 0, "n": 0, "por_mes": defaultdict(int), "subs": {}})
+        c = cats.setdefault(
+            m.categoria, {"id": m.categoria_id, "total": 0, "n": 0, "por_mes": defaultdict(int), "subs": {}}
+        )
         v = valor(m)
         c["total"] += v
         c["n"] += 1
         c["por_mes"][m.mes] += v
         if m.subcategoria:
-            s = c["subs"].setdefault(m.subcategoria, {"total": 0, "n": 0})
+            s = c["subs"].setdefault(m.subcategoria, {"id": m.subcategoria_id, "total": 0, "n": 0})
             s["total"] += v
             s["n"] += 1
 
@@ -222,6 +238,7 @@ def categorias(
         filas.append(
             {
                 "categoria": nombre,
+                "id": c["id"],
                 "total": c["total"],
                 "n": c["n"],
                 "promedio_mensual": round(c["total"] / n_meses),
@@ -230,6 +247,7 @@ def categorias(
                 "subcategorias": [
                     {
                         "subcategoria": s,
+                        "id": d["id"],
                         "total": d["total"],
                         "n": d["n"],
                         "ticket": round(d["total"] / d["n"]),
@@ -454,13 +472,19 @@ def reducir_puntos(puntos: list[dict[str, Any]], tope: int = 180, campo: str = "
 
 
 def valor_neto(
-    sesion: Session, desde: str | None = None, hasta: str | None = None, escala: str = "mes"
+    sesion: Session,
+    desde: str | None = None,
+    hasta: str | None = None,
+    escala: str = "mes",
+    cuenta_id: int | None = None,
 ) -> dict[str, Any]:
     """Saldo de las cuentas que suman al total (punto 15) al cierre de cada mes, de cada día o de cada
-    día con movimientos (`movimiento`: más detalle sin recargar el gráfico)."""
+    día con movimientos (`movimiento`: más detalle sin recargar el gráfico). Con `cuenta_id`, el de esa
+    sola cuenta (sume o no al total)."""
     from finanzas.infra.consultas import en_total, saldos_cuentas
 
-    cuentas = en_total(saldos_cuentas(sesion))
+    todas = saldos_cuentas(sesion)
+    cuentas = [c for c in todas if c["id"] == cuenta_id] if cuenta_id is not None else en_total(todas)
     ids = [c["id"] for c in cuentas]
     if not ids:
         return {"escala": escala, "puntos": [], "cuentas": []}

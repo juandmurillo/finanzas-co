@@ -1,5 +1,6 @@
 /** Recurrentes y suscripciones (RF-RE, fase 8 punto 10): una sola lista con lo programado, sus días restantes y
  * cuánto queda después de cada pago; pagar, editar (y eliminar), pausar y cancelar desde la misma fila. */
+import { esMovil } from "@/shared/lib/dispositivo";
 import { useRefrescar } from "@/shared/lib/useRefrescar";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useId, useMemo, useState } from "react";
@@ -17,12 +18,16 @@ import { api } from "@/shared/lib/api";
 import { diasHasta, fechaCorta, formatoCOP, hoyISO, mascaraMonto, parseMonto } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 import { DiasRestantes } from "@/shared/ui/DiasRestantes";
-import { Dinero } from "@/shared/ui/Dinero";
 import { ErrorVista, TarjetaCargando, Vacio } from "@/shared/ui/Estados";
+import { AreaTemporal } from "@/shared/charts";
 import { Hoja } from "@/shared/ui/Hoja";
+import { Icono } from "@/shared/ui/Icono";
+import { CabeceraTarjeta, KpiCompacto } from "@/shared/ui/Kpi";
 import { SelectorCategoria } from "@/shared/ui/SelectorCategoria";
 import { CuentaEtiqueta, SelectorCuenta } from "@/shared/ui/SelectorCuenta";
 
+import { Desplegable } from "@/shared/ui/Desplegable";
+import { CampoFecha } from "@/shared/ui/CampoFecha";
 const FRECUENCIAS: Record<FrecuenciaRecurrente, string> = {
   semanal: "Semanal",
   quincenal: "Quincenal",
@@ -42,51 +47,108 @@ function FilaEvento({ e, vencido }: { e: EventoCalendario; vencido?: boolean }) 
     onSettled: refrescar,
   });
   const ingreso = e.monto > 0;
+  const movil = esMovil();
+  const [detalle, setDetalle] = useState(false);
   return (
-    <li
-      className="cd-row"
-      style={{ flexWrap: "nowrap", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border)" }}
-    >
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <b style={{ fontSize: 14 }}>{e.descripcion}</b>
-        <span className="cd-delta-note">
-          {" "}
-          · {e.cuenta ? <CuentaEtiqueta nombre={e.cuenta} id={e.cuenta_id} /> : "préstamo personal"}
-          {vencido && ` · ${fechaCorta(e.fecha)}`}
-        </span>{" "}
-        {e.dias <= 7 && <DiasRestantes dias={e.dias} />}
-      </span>
-      <span className="cd-stack" style={{ alignItems: "flex-end", gap: 0 }}>
+    <tr {...filaTocable(movil, e.descripcion, () => setDetalle(true))}>
+      <td data-etiqueta="Pago">
+        {detalle && (
+          <Hoja titulo={e.descripcion} onCerrar={() => setDetalle(false)}>
+            <ResumenPago
+              lineas={[
+                [e.recurrente_id != null ? "Recurrente" : "Programado", e.cuenta ?? "préstamo personal"],
+                [vencido ? "Venció" : "Fecha", fechaCorta(e.fecha, true)],
+                ["Monto", formatoCOP(e.monto, { signo: ingreso })],
+                ...(e.saldo_total !== undefined && !vencido
+                  ? ([["Te quedará", formatoCOP(e.saldo_total)]] as [string, string][])
+                  : []),
+              ]}
+            />
+            {e.tipo === "programada" && (
+              <div className="detalle-acciones">
+                <button
+                  className="cd-btn cd-btn--primary"
+                  onClick={() => {
+                    setDetalle(false);
+                    abrirMovimiento(e.id);
+                  }}
+                >
+                  {ingreso ? "Recibido" : "Pagado"}
+                </button>
+                {vencido && (
+                  <button
+                    className="cd-btn cd-btn--secondary"
+                    disabled={descartar.isPending}
+                    onClick={() => {
+                      descartar.mutate();
+                      setDetalle(false);
+                    }}
+                  >
+                    {e.recurrente_id != null ? "Saltar este pago" : "Descartar"}
+                  </button>
+                )}
+              </div>
+            )}
+          </Hoja>
+        )}
+        <b className="fila-recurrente-nombre">{e.descripcion}</b>
+        <small className="tabla-rec-sub">
+          {e.recurrente_id != null ? "Recurrente" : "Programado"} ·{" "}
+          {e.cuenta ? <CuentaEtiqueta nombre={e.cuenta} id={e.cuenta_id} /> : "préstamo personal"}
+        </small>
+      </td>
+      <td data-etiqueta="Fecha">
+        <span className="tabla-rec-fecha">
+          {fechaCorta(e.fecha)} {(vencido || e.dias <= 7) && <DiasRestantes dias={e.dias} />}
+        </span>
+      </td>
+      <td data-etiqueta="Monto">
         <span className={`cd-amt ${ingreso ? "cd-amt--in" : ""}`}>{formatoCOP(e.monto, { signo: ingreso })}</span>
-        {e.saldo_total !== undefined && (
-          <span
-            className="cd-delta-note cd-num"
-            style={{
-              color: e.saldo_total < 0 ? "var(--negative)" : undefined,
-              fontWeight: e.saldo_total < 0 ? 700 : undefined,
-            }}
-          >
-            queda {formatoCOP(e.saldo_total)}
+        {!vencido && e.saldo_total !== undefined && <Queda saldo={e.saldo_total} />}
+      </td>
+      <td data-etiqueta="Acciones">
+        {e.tipo === "programada" && (
+          <span className="tabla-rec-acciones">
+            {vencido && (
+              <span className="acciones-fila">
+                <button
+                  type="button"
+                  aria-label={e.recurrente_id != null ? `Saltar ${e.descripcion}` : `Descartar ${e.descripcion}`}
+                  title={e.recurrente_id != null ? "Saltar este pago" : "Descartar"}
+                  disabled={descartar.isPending}
+                  onClick={() => descartar.mutate()}
+                >
+                  <Icono nombre="flecha" pequeno />
+                </button>
+              </span>
+            )}
           </span>
         )}
-      </span>
-      {e.tipo === "programada" && (
-        <span className="cd-row" style={{ gap: 6, flexWrap: "nowrap" }}>
+      </td>
+      <td data-etiqueta="Registrar" className="tabla-rec-pagar">
+        {e.tipo === "programada" && (
           <button
-            className="cd-btn cd-btn--secondary cd-btn--sm"
+            className="cd-btn cd-btn--primary cd-btn--sm"
             title="Revisa monto, cuenta y fecha antes de confirmar"
             onClick={() => abrirMovimiento(e.id)}
           >
             {ingreso ? "Recibido" : "Pagado"}
           </button>
-          {vencido && (
-            <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => descartar.mutate()}>
-              {e.recurrente_id != null ? "Saltar este pago" : "Descartar"}
-            </button>
-          )}
-        </span>
-      )}
-    </li>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/** «queda $ X» bajo el monto: lo que te quedará en las cuentas después de ese pago. */
+function Queda({ saldo }: { saldo: number }) {
+  return (
+    <span
+      className="cd-num tabla-rec-queda"
+      style={{ color: saldo < 0 ? "var(--negative)" : "var(--ink-muted)", fontWeight: saldo < 0 ? 700 : undefined }}
+    >
+      queda {formatoCOP(saldo)}
+    </span>
   );
 }
 
@@ -95,17 +157,30 @@ function Vencidos({ vencidos }: { vencidos: EventoCalendario[] }) {
   return (
     <section className="cd-card" style={{ borderColor: "var(--negative)" }}>
       <div className="cd-card-head">
-        <h3 className="cd-card-title">Vencidos sin registrar</h3>
+        <h2 className="cd-card-title">Vencidos sin registrar</h2>
         <span className="cd-badge cd-badge--negative">{vencidos.length}</span>
       </div>
       <p className="cd-delta-note" style={{ margin: "0 0 4px" }}>
         Si ya los pagaste, confírmalos con su fecha; si este periodo no aplica, sáltalo.
       </p>
-      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {vencidos.map((e) => (
-          <FilaEvento key={`${e.tipo}-${e.id}-${e.fecha}`} e={e} vencido />
-        ))}
-      </ul>
+      <div className="tabla-rec">
+        <table className={`cd-table ${esMovil() ? "tabla-rec-compacta" : "tabla-apilable"}`}>
+          <thead>
+            <tr>
+              <th>Pago</th>
+              <th>Fecha</th>
+              <th style={{ textAlign: "right" }}>Monto</th>
+              <th aria-label="Acciones" />
+              <th aria-label="Registrar" />
+            </tr>
+          </thead>
+          <tbody>
+            {vencidos.map((e) => (
+              <FilaEvento key={`${e.tipo}-${e.id}-${e.fecha}`} e={e} vencido />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -131,7 +206,7 @@ function Detectados({ detectados }: { detectados: Detectado[] }) {
   if (detectados.length === 0) return null;
   return (
     <section className="cd-card cd-stack" style={{ gap: 10 }}>
-      <h3 className="cd-card-title">Encontré estos pagos que se repiten</h3>
+      <h2 className="cd-card-title">Encontré estos pagos que se repiten</h2>
       {detectados.map((d) => (
         <div key={d.descripcion} className="cd-row" style={{ flexWrap: "nowrap", gap: 10 }}>
           <span style={{ flex: 1, minWidth: 0 }}>
@@ -151,6 +226,46 @@ function Detectados({ detectados }: { detectados: Detectado[] }) {
           </button>
         </div>
       ))}
+    </section>
+  );
+}
+
+/** Saldo de tus cuentas día a día con lo programado de los próximos 45 días. */
+function SaldoProyectado({ inicial, eventos }: { inicial: number; eventos: EventoCalendario[] }) {
+  const porDia = new Map<string, { saldo: number; pagos: EventoCalendario[] }>();
+  porDia.set(hoyISO(), { saldo: inicial, pagos: [] });
+  for (const e of eventos) {
+    if (e.saldo_total === undefined) continue;
+    const dia = porDia.get(e.fecha) ?? { saldo: e.saldo_total, pagos: [] };
+    dia.saldo = e.saldo_total;
+    dia.pagos.push(e);
+    porDia.set(e.fecha, dia);
+  }
+  const dias = [...porDia.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const puntos = dias.map(([fecha, d]) => ({ fecha, valor: d.saldo }));
+  const minimo = Math.min(...puntos.map((x) => x.valor));
+  return (
+    <section className="cd-card rec-saldo">
+      <CabeceraTarjeta titulo="Saldo proyectado" rango={`Próximos 45 días · mínimo ${formatoCOP(minimo)}`} />
+      {puntos.length < 2 ? (
+        <p className="cd-delta-note">No hay pagos programados en los próximos 45 días.</p>
+      ) : (
+        <AreaTemporal
+          titulo="Saldo proyectado con los pagos programados"
+          nombreSerie="Saldo"
+          puntos={puntos}
+          alto={esMovil() ? 120 : 200}
+          extraGlobo={(i) => {
+            const pagos = dias[i]?.[1].pagos ?? [];
+            return pagos.slice(0, 3).map((e) => (
+              <span key={`${e.tipo}-${e.id}`} className="globo-fila">
+                {e.descripcion}
+                <b>{formatoCOP(e.monto, { signo: e.monto > 0 })}</b>
+              </span>
+            ));
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -189,37 +304,164 @@ function FilaRecurrente({
     onError: (e) => toast.error(e.message),
     onSettled: refrescar,
   });
+  const movil = esMovil();
+  const [detalle, setDetalle] = useState(false);
   return (
-    <li className="fila-recurrente" style={{ opacity: activo ? 1 : 0.65 }}>
-      <span style={{ minWidth: 0 }}>
+    <tr style={{ opacity: activo ? 1 : 0.65 }} {...filaTocable(movil, r.nombre, () => setDetalle(true))}>
+      <td data-etiqueta="Pago">
+        {detalle && (
+          <Hoja titulo={r.nombre} onCerrar={() => setDetalle(false)}>
+            <ResumenPago
+              lineas={[
+                [
+                  "Frecuencia",
+                  `${FRECUENCIAS[r.frecuencia]}${r.es_suscripcion ? " · suscripción" : ""}${r.credito_id !== null ? " · crédito" : ""}`,
+                ],
+                ["Cuenta", r.cuenta],
+                ["Próximo", activo && proxima ? fechaCorta(proxima, true) : "—"],
+                ["Monto", formatoCOP(r.monto, { signo: ingreso })],
+                ...(activo && evento?.saldo_total !== undefined
+                  ? ([["Te quedará", formatoCOP(evento.saldo_total)]] as [string, string][])
+                  : []),
+              ]}
+            />
+            <div className="detalle-acciones">
+              {activo && evento && (
+                <button
+                  className="cd-btn cd-btn--primary"
+                  onClick={() => {
+                    setDetalle(false);
+                    abrirMovimiento(evento.id);
+                  }}
+                >
+                  {ingreso ? "Recibir" : "Pagar"}
+                </button>
+              )}
+              {activo && evento && r.credito_id === null && (
+                <button
+                  className="cd-btn cd-btn--secondary"
+                  disabled={saltar.isPending}
+                  onClick={() => {
+                    saltar.mutate();
+                    setDetalle(false);
+                  }}
+                >
+                  Saltar este periodo
+                </button>
+              )}
+              <button
+                className="cd-btn cd-btn--secondary"
+                onClick={() => {
+                  setDetalle(false);
+                  alEditar();
+                }}
+              >
+                Editar
+              </button>
+              <button
+                className="cd-btn cd-btn--secondary"
+                disabled={estado.isPending}
+                onClick={() => {
+                  estado.mutate(activo ? "pausado" : "activo");
+                  setDetalle(false);
+                }}
+              >
+                {activo ? "Pausar" : "Reactivar"}
+              </button>
+              {r.estado !== "cancelado" &&
+                (confirmarCancelar ? (
+                  <button
+                    className="cd-btn cd-btn--peligro"
+                    onClick={() => {
+                      estado.mutate("cancelado");
+                      setDetalle(false);
+                    }}
+                  >
+                    Sí, cancelar {r.nombre}
+                  </button>
+                ) : (
+                  <button className="cd-btn cd-btn--peligro-suave" onClick={() => setConfirmarCancelar(true)}>
+                    Cancelar recurrente
+                  </button>
+                ))}
+            </div>
+          </Hoja>
+        )}
         <b className="fila-recurrente-nombre">{r.nombre}</b>
-        {r.es_suscripcion && (
-          <span className="cd-badge cd-badge--neutral" style={{ marginLeft: 8 }}>
-            Suscripción
-          </span>
-        )}
-        {r.credito_id !== null && (
-          <span className="cd-badge cd-badge--neutral" style={{ marginLeft: 8 }}>
-            Crédito
-          </span>
-        )}
-        {!activo && (
-          <span className="cd-badge cd-badge--plain" style={{ marginLeft: 8 }}>
-            {r.estado === "pausado" ? "En pausa" : "Cancelado"}
-          </span>
-        )}
-        <span className="cd-row cd-delta-note" style={{ gap: 6, marginTop: 2 }}>
-          <span>{FRECUENCIAS[r.frecuencia]}</span>·
+        <small className="tabla-rec-sub">
+          {FRECUENCIAS[r.frecuencia]}
+          {r.es_suscripcion && " · suscripción"}
+          {r.credito_id !== null && " · crédito"}
+          {r.costo_mensual > 0 && r.frecuencia !== "mensual" && ` · ${formatoCOP(r.costo_mensual)}/mes`} ·{" "}
           <CuentaEtiqueta nombre={r.cuenta} id={r.cuenta_id} />
-          {activo && proxima && (
-            <>
-              · <span>{fechaCorta(proxima)}</span>
-              <DiasRestantes dias={diasHasta(proxima)} />
-            </>
-          )}
+        </small>
+      </td>
+      <td data-etiqueta="Fecha">
+        {activo && proxima ? (
+          <span className="tabla-rec-fecha">
+            {fechaCorta(proxima)}
+            <DiasRestantes dias={diasHasta(proxima)} />
+          </span>
+        ) : (
+          "—"
+        )}
+      </td>
+      <td data-etiqueta="Monto">
+        <span className={`cd-amt ${ingreso ? "cd-amt--in" : ""}`}>{formatoCOP(r.monto, { signo: ingreso })}</span>
+        {activo && evento?.saldo_total !== undefined && <Queda saldo={evento.saldo_total} />}
+      </td>
+      <td data-etiqueta="Acciones">
+        <span className="tabla-rec-acciones">
+          <span className="acciones-fila">
+            {activo && evento && r.credito_id === null && (
+              <button
+                type="button"
+                aria-label={`Saltar el pago de ${r.nombre} de este periodo`}
+                title="Saltar este periodo"
+                disabled={saltar.isPending}
+                onClick={() => saltar.mutate()}
+              >
+                <Icono nombre="flecha" pequeno />
+              </button>
+            )}
+            <button type="button" aria-label={`Editar ${r.nombre}`} title="Editar" onClick={alEditar}>
+              <Icono nombre="lapiz" pequeno />
+            </button>
+            <button
+              type="button"
+              aria-label={`${activo ? "Pausar" : "Reactivar"} ${r.nombre}`}
+              title={activo ? "Pausar" : "Reactivar"}
+              disabled={estado.isPending}
+              onClick={() => estado.mutate(activo ? "pausado" : "activo")}
+            >
+              <Icono nombre={activo ? "pausa" : "check"} pequeno />
+            </button>
+            {r.estado !== "cancelado" &&
+              (confirmarCancelar ? (
+                <button
+                  type="button"
+                  className="peligro confirmar"
+                  aria-label={`Confirmar: cancelar ${r.nombre}`}
+                  title="Confirmar cancelación"
+                  onClick={() => estado.mutate("cancelado")}
+                >
+                  <Icono nombre="check" pequeno />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="peligro"
+                  aria-label={`Cancelar ${r.nombre}`}
+                  title="Cancelar"
+                  onClick={() => setConfirmarCancelar(true)}
+                >
+                  <Icono nombre="cerrar" pequeno />
+                </button>
+              ))}
+          </span>
         </span>
-      </span>
-      <span className="fila-recurrente-acciones">
+      </td>
+      <td data-etiqueta="Registrar" className="tabla-rec-pagar">
         {activo && evento && (
           <button
             className="cd-btn cd-btn--primary cd-btn--sm"
@@ -229,55 +471,8 @@ function FilaRecurrente({
             {ingreso ? "Recibir" : "Pagar"}
           </button>
         )}
-        {activo && evento && r.credito_id === null && (
-          <button
-            className="cd-btn cd-btn--ghost cd-btn--sm"
-            title="No se cobra este periodo; sigue el próximo"
-            disabled={saltar.isPending}
-            onClick={() => saltar.mutate()}
-          >
-            Saltar
-          </button>
-        )}
-        <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={alEditar}>
-          Editar
-        </button>
-        <button
-          className="cd-btn cd-btn--ghost cd-btn--sm"
-          disabled={estado.isPending}
-          onClick={() => estado.mutate(activo ? "pausado" : "activo")}
-        >
-          {activo ? "Pausar" : "Reactivar"}
-        </button>
-        {r.estado !== "cancelado" &&
-          (confirmarCancelar ? (
-            <button className="cd-btn cd-btn--peligro cd-btn--sm" onClick={() => estado.mutate("cancelado")}>
-              ¿Cancelar?
-            </button>
-          ) : (
-            <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setConfirmarCancelar(true)}>
-              Cancelar
-            </button>
-          ))}
-      </span>
-      <span className="cd-stack" style={{ alignItems: "flex-end", gap: 2 }}>
-        <span className={`cd-amt ${ingreso ? "cd-amt--in" : ""}`}>{formatoCOP(r.monto, { signo: ingreso })}</span>
-        {r.costo_mensual > 0 && r.frecuencia !== "mensual" && (
-          <span className="cd-delta-note cd-num">{formatoCOP(r.costo_mensual)}/mes</span>
-        )}
-        {activo && evento?.saldo_total !== undefined && (
-          <span
-            className="cd-delta-note cd-num"
-            style={{
-              color: evento.saldo_total < 0 ? "var(--negative)" : undefined,
-              fontWeight: evento.saldo_total < 0 ? 700 : undefined,
-            }}
-          >
-            quedan {formatoCOP(evento.saldo_total)}
-          </span>
-        )}
-      </span>
-    </li>
+      </td>
+    </tr>
   );
 }
 
@@ -491,7 +686,7 @@ function NuevoRecurrente({ editando, alTerminar }: { editando: Recurrente | null
         </div>
         <div className="cd-stack" style={{ gap: 6 }}>
           {etiqueta("frecuencia", "Frecuencia")}
-          <select
+          <Desplegable
             id={`${id}-frecuencia`}
             className="cd-input"
             value={f.frecuencia}
@@ -502,11 +697,11 @@ function NuevoRecurrente({ editando, alTerminar }: { editando: Recurrente | null
                 {t}
               </option>
             ))}
-          </select>
+          </Desplegable>
         </div>
         <div className="cd-stack" style={{ gap: 6 }}>
           {etiqueta("dia", editando ? "Próximo cobro" : "Primer cobro")}
-          <input
+          <CampoFecha
             id={`${id}-dia`}
             type="date"
             className="cd-input"
@@ -537,7 +732,7 @@ function NuevoRecurrente({ editando, alTerminar }: { editando: Recurrente | null
       </div>
       <div className="cd-stack" style={{ gap: 6 }}>
         {etiqueta("ancla", "La siguiente fecha")}
-        <select
+        <Desplegable
           id={`${id}-ancla`}
           className="cd-input"
           value={f.ancla}
@@ -545,7 +740,7 @@ function NuevoRecurrente({ editando, alTerminar }: { editando: Recurrente | null
         >
           <option value="calendario">Siempre en la misma fecha (arriendo, cuotas, facturas)</option>
           <option value="pago">Cuenta desde que pagas (gimnasio, planes por 30 días)</option>
-        </select>
+        </Desplegable>
       </div>
       {!f.ingreso && (
         <label className="cd-row" style={{ gap: 8, fontSize: 13, fontWeight: 600 }}>
@@ -598,71 +793,84 @@ export function RecurrentesPage() {
           alTerminar={() => setEditando(null)}
         />
       )}
-      {l && c && (
-        <div className="cd-bento">
-          <div className="span-4 cd-balance">
-            <div className="cd-balance-top">
-              <span className="cd-balance-label">Te quedará en 45 días</span>
-            </div>
-            <div className="cd-balance-value">
-              <Dinero centavos={c.saldo_final} />
-            </div>
-            <div className="cd-balance-foot">
-              <span className="cd-delta">
-                {c.primer_negativo
-                  ? `en negativo desde el ${fechaCorta(c.primer_negativo.fecha)}`
-                  : `mínimo ${formatoCOP(c.minimo.saldo)} el ${fechaCorta(c.minimo.fecha)}`}
-              </span>
-            </div>
-          </div>
-          <div className="cd-card cd-kpi span-4">
-            <span className="cd-kpi-label">Suscripciones</span>
-            <span className="cd-kpi-value">
-              <Dinero centavos={l.suscripciones_mensual} />
-            </span>
-            <span className="cd-delta-note">
-              al mes en {l.num_suscripciones} activas · {formatoCOP(l.suscripciones_anual)} al año
-            </span>
-          </div>
-          <div className="cd-card cd-kpi span-4">
-            <span className="cd-kpi-label">Pagos fijos programados</span>
-            <span className="cd-kpi-value">
-              <Dinero centavos={l.gasto_mensual} />
-            </span>
-            <span className="cd-delta-note">al mes, sin contar cuotas de créditos</span>
-          </div>
-        </div>
-      )}
       <div className="cd-bento">
-        <div className="span-8 cd-stack" style={{ gap: 16 }}>
+        <div className="span-8 cd-stack rec-principal" style={{ gap: "var(--gap-bento)", alignSelf: "start" }}>
           {c && <Vencidos vencidos={c.vencidos} />}
           <section className="cd-card">
-            <div className="cd-card-head">
-              <h3 className="cd-card-title">Programados</h3>
-              {c && (
-                <span className="cd-delta-note cd-num">hoy tienes {formatoCOP(c.saldo_inicial)} en tus cuentas</span>
-              )}
-            </div>
+            <CabeceraTarjeta
+              titulo="Programados"
+              rango={c ? `Hoy tienes ${formatoCOP(c.saldo_inicial)} en tus cuentas` : undefined}
+            />
             {(lista.isPending || calendario.isPending) && <TarjetaCargando filas={4} />}
             {(lista.isError || calendario.isError) && <ErrorVista error={lista.error ?? calendario.error} />}
             {l && activos.length === 0 && sueltos.length === 0 && (
               <Vacio titulo="Aún no hay recurrentes" texto="Agrega uno o acepta los que encontré en tu historial." />
             )}
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {activos.map((r) => (
-                <FilaRecurrente key={r.id} r={r} evento={proximos.get(r.id)} alEditar={() => setEditando(r)} />
-              ))}
-              {sueltos.map((e) => (
-                <FilaEvento key={`${e.tipo}-${e.id}-${e.fecha}`} e={e} />
-              ))}
-            </ul>
+            {(activos.length > 0 || sueltos.length > 0) && (
+              <div className="tabla-rec">
+                <table className={`cd-table ${esMovil() ? "tabla-rec-compacta" : "tabla-apilable"}`}>
+                  <thead>
+                    <tr>
+                      <th>Pago</th>
+                      <th>Próximo</th>
+                      <th style={{ textAlign: "right" }}>Monto</th>
+                      <th aria-label="Acciones" />
+                      <th aria-label="Registrar" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activos.map((r) => (
+                      <FilaRecurrente key={r.id} r={r} evento={proximos.get(r.id)} alEditar={() => setEditando(r)} />
+                    ))}
+                    {sueltos.map((e) => (
+                      <FilaEvento key={`${e.tipo}-${e.id}-${e.fecha}`} e={e} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         </div>
-        <div className="span-4 cd-stack" style={{ gap: 16, alignSelf: "start" }}>
+        <div className="span-4 cd-stack rec-lado" style={{ gap: "var(--gap-bento)", alignSelf: "start" }}>
+          {l && c && (
+            <div className="recurrentes-kpis">
+              <KpiCompacto
+                inversa
+                etiqueta="Te quedará en 45 días"
+                icono="cuentas"
+                valor={c.saldo_final}
+                nota={
+                  c.primer_negativo
+                    ? `en negativo desde el ${fechaCorta(c.primer_negativo.fecha)}`
+                    : `mínimo ${formatoCOP(c.minimo.saldo)} el ${fechaCorta(c.minimo.fecha)}`
+                }
+              />
+              <KpiCompacto
+                etiqueta="Suscripciones"
+                icono="recurrentes"
+                valor={l.suscripciones_mensual}
+                nota={`${l.num_suscripciones} activas · ${formatoCOP(l.suscripciones_anual)} al año`}
+              />
+              <KpiCompacto
+                etiqueta="Pagos fijos"
+                icono="calendario"
+                valor={l.gasto_mensual}
+                nota="al mes, sin cuotas de créditos"
+              />
+              <KpiCompacto
+                etiqueta="Vencidos"
+                icono="alerta"
+                valor={String(c.vencidos.length)}
+                delta={c.vencidos.length ? { valor: 0, sentido: "alerta", texto: "Revísalos" } : undefined}
+                nota={c.vencidos.length ? undefined : "todo al día"}
+              />
+            </div>
+          )}
+          {c && <SaldoProyectado inicial={c.saldo_inicial} eventos={c.eventos} />}
           {hayDetectados && <Detectados detectados={detectados.data ?? []} />}
           <section className="cd-card">
             <div className="cd-card-head">
-              <h3 className="cd-card-title">En pausa y cancelados</h3>
+              <h2 className="cd-card-title">En pausa y cancelados</h2>
               <span className="cd-badge cd-badge--plain">{inactivos.length}</span>
             </div>
             {inactivos.length === 0 && <span className="cd-delta-note">Nada en pausa.</span>}
@@ -675,5 +883,38 @@ export function RecurrentesPage() {
         </div>
       </div>
     </>
+  );
+}
+
+/** En el celular la fila entera abre su detalle (con el teclado, Enter o Espacio). */
+function filaTocable(movil: boolean, nombre: string, abrir: () => void) {
+  if (!movil) return {};
+  return {
+    className: "fila-tocable",
+    tabIndex: 0,
+    "aria-label": `${nombre}: ver detalle y acciones`,
+    // La hoja del detalle va en un portal: sus clics suben por React hasta la fila, pero no están en su DOM.
+    onClick: (e: React.MouseEvent) => e.currentTarget.contains(e.target as Node) && abrir(),
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (!e.currentTarget.contains(e.target as Node)) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        abrir();
+      }
+    },
+  };
+}
+
+/** Datos del pago en el detalle: rótulo y valor por fila. */
+function ResumenPago({ lineas }: { lineas: [string, string][] }) {
+  return (
+    <dl className="detalle-resumen">
+      {lineas.map(([k, v]) => (
+        <div key={k}>
+          <dt>{k}</dt>
+          <dd className="cd-num">{v}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

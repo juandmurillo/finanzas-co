@@ -2,9 +2,27 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
+
+from finanzas.dominio.simbolos import MAX_IMAGEN, color_valido, simbolo_valido
+
+
+def _simbolo(v: str | None) -> str | None:
+    if not simbolo_valido(v):
+        raise ValueError("Símbolo no válido: usa un ícono, un emoji o una imagen PNG, JPEG o WebP pequeña")
+    return v or None
+
+
+def _color(v: str | None) -> str | None:
+    if not color_valido(v):
+        raise ValueError("El color debe ser de la paleta (cat-1 … cat-8)")
+    return v
+
+
+Simbolo = Annotated[str | None, Field(default=None, max_length=MAX_IMAGEN), AfterValidator(_simbolo)]
+Color = Annotated[str | None, Field(default=None, max_length=20), AfterValidator(_color)]
 
 
 class CuentaOut(BaseModel):
@@ -27,8 +45,8 @@ class CuentaIn(BaseModel):
     tipo: TipoCuenta = "billetera"
     institucion: str | None = Field(default=None, max_length=80)
     saldo_inicial: int = Field(default=0, description="Centavos: saldo el día que empiezas a registrarla")
-    color: str | None = None
-    icono: str | None = Field(default=None, max_length=40)
+    color: Color = None
+    icono: Simbolo = None
     incluir_en_total: bool = True
 
 
@@ -38,7 +56,8 @@ class CuentaCambios(BaseModel):
     nombre: str | None = Field(default=None, min_length=1, max_length=80)
     tipo: TipoCuenta | None = None
     institucion: str | None = Field(default=None, max_length=80)
-    icono: str | None = Field(default=None, max_length=40)
+    icono: Simbolo = None
+    color: Color = None
     incluir_en_total: bool | None = None
     archivada: bool | None = None
 

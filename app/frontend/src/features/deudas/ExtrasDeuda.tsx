@@ -7,6 +7,7 @@ import { api } from "@/shared/lib/api";
 import { formatoCOP, mascaraMonto, parseMonto, porcentaje } from "@/shared/lib/formato";
 import { useDebounce } from "@/shared/lib/useDebounce";
 
+import { Desplegable } from "@/shared/ui/Desplegable";
 const etiquetaEstilo = { fontSize: 12, fontWeight: 600, color: "var(--ink-muted)" } as const;
 
 function Opcion({
@@ -57,7 +58,7 @@ export function AbonoUnico({ creditos }: { creditos: CreditoDetalle[] }) {
   return (
     <section className="cd-card cd-stack" style={{ gap: 12 }}>
       <div className="cd-card-head">
-        <h3 className="cd-card-title">Si abonas una vez</h3>
+        <h2 className="cd-card-title">Si abonas una vez</h2>
         <span className="cd-delta-note">pide siempre «abono a capital»</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
@@ -65,7 +66,7 @@ export function AbonoUnico({ creditos }: { creditos: CreditoDetalle[] }) {
           <label htmlFor={`${id}-credito`} style={etiquetaEstilo}>
             Crédito
           </label>
-          <select
+          <Desplegable
             id={`${id}-credito`}
             className="cd-input"
             value={credito ?? ""}
@@ -76,7 +77,7 @@ export function AbonoUnico({ creditos }: { creditos: CreditoDetalle[] }) {
                 {c.nombre} · {porcentaje(c.tasa_ea, 1)}
               </option>
             ))}
-          </select>
+          </Desplegable>
         </div>
         <div className="cd-stack" style={{ gap: 6 }}>
           <label htmlFor={`${id}-monto`} style={etiquetaEstilo}>
@@ -148,7 +149,7 @@ export function CompraCartera() {
   return (
     <section className="cd-card cd-stack" style={{ gap: 12 }}>
       <div className="cd-card-head">
-        <h3 className="cd-card-title">¿Y si compras la cartera?</h3>
+        <h2 className="cd-card-title">¿Y si compras la cartera?</h2>
         <span className="cd-delta-note">recoge todos tus créditos en uno nuevo</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>

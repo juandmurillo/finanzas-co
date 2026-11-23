@@ -1,0 +1,835 @@
+/* Estilos de apariencia (Configuración › Apariencia, data-estilo en <html>). Cambian formas, relieves y
+   fondos de toda la app, barra lateral incluida; los colores salen del tema elegido, así que se combinan con
+   cualquiera de los dieciocho. Las sombras son siempre oscuras (más intensas en modo oscuro). */
+
+/* ---------- Suave: todo muy redondeado y sombras amplias ---------- */
+[data-estilo="suave"] {
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-xl: 32px;
+  --shadow-card: 0 12px 32px -14px rgba(0, 0, 0, 0.28);
+}
+[data-theme="dark"][data-estilo="suave"] {
+  --shadow-card: 0 14px 36px -12px rgba(0, 0, 0, 0.7);
+}
+[data-estilo="suave"] .cd-card {
+  border-color: transparent;
+  box-shadow: var(--shadow-card);
+}
+[data-estilo="suave"] .cd-btn,
+[data-estilo="suave"] .cd-input,
+[data-estilo="suave"] .cd-seg {
+  border-radius: var(--radius-pill);
+}
+[data-estilo="suave"] .cd-sidebar {
+  border: 0;
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------- Geométrico y Futurista: sin redondeos (también en gráficos) ---------- */
+[data-estilo="recto"],
+[data-estilo="futurista"] {
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-pill: 0;
+  --shadow-card: none;
+}
+:is([data-estilo="recto"], [data-estilo="futurista"]) *:not(.circulo-anillo):not(input[type="radio"]),
+:is([data-estilo="recto"], [data-estilo="futurista"]) *::before,
+:is([data-estilo="recto"], [data-estilo="futurista"]) *::after {
+  border-radius: 0 !important;
+}
+:is([data-estilo="recto"], [data-estilo="futurista"]) svg rect {
+  rx: 0;
+  ry: 0;
+}
+:is([data-estilo="recto"], [data-estilo="futurista"]) svg path,
+:is([data-estilo="recto"], [data-estilo="futurista"]) svg line {
+  stroke-linecap: butt !important;
+  stroke-linejoin: miter !important;
+}
+[data-estilo="recto"] .cd-card {
+  box-shadow: none;
+  border: 1.5px solid var(--border-strong);
+}
+[data-estilo="recto"] .cd-balance,
+[data-estilo="recto"] .tarjeta-cuenta,
+[data-estilo="recto"] .kpi-c--inversa {
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.85);
+}
+[data-estilo="recto"] .cd-sidebar {
+  border-right: 2px solid var(--ink);
+}
+[data-estilo="recto"] .cd-nav a[aria-current="page"] {
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.85);
+}
+
+/* ---------- Futurista: brutalismo técnico. Retícula de plano, bordes gruesos, sombras duras desplazadas,
+   rótulos en monoespaciada y mayúsculas, y una marca de acento en la esquina de cada tarjeta. ---------- */
+[data-estilo="futurista"] {
+  --font-mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", "SF Mono", Consolas, "Roboto Mono", monospace;
+  --futuro-linea: color-mix(in srgb, var(--ink) 7%, transparent);
+  --futuro-linea-fuerte: color-mix(in srgb, var(--ink) 12%, transparent);
+  --futuro-sombra: rgba(0, 0, 0, 0.92);
+  --futuro-borde: var(--ink);
+}
+[data-theme="dark"][data-estilo="futurista"] {
+  --futuro-linea: color-mix(in srgb, var(--ink) 6%, transparent);
+  --futuro-linea-fuerte: color-mix(in srgb, var(--ink) 11%, transparent);
+  --futuro-sombra: #000;
+  --futuro-borde: color-mix(in srgb, var(--ink) 70%, var(--bg));
+}
+/* Retícula de plano: líneas finas cada 24 px y una más marcada cada 120 px. */
+[data-estilo="futurista"] body,
+[data-estilo="futurista"] .cd-main {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--futuro-linea-fuerte) 1px, transparent 1px),
+    linear-gradient(90deg, var(--futuro-linea-fuerte) 1px, transparent 1px),
+    linear-gradient(var(--futuro-linea) 1px, transparent 1px),
+    linear-gradient(90deg, var(--futuro-linea) 1px, transparent 1px);
+  background-size:
+    120px 120px,
+    120px 120px,
+    24px 24px,
+    24px 24px;
+  background-attachment: fixed;
+}
+[data-estilo="futurista"] .cd-card {
+  position: relative;
+  border: 2px solid var(--futuro-borde);
+  box-shadow: 6px 6px 0 var(--futuro-sombra);
+}
+/* Marca de esquina con el acento del tema */
+[data-estilo="futurista"] .cd-card::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  pointer-events: none;
+}
+[data-estilo="futurista"] .cd-balance,
+[data-estilo="futurista"] .tarjeta-cuenta,
+[data-estilo="futurista"] .kpi-c--inversa,
+[data-estilo="futurista"] .insight {
+  border-color: var(--futuro-sombra);
+}
+/* Rótulos técnicos */
+[data-estilo="futurista"]
+  :is(
+    .cd-pagehead h1,
+    .cd-card-title,
+    .cd-kpi-label,
+    .cd-nav a,
+    .cd-btn,
+    .mov-chip,
+    .cd-seg button,
+    .movil-item,
+    .periodo-boton,
+    .cd-link,
+    th
+  ) {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+[data-estilo="futurista"] .cd-pagehead h1 {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+[data-estilo="futurista"] .cd-pagehead h1::before {
+  content: "// ";
+  color: var(--accent-ink, var(--ink-muted));
+  font-weight: 600;
+}
+[data-estilo="futurista"] :is(.cd-btn, .cd-icon-btn, .mov-chip, .periodo-boton) {
+  border: 2px solid var(--futuro-borde);
+  box-shadow: 3px 3px 0 var(--futuro-sombra);
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
+}
+[data-estilo="futurista"] :is(.cd-btn, .cd-icon-btn, .mov-chip, .periodo-boton):not(:disabled):active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+[data-estilo="futurista"] .cd-btn--ghost {
+  box-shadow: none;
+  border-color: transparent;
+}
+[data-estilo="futurista"] :is(.cd-input, .cd-select, .cd-search, .cd-seg) {
+  border: 2px solid var(--futuro-borde);
+}
+[data-estilo="futurista"] .cd-seg {
+  padding: 2px;
+}
+[data-estilo="futurista"] .cd-sidebar {
+  border-right: 2px solid var(--futuro-borde);
+}
+[data-estilo="futurista"] .cd-nav a[aria-current="page"] {
+  box-shadow:
+    inset 4px 0 0 var(--accent),
+    3px 3px 0 var(--futuro-sombra);
+}
+[data-estilo="futurista"] :is(.hoja-panel, .captura-panel, .flotante),
+[data-estilo="futurista"] .periodo-pop,
+[data-estilo="futurista"] .grafico-globo {
+  border: 2px solid var(--futuro-borde);
+  box-shadow: 6px 6px 0 var(--futuro-sombra);
+}
+
+/* ---------- Vidrio (Liquid Glass, al estilo de Apple): material translúcido con desenfoque y saturación,
+   borde especular que capta la luz arriba a la izquierda, brillo interior, esquinas concéntricas amplias y
+   controles flotantes. Sobre manchas suaves de color del tema. ---------- */
+[data-estilo="vidrio"] {
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 30px;
+  --vidrio-relleno-1: color-mix(in srgb, var(--card) 82%, transparent);
+  --vidrio-relleno-2: color-mix(in srgb, var(--card) 68%, transparent);
+  --vidrio-borde: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.28) 30%,
+    rgba(255, 255, 255, 0.08) 60%,
+    rgba(255, 255, 255, 0.55)
+  );
+  --vidrio-brillo: inset 0 1px 1px rgba(255, 255, 255, 0.75), inset 0 -1px 1px rgba(0, 0, 0, 0.04);
+  --vidrio-sombra: 0 2px 6px rgba(0, 0, 0, 0.05), 0 12px 36px -10px rgba(0, 0, 0, 0.22);
+  --vidrio-control: color-mix(in srgb, var(--card) 58%, transparent);
+  --vidrio-desenfoque: blur(28px) saturate(1.8);
+}
+[data-theme="dark"][data-estilo="vidrio"] {
+  --vidrio-borde: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0.1) 30%,
+    rgba(255, 255, 255, 0.03) 60%,
+    rgba(255, 255, 255, 0.22)
+  );
+  --vidrio-brillo: inset 0 1px 1px rgba(255, 255, 255, 0.16), inset 0 -1px 1px rgba(0, 0, 0, 0.3);
+  --vidrio-sombra: 0 2px 8px rgba(0, 0, 0, 0.35), 0 16px 40px -10px rgba(0, 0, 0, 0.75);
+  --vidrio-control: color-mix(in srgb, var(--card) 62%, transparent);
+}
+[data-estilo="vidrio"] body,
+[data-estilo="vidrio"] .cd-app {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(40% 35% at 12% 10%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 70%),
+    radial-gradient(45% 40% at 88% 22%, color-mix(in srgb, var(--brand) 26%, transparent), transparent 70%),
+    radial-gradient(50% 45% at 60% 95%, color-mix(in srgb, var(--chart-2) 24%, transparent), transparent 70%),
+    radial-gradient(
+      35% 30% at 30% 60%,
+      color-mix(in srgb, var(--chart-3, var(--accent)) 14%, transparent),
+      transparent 70%
+    );
+  background-attachment: fixed;
+}
+[data-estilo="vidrio"] .cd-main {
+  background: transparent;
+}
+/* Material: relleno translúcido + borde especular en degradado (dos fondos: el relleno en padding-box y la
+   luz del borde en border-box). */
+[data-estilo="vidrio"]
+  :is(.cd-card:not(.kpi-c--inversa):not(.insight), .hoja-panel, .captura-panel, .periodo-pop, .flotante) {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(160deg, var(--vidrio-relleno-1), var(--vidrio-relleno-2)) padding-box,
+    var(--vidrio-borde) border-box;
+  box-shadow: var(--vidrio-brillo), var(--vidrio-sombra);
+  -webkit-backdrop-filter: var(--vidrio-desenfoque);
+  backdrop-filter: var(--vidrio-desenfoque);
+}
+[data-estilo="vidrio"] :is(.hoja-panel, .captura-panel, .periodo-pop, .flotante) {
+  --vidrio-relleno-1: color-mix(in srgb, var(--card) 90%, transparent);
+  --vidrio-relleno-2: color-mix(in srgb, var(--card) 82%, transparent);
+}
+[data-estilo="vidrio"] .grafico-globo {
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  border-color: color-mix(in srgb, #fff 40%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+/* Barra lateral flotante: panel de vidrio separado de los bordes, con esquinas concéntricas. */
+@media (min-width: 861px) {
+  [data-estilo="vidrio"] .cd-app > .cd-sidebar {
+    top: 10px;
+    height: calc(100dvh - 20px);
+    margin: 10px 0 10px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-xl);
+    background:
+      linear-gradient(170deg, var(--vidrio-relleno-1), var(--vidrio-relleno-2)) padding-box,
+      var(--vidrio-borde) border-box;
+    box-shadow: var(--vidrio-brillo), var(--vidrio-sombra);
+    -webkit-backdrop-filter: var(--vidrio-desenfoque);
+    backdrop-filter: var(--vidrio-desenfoque);
+  }
+}
+[data-estilo="vidrio"] .cd-nav a:hover {
+  background: color-mix(in srgb, var(--card) 50%, transparent);
+}
+[data-estilo="vidrio"] .cd-nav a[aria-current="page"] {
+  background: color-mix(in srgb, var(--nav-active) 86%, transparent);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    0 4px 12px -4px rgba(0, 0, 0, 0.3);
+}
+/* Controles de vidrio: cápsulas translúcidas con brillo; el principal es vidrio teñido con la marca. */
+[data-estilo="vidrio"]
+  :is(.cd-btn--secondary, .cd-btn--ghost, .cd-icon-btn, .periodo-boton, .mov-chip:not([aria-pressed="true"])) {
+  border-color: color-mix(in srgb, #fff 35%, transparent);
+  background: var(--vidrio-control);
+  box-shadow: var(--vidrio-brillo);
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+  backdrop-filter: blur(12px) saturate(1.6);
+}
+[data-estilo="vidrio"] .cd-btn--ghost:not(:hover) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+[data-estilo="vidrio"] :is(.cd-btn--primary, .cd-btn--accent, .mov-chip[aria-pressed="true"]) {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    0 6px 16px -6px rgba(0, 0, 0, 0.35);
+}
+[data-estilo="vidrio"] :is(.cd-btn, .cd-icon-btn, .mov-chip, .periodo-boton, .cd-input, .cd-select, .cd-search) {
+  border-radius: var(--radius-pill);
+}
+[data-estilo="vidrio"] :is(.cd-input, .cd-select, .cd-search) {
+  border-color: color-mix(in srgb, #fff 30%, transparent);
+  background: var(--vidrio-control);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+[data-estilo="vidrio"] textarea.cd-input {
+  border-radius: var(--radius-md);
+}
+/* Control segmentado como el de Apple: pista translúcida hundida y una cápsula clara que flota. */
+[data-estilo="vidrio"] .cd-seg {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  border-color: transparent;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+[data-estilo="vidrio"] .cd-seg:not(.cd-seg--brand) button[aria-selected="true"] {
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    0 2px 8px -2px rgba(0, 0, 0, 0.25);
+}
+[data-estilo="vidrio"] .cd-seg--brand button[aria-selected="true"] {
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    0 2px 8px -2px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"][data-estilo="vidrio"] .cd-seg:not(.cd-seg--brand) button[aria-selected="true"] {
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    0 2px 8px -2px rgba(0, 0, 0, 0.6);
+}
+/* En el celular el desenfoque rompe los paneles fijos dentro de tarjetas: solo transparencia. */
+@media (max-width: 720px) {
+  [data-estilo="vidrio"] .cd-card:not(.kpi-c--inversa):not(.insight) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    --vidrio-relleno-1: color-mix(in srgb, var(--card) 90%, transparent);
+    --vidrio-relleno-2: color-mix(in srgb, var(--card) 86%, transparent);
+  }
+}
+/* Las tarjetas de color conservan su fondo y suman el brillo del vidrio. */
+[data-estilo="vidrio"] .kpi-c--inversa,
+[data-estilo="vidrio"] .insight,
+[data-estilo="vidrio"] .cd-balance {
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 12px 32px -12px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Neomorfismo: relieve del mismo color del fondo. La luz es el propio fondo aclarado y la sombra el
+   fondo muy oscurecido, así el relieve nace de la superficie y no de un gris encima. En oscuro el fondo sube a un
+   gris oscuro medio (~#2b2f33, como las referencias de soft UI oscuro): sobre casi negro la sombra no se ve. */
+[data-estilo="neomorfismo"] {
+  --neo-fondo: var(--bg);
+  --card: var(--neo-fondo);
+  --card-raised: var(--neo-fondo);
+  --sidebar: var(--neo-fondo);
+  --surface: var(--neo-fondo);
+  --radius-lg: 22px;
+  --radius-xl: 26px;
+  --neo-luz: color-mix(in srgb, var(--neo-fondo) 35%, #fff);
+  --neo-sombra: color-mix(in srgb, var(--neo-fondo) 80%, #000);
+  --neo-convexo: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--neo-fondo) 88%, #fff),
+    color-mix(in srgb, var(--neo-fondo) 96%, #000)
+  );
+  --neo-d: 9px;
+  --neo-b: 22px;
+}
+[data-theme="dark"][data-estilo="neomorfismo"] {
+  --neo-fondo: color-mix(in srgb, var(--bg) 86%, #fff);
+  --neo-luz: color-mix(in srgb, var(--neo-fondo) 90%, #fff);
+  --neo-sombra: color-mix(in srgb, var(--neo-fondo) 40%, #000);
+  --neo-convexo: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--neo-fondo) 95%, #fff),
+    color-mix(in srgb, var(--neo-fondo) 92%, #000)
+  );
+  --neo-d: 8px;
+  --neo-b: 16px;
+}
+[data-estilo="neomorfismo"] body,
+[data-estilo="neomorfismo"] .cd-app,
+[data-estilo="neomorfismo"] .cd-main,
+[data-estilo="neomorfismo"] .cd-topbar {
+  background: var(--neo-fondo);
+}
+/* En oscuro, el filo superior de cada relieve capta la luz (las referencias lo marcan con un borde sutil). */
+[data-theme="dark"][data-estilo="neomorfismo"] .cd-card:not(.kpi-c--inversa):not(.insight),
+[data-theme="dark"][data-estilo="neomorfismo"] :is(.hoja-panel, .captura-panel, .periodo-pop, .flotante) {
+  outline: 1px solid color-mix(in srgb, var(--neo-fondo) 88%, #fff);
+  outline-offset: -1px;
+}
+/* Superficies en relieve */
+[data-estilo="neomorfismo"] .cd-card:not(.kpi-c--inversa):not(.insight),
+[data-estilo="neomorfismo"] :is(.hoja-panel, .captura-panel, .periodo-pop, .flotante) {
+  border: 0;
+  background: var(--neo-convexo);
+  box-shadow:
+    var(--neo-d) var(--neo-d) var(--neo-b) var(--neo-sombra),
+    calc(var(--neo-d) * -1) calc(var(--neo-d) * -1) var(--neo-b) var(--neo-luz);
+}
+[data-estilo="neomorfismo"] :is(.kpi-c--inversa, .insight, .cd-balance, .tarjeta-cuenta) {
+  border: 0;
+  box-shadow:
+    var(--neo-d) var(--neo-d) var(--neo-b) var(--neo-sombra),
+    calc(var(--neo-d) * -1) calc(var(--neo-d) * -1) var(--neo-b) var(--neo-luz);
+}
+[data-estilo="neomorfismo"] .grafico-globo {
+  border: 0;
+  background: var(--neo-fondo);
+  box-shadow:
+    6px 6px 14px var(--neo-sombra),
+    -6px -6px 14px var(--neo-luz);
+}
+/* Campos y pistas hundidas */
+[data-estilo="neomorfismo"] :is(.cd-input, .cd-select, .cd-search, .cd-seg) {
+  border-color: transparent;
+  background: var(--neo-fondo);
+  box-shadow:
+    inset 4px 4px 8px var(--neo-sombra),
+    inset -4px -4px 8px var(--neo-luz);
+}
+[data-estilo="neomorfismo"] .cd-seg:not(.cd-seg--brand) button[aria-selected="true"] {
+  background: var(--neo-convexo);
+  color: var(--ink);
+  box-shadow:
+    3px 3px 6px var(--neo-sombra),
+    -3px -3px 6px var(--neo-luz);
+}
+/* Botones en relieve: solo los que van sobre superficies del color del fondo (no los del héroe ni de tarjetas
+   de color); al pulsarlos se hunden. */
+[data-estilo="neomorfismo"]
+  :where(
+    .cd-card:not(.kpi-c--inversa):not(.insight),
+    .cd-pagehead,
+    .cd-topbar,
+    .hoja-panel,
+    .captura-panel,
+    .barra-filtros,
+    .periodo,
+    .periodo-pop,
+    .mov-chips
+  )
+  :is(
+    .cd-btn:not(.cd-btn--primary):not(.cd-btn--peligro):not(.cd-btn--accent):not([aria-pressed="true"]),
+    .cd-icon-btn,
+    .periodo-boton,
+    .mov-chip:not([aria-pressed="true"])
+  ) {
+  border-color: transparent;
+  background: var(--neo-convexo);
+  box-shadow:
+    5px 5px 10px var(--neo-sombra),
+    -5px -5px 10px var(--neo-luz);
+}
+[data-estilo="neomorfismo"]
+  :where(
+    .cd-card:not(.kpi-c--inversa):not(.insight),
+    .cd-pagehead,
+    .cd-topbar,
+    .hoja-panel,
+    .captura-panel,
+    .barra-filtros,
+    .periodo,
+    .periodo-pop,
+    .mov-chips
+  )
+  :is(.cd-btn, .cd-icon-btn, .periodo-boton, .mov-chip):not(:disabled):active,
+[data-estilo="neomorfismo"] .mov-chip[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--neo-fondo);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow:
+    inset 4px 4px 8px var(--neo-sombra),
+    inset -4px -4px 8px var(--neo-luz);
+}
+[data-estilo="neomorfismo"] .cd-btn--primary,
+[data-estilo="neomorfismo"] .cd-btn--accent {
+  border-color: transparent;
+  box-shadow:
+    5px 5px 10px var(--neo-sombra),
+    -5px -5px 10px var(--neo-luz);
+}
+[data-estilo="neomorfismo"] .cd-btn--ghost:not(:hover):not(:active) {
+  background: transparent;
+  box-shadow: none;
+}
+/* Barra lateral: una sola superficie con el borde en relieve hacia el contenido. */
+[data-estilo="neomorfismo"] .cd-sidebar {
+  border-right: 0;
+  box-shadow:
+    8px 0 18px -6px var(--neo-sombra),
+    inset -1px 0 0 var(--neo-luz);
+}
+[data-estilo="neomorfismo"] .cd-nav a {
+  border-radius: var(--radius-md);
+}
+[data-estilo="neomorfismo"] .cd-nav a:hover:not([aria-current="page"]) {
+  background: var(--neo-fondo);
+  box-shadow:
+    3px 3px 7px var(--neo-sombra),
+    -3px -3px 7px var(--neo-luz);
+}
+[data-estilo="neomorfismo"] .cd-nav a[aria-current="page"] {
+  background: var(--neo-fondo);
+  color: var(--accent-ink);
+  box-shadow:
+    inset 4px 4px 8px var(--neo-sombra),
+    inset -4px -4px 8px var(--neo-luz);
+}
+/* Fila elegida de un índice (Configuración): hundida en el mismo fondo, sin tinte que baje el contraste. */
+[data-estilo="neomorfismo"] .config-fila[aria-current="page"] {
+  background: var(--neo-fondo);
+  box-shadow:
+    inset 4px 4px 8px var(--neo-sombra),
+    inset -4px -4px 8px var(--neo-luz);
+}
+[data-estilo="neomorfismo"] .texto-aviso {
+  color: color-mix(in srgb, var(--warning) 82%, #000);
+}
+
+/* ---------- Minimalista: sin sombras ni rellenos, solo líneas finas ---------- */
+[data-estilo="minimalista"] {
+  --shadow-card: none;
+}
+/* Las tarjetas de color (héroe, KPI principal, hallazgo) conservan su fondo: su texto es claro. */
+[data-estilo="minimalista"] .cd-card:not(.kpi-c--inversa):not(.insight) {
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
+  border-radius: 0;
+}
+[data-estilo="minimalista"] .cd-main,
+[data-estilo="minimalista"] .cd-topbar,
+[data-estilo="minimalista"] .cd-sidebar {
+  background: var(--card);
+}
+[data-estilo="minimalista"] .cd-sidebar {
+  border-right: 1px solid var(--border);
+}
+[data-estilo="minimalista"] .cd-nav a[aria-current="page"] {
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--ink);
+  border-radius: 0;
+}
+[data-estilo="minimalista"] .cd-balance,
+[data-estilo="minimalista"] .kpi-c--inversa,
+[data-estilo="minimalista"] .insight {
+  box-shadow: none;
+  border: 0;
+}
+
+/* Selector de estilo en Apariencia */
+.estilos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.estilo-opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.estilo-opcion[aria-checked="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.estilo-opcion b {
+  font-size: var(--texto-cuerpo);
+}
+.estilo-opcion small {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.estilo-muestra {
+  position: relative;
+  width: 100%;
+  height: 54px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.estilo-muestra i {
+  position: absolute;
+  top: 12px;
+  height: 30px;
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+.estilo-muestra i:first-child {
+  left: 10px;
+  width: 42%;
+  background: var(--brand);
+}
+.estilo-muestra i:last-child {
+  right: 10px;
+  width: 38%;
+}
+.estilo-muestra--suave i {
+  border-radius: 14px;
+  box-shadow: 0 6px 14px -6px rgb(0 0 0 / 0.35);
+}
+.estilo-muestra--recto i {
+  border-radius: 0;
+  box-shadow: 3px 3px 0 var(--accent);
+}
+.estilo-muestra--futurista {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1px);
+  background-size: 9px 9px;
+}
+.estilo-muestra--futurista i {
+  border-radius: 0;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 #000;
+}
+.estilo-muestra--futurista i:last-child::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+}
+.estilo-muestra--vidrio {
+  background:
+    radial-gradient(60% 80% at 20% 20%, var(--accent), transparent 70%),
+    radial-gradient(60% 80% at 85% 80%, var(--brand), transparent 70%), var(--bg);
+}
+.estilo-muestra--vidrio i {
+  border-radius: 12px;
+}
+.estilo-muestra--vidrio i:last-child {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--card) 60%, transparent),
+        color-mix(in srgb, var(--card) 40%, transparent)
+      )
+      padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.5))
+      border-box;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(6px) saturate(1.6);
+}
+.estilo-muestra--neomorfismo i {
+  background: var(--bg) !important;
+  border-radius: 10px;
+  box-shadow:
+    4px 4px 8px color-mix(in srgb, var(--bg) 80%, #000),
+    -4px -4px 8px color-mix(in srgb, var(--bg) 35%, #fff);
+}
+[data-theme="dark"] .estilo-muestra--neomorfismo i {
+  box-shadow:
+    4px 4px 8px color-mix(in srgb, var(--bg) 35%, #000),
+    -4px -4px 8px color-mix(in srgb, var(--bg) 93%, #fff);
+}
+.estilo-muestra--minimalista i {
+  box-shadow: none;
+  border: 1px solid var(--border-strong);
+  background: transparent !important;
+}
+.estilo-muestra--minimalista i:first-child {
+  border-color: var(--ink);
+}
+
+/* ---------- Barra superior y barra inferior del celular en cada estilo ---------- */
+.cd-topbar {
+  border-bottom: 1px solid transparent;
+}
+[data-estilo="suave"] .app-movil-nav {
+  border-top: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: 0 -8px 24px -12px rgba(0, 0, 0, 0.3);
+}
+[data-estilo="recto"] .cd-topbar {
+  border-bottom: 2px solid var(--ink);
+}
+[data-estilo="recto"] .app-movil-nav {
+  border-top: 2px solid var(--ink);
+}
+[data-estilo="futurista"] .cd-topbar {
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border-bottom: 2px solid var(--futuro-borde);
+}
+[data-estilo="futurista"] .app-movil-nav {
+  background: var(--bg);
+  border-top: 2px solid var(--futuro-borde);
+}
+[data-estilo="futurista"] .movil-item[aria-current="page"] {
+  color: var(--ink);
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+/* Vidrio: barra superior de vidrio y barra inferior flotante en cápsula, como la de iOS. */
+/* Barra superior transparente: solo sus controles, en cápsulas de vidrio, flotan sobre el contenido. */
+[data-estilo="vidrio"] .cd-topbar {
+  background: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+[data-estilo="vidrio"] .cd-topbar :is(.cd-icon-btn, .cd-btn, .cd-search, .cd-badge) {
+  -webkit-backdrop-filter: blur(14px) saturate(1.8);
+  backdrop-filter: blur(14px) saturate(1.8);
+}
+/* La cápsula flota 10 px sobre el borde: el «+» y el aire final cuentan esos 10 px (alto 58 + 10). */
+[data-estilo="vidrio"] {
+  --nav-movil-alto: 68px;
+}
+[data-estilo="vidrio"] .app-movil-nav {
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  height: 58px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 33px;
+  background:
+    linear-gradient(170deg, var(--vidrio-relleno-1), var(--vidrio-relleno-2)) padding-box,
+    var(--vidrio-borde) border-box;
+  box-shadow: var(--vidrio-brillo), var(--vidrio-sombra);
+  -webkit-backdrop-filter: var(--vidrio-desenfoque);
+  backdrop-filter: var(--vidrio-desenfoque);
+}
+[data-estilo="vidrio"] .movil-item {
+  border-radius: 25px;
+}
+[data-estilo="vidrio"] .movil-item[aria-current="page"] {
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+}
+
+[data-estilo="neomorfismo"] .cd-topbar {
+  box-shadow: 0 8px 16px -10px var(--neo-sombra);
+}
+[data-estilo="neomorfismo"] .app-movil-nav {
+  background: var(--neo-fondo);
+  border-top: 0;
+  box-shadow:
+    0 -6px 16px var(--neo-sombra),
+    inset 0 1px 0 var(--neo-luz);
+}
+[data-estilo="neomorfismo"] .movil-item[aria-current="page"] {
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 3px 3px 6px var(--neo-sombra),
+    inset -3px -3px 6px var(--neo-luz);
+}
+[data-estilo="minimalista"] .cd-topbar {
+  border-bottom-color: var(--border);
+  backdrop-filter: none;
+}
+[data-estilo="minimalista"] .app-movil-nav {
+  background: var(--card);
+}
+
+/* ---------- Listas desplegables y calendarios en cada estilo ---------- */
+[data-estilo="futurista"] :is(.desplegable-opcion, .calendario-dia, .calendario-mes, .calendario-titulo) {
+  font-family: var(--font-mono);
+}
+[data-estilo="futurista"] .desplegable-opcion.activa {
+  background: var(--accent);
+  color: var(--on-accent, var(--ink));
+}
+[data-estilo="futurista"] .calendario-dia.elegido,
+[data-estilo="futurista"] .calendario-mes.elegido {
+  box-shadow: 2px 2px 0 var(--futuro-sombra);
+}
+[data-estilo="vidrio"] .flotante {
+  --vidrio-relleno-1: color-mix(in srgb, var(--card) 90%, transparent);
+  --vidrio-relleno-2: color-mix(in srgb, var(--card) 82%, transparent);
+}
+[data-estilo="vidrio"] :is(.desplegable-opcion, .calendario-mes) {
+  border-radius: var(--radius-md);
+}
+[data-estilo="vidrio"] .calendario-dia.elegido {
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    0 4px 10px -4px rgba(0, 0, 0, 0.35);
+}
+[data-estilo="neomorfismo"] .flotante {
+  border: 0;
+  background: var(--neo-fondo);
+  box-shadow:
+    8px 8px 18px var(--neo-sombra),
+    -8px -8px 18px var(--neo-luz);
+}
+[data-estilo="neomorfismo"] :is(.desplegable-opcion.activa, .calendario-dia:hover:not(:disabled):not(.elegido)) {
+  background: var(--neo-fondo);
+  box-shadow:
+    inset 3px 3px 6px var(--neo-sombra),
+    inset -3px -3px 6px var(--neo-luz);
+}
+[data-estilo="neomorfismo"] :is(.calendario-dia.elegido, .calendario-mes.elegido) {
+  box-shadow:
+    3px 3px 6px var(--neo-sombra),
+    -3px -3px 6px var(--neo-luz);
+}
+[data-estilo="neomorfismo"] :is(.desplegable, .campo-fecha):not(.cd-input):not(.cd-select),
+[data-estilo="neomorfismo"] .calendario-hora-campo {
+  border-color: transparent;
+  background: var(--neo-fondo);
+  box-shadow:
+    inset 3px 3px 6px var(--neo-sombra),
+    inset -3px -3px 6px var(--neo-luz);
+}

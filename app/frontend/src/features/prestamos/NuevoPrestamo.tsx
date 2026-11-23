@@ -10,6 +10,8 @@ import { claves } from "@/shared/lib/queryKeys";
 import { useDebounce } from "@/shared/lib/useDebounce";
 import { Icono } from "@/shared/ui/Icono";
 
+import { Desplegable } from "@/shared/ui/Desplegable";
+import { CampoFecha } from "@/shared/ui/CampoFecha";
 type Interes = "ninguno" | "fijo" | "simple_mensual";
 type Plan = "fecha_unica" | "cuotas" | "libre";
 
@@ -67,13 +69,28 @@ function aPeticion(f: Formulario, cuentaId: number | null): PrestamoNuevo | null
   };
 }
 
-export function NuevoPrestamo() {
+interface Props {
+  /** Personas con las que ya hay préstamos: se ofrecen al escribir para no duplicarlas. */
+  personas?: string[];
+  personaInicial?: string;
+  direccionInicial?: Formulario["direccion"];
+  alGuardar?: () => void;
+}
+
+export function NuevoPrestamo({ personas = [], personaInicial = "", direccionInicial, alGuardar }: Props = {}) {
   const id = useId();
   const cliente = useQueryClient();
-  const [f, setF] = useState<Formulario>(inicial);
+  const [f, setF] = useState<Formulario>(() => ({
+    ...inicial(),
+    persona: personaInicial,
+    direccion: direccionInicial ?? "presto_yo",
+  }));
   const cuentas = useQuery({ queryKey: claves.cuentas, queryFn: () => api.cuentas() });
   const cuentaId = f.cuentaId ?? cuentas.data?.[0]?.id ?? null;
-  const peticion = aPeticion(f, cuentaId);
+  const plano = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  const existente = personas.find((p) => f.persona.trim() && plano(p) === plano(f.persona));
+  // Si coincide con alguien que ya existe (sin importar tildes ni mayúsculas), se usa su nombre exacto.
+  const peticion = aPeticion({ ...f, persona: existente ?? f.persona }, cuentaId);
   const peticionDemorada = useDebounce(peticion, 300);
   const previa = useQuery({
     queryKey: ["prestamos", "simular", peticionDemorada],
@@ -90,6 +107,7 @@ export function NuevoPrestamo() {
         f.direccion === "presto_yo" ? `Préstamo a ${f.persona} registrado` : `Préstamo de ${f.persona} registrado`,
       );
       setF(inicial());
+      alGuardar?.();
     },
     onError: (e) => toast.error(e.message),
     onSettled: () => {
@@ -134,8 +152,7 @@ export function NuevoPrestamo() {
   );
 
   return (
-    <aside className="cd-card cd-stack" aria-label="Nuevo préstamo" style={{ gap: 14, alignSelf: "start" }}>
-      <h3 className="cd-card-title">Nuevo préstamo</h3>
+    <div className="cd-stack" style={{ gap: 14 }}>
       {seg(
         "Dirección",
         [
@@ -152,13 +169,21 @@ export function NuevoPrestamo() {
           className="cd-input"
           value={f.persona}
           placeholder="Nombre"
+          list={`${id}-personas`}
+          autoComplete="off"
           onChange={(e) => cambiar("persona", e.target.value)}
         />
+        <datalist id={`${id}-personas`}>
+          {personas.map((p) => (
+            <option key={p} value={p} />
+          ))}
+        </datalist>
+        {existente && <span className="cd-delta-note">Queda junto a los demás préstamos con {existente}.</span>}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
         <div className="cd-stack" style={{ gap: 6 }}>
           {etiqueta("origen", "Origen")}
-          <select
+          <Desplegable
             id={`${id}-origen`}
             className="cd-input"
             value={f.origen}
@@ -168,7 +193,7 @@ export function NuevoPrestamo() {
             <option value="familia">Familia</option>
             <option value="companero">Compañero</option>
             <option value="otra_fuente">Otra fuente</option>
-          </select>
+          </Desplegable>
         </div>
         <div className="cd-stack" style={{ gap: 6 }}>
           {etiqueta("monto", "Monto")}
@@ -183,7 +208,7 @@ export function NuevoPrestamo() {
         </div>
         <div className="cd-stack" style={{ gap: 6 }}>
           {etiqueta("cuenta", f.direccion === "presto_yo" ? "Sale de" : "Llega a")}
-          <select
+          <Desplegable
             id={`${id}-cuenta`}
             className="cd-input"
             value={cuentaId ?? ""}
@@ -194,11 +219,11 @@ export function NuevoPrestamo() {
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </Desplegable>
         </div>
         <div className="cd-stack" style={{ gap: 6 }}>
           {etiqueta("fecha", "Fecha")}
-          <input
+          <CampoFecha
             id={`${id}-fecha`}
             type="date"
             className="cd-input"
@@ -252,7 +277,7 @@ export function NuevoPrestamo() {
           false,
         )}
         {f.plan === "fecha_unica" && (
-          <input
+          <CampoFecha
             aria-label="Fecha de pago"
             type="date"
             className="cd-input"
@@ -270,7 +295,7 @@ export function NuevoPrestamo() {
               value={f.numCuotas}
               onChange={(e) => cambiar("numCuotas", e.target.value.replace(/\D/g, ""))}
             />
-            <select
+            <Desplegable
               aria-label="Frecuencia"
               className="cd-input"
               value={f.frecuencia}
@@ -280,7 +305,7 @@ export function NuevoPrestamo() {
               <option value="quincenal">Quincenales</option>
               <option value="mensual">Mensuales</option>
               <option value="diaria">Diarias</option>
-            </select>
+            </Desplegable>
           </div>
         )}
       </div>
@@ -317,6 +342,6 @@ export function NuevoPrestamo() {
       <button className="cd-btn cd-btn--primary" disabled={!peticion || crear.isPending} onClick={() => crear.mutate()}>
         {previa.data?.alerta ? "Guardar igual" : "Guardar préstamo"}
       </button>
-    </aside>
+    </div>
   );
 }

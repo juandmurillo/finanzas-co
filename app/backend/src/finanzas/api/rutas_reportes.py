@@ -13,7 +13,6 @@ from finanzas.dominio.fechas import hoy_bogota
 from finanzas.dominio.grupos import Grupo
 from finanzas.infra import consultas_kpis
 from finanzas.infra import consultas_reportes as rep
-from finanzas.infra.exportar_excel import libro
 
 router = APIRouter(prefix="/api/v1", tags=["reportes"])
 Lectura = Annotated[Session, Depends(sesion_lectura)]
@@ -62,10 +61,14 @@ def reporte_apuestas(sesion: Lectura, desde: Desde = None, hasta: Hasta = None) 
 
 @router.get("/reportes/valor-neto")
 def reporte_valor_neto(
-    sesion: Lectura, desde: Desde = None, hasta: Hasta = None, escala: Literal["mes", "dia", "movimiento"] = "mes"
+    sesion: Lectura,
+    desde: Desde = None,
+    hasta: Hasta = None,
+    escala: Literal["mes", "dia", "movimiento"] = "mes",
+    cuenta_id: int | None = None,
 ) -> dict[str, Any]:
-    """Saldo de las cuentas incluidas en el total, al cierre de cada mes o día."""
-    return rep.valor_neto(sesion, desde, hasta, escala)
+    """Saldo de las cuentas incluidas en el total (o de una sola cuenta), al cierre de cada mes o día."""
+    return rep.valor_neto(sesion, desde, hasta, escala, cuenta_id)
 
 
 @router.get("/reportes/calor")
@@ -81,6 +84,8 @@ def reporte_revision(sesion: Lectura, mes: Annotated[str, Path(pattern=MES)]) ->
 
 @router.get("/exportar/excel", response_class=Response)
 def exportar_excel(sesion: Lectura, desde: Desde = None, hasta: Hasta = None) -> Response:
+    from finanzas.infra.exportar_excel import libro  # openpyxl tarda en cargar: solo cuando se exporta
+
     nombre = f"finanzas-{desde or 'inicio'}-a-{hasta or hoy_bogota().isoformat()[:7]}.xlsx"
     return Response(
         libro(sesion, desde, hasta),

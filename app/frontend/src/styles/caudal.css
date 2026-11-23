@@ -1,5 +1,5 @@
 /* Caudal — estilos de componentes.
-   La fuente Plus Jakarta Sans se carga en index.html. Depende de tokens.css. */
+   La fuente Plus Jakarta Sans va empaquetada (se importa en main.tsx). Depende de tokens.css. */
 
 *,
 *::before,
@@ -61,7 +61,7 @@ body {
   opacity: 0.7;
 }
 .cd-money .dec {
-  opacity: 0.45;
+  opacity: 0.72;
 }
 
 /* ---------- Tarjeta ---------- */

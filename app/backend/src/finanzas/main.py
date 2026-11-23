@@ -7,10 +7,11 @@ import contextlib
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from finanzas.api.guardia import GuardiaOrigen
 from finanzas.api.rutas import router
@@ -21,6 +22,7 @@ from finanzas.api.rutas_extras import router as router_extras
 from finanzas.api.rutas_planeacion import router as router_planeacion
 from finanzas.api.rutas_reportes import router as router_reportes
 from finanzas.api.rutas_sistema import router as router_sistema
+from finanzas.api.secreto import GuardiaSecreto
 from finanzas.config import Config, obtener_config
 from finanzas.dominio.errores import ErrorDominio
 from finanzas.infra.db import BaseDatos
@@ -64,6 +66,8 @@ def crear_app(config: Config | None = None, db: BaseDatos | None = None, bus: Bu
     app.state.db = db or BaseDatos(config.db_url)
     app.state.bus = bus or BusEventos()
     app.add_middleware(CORSMiddleware, allow_origins=config.origenes_cors, allow_methods=["*"], allow_headers=["*"])
+    if config.secreto:
+        app.add_middleware(GuardiaSecreto, secreto=config.secreto)
     app.add_middleware(GuardiaOrigen, origenes=config.origenes_cors, hosts=config.hosts_permitidos)
 
     @app.exception_handler(ErrorDominio)
@@ -87,4 +91,28 @@ def crear_app(config: Config | None = None, db: BaseDatos | None = None, bus: Bu
     app.include_router(router_automatizacion)
     app.include_router(router_extras)
     app.include_router(router_sistema)
+    if config.web_dir:
+        servir_frontend(app, config.web_dir)
     return app
+
+
+def servir_frontend(app: FastAPI, carpeta: Path) -> None:
+    """El frontend compilado sale del mismo origen que la API (arranque portátil). Las rutas que no son archivos
+    devuelven index.html, porque la navegación es del lado del cliente; lo que empieza por api/ nunca."""
+    raiz = carpeta.resolve()
+    indice = raiz / "index.html"
+
+    @app.get("/{ruta:path}", include_in_schema=False, response_model=None)
+    def frontend(ruta: str) -> FileResponse | JSONResponse:
+        if ruta == "api" or ruta.startswith("api/"):
+            return JSONResponse(
+                {"type": "about:blank", "title": "No encontrado", "status": 404, "detail": f"/{ruta}"},
+                status_code=404,
+                media_type="application/problem+json",
+            )
+        archivo = (raiz / ruta).resolve()
+        if ruta and archivo.is_file() and archivo.is_relative_to(raiz):
+            # Vite pone un hash en el nombre de cada recurso: se pueden guardar sin vencer.
+            cache = "max-age=31536000, immutable" if archivo.parent.name == "assets" else "no-cache"
+            return FileResponse(archivo, headers={"Cache-Control": cache})
+        return FileResponse(indice, headers={"Cache-Control": "no-cache"})

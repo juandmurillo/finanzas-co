@@ -26,6 +26,8 @@ import { Hoja } from "@/shared/ui/Hoja";
 import { MenuAcciones } from "@/shared/ui/MenuAcciones";
 import { SensorContinuo, TooltipGrafico, ZonaGrafico } from "@/shared/ui/TooltipGrafico";
 
+import { Desplegable } from "@/shared/ui/Desplegable";
+import { CampoFecha } from "@/shared/ui/CampoFecha";
 const CLASES: Record<string, string> = {
   cdt: "CDT",
   fondo: "Fondo",
@@ -82,7 +84,7 @@ function SelectorDeCuenta({
 }) {
   const cuentas = useQuery({ queryKey: claves.cuentas, queryFn: () => api.cuentas() });
   return (
-    <select
+    <Desplegable
       className="cd-input"
       value={valor ?? ""}
       onChange={(e) => alCambiar(e.target.value ? Number(e.target.value) : null)}
@@ -94,7 +96,7 @@ function SelectorDeCuenta({
           {c.nombre}
         </option>
       ))}
-    </select>
+    </Desplegable>
   );
 }
 
@@ -171,25 +173,25 @@ function FormActivo({ activo, alCerrar }: { activo: Activo | null; alCerrar: () 
       <div className="activos-doble">
         <label className="cd-stack" style={{ gap: 6 }}>
           <span style={etiqueta}>Clase</span>
-          <select className="cd-input" value={f.clase} onChange={(e) => setF({ ...f, clase: e.target.value })}>
+          <Desplegable className="cd-input" value={f.clase} onChange={(e) => setF({ ...f, clase: e.target.value })}>
             {Object.entries(CLASES).map(([v, t]) => (
               <option key={v} value={v}>
                 {t}
               </option>
             ))}
-          </select>
+          </Desplegable>
         </label>
         {!activo && (
           <label className="cd-stack" style={{ gap: 6 }}>
             <span style={etiqueta}>Moneda del valor</span>
-            <select
+            <Desplegable
               className="cd-input"
               value={f.moneda}
               onChange={(e) => setF({ ...f, moneda: e.target.value as "COP" | "USD" })}
             >
               <option value="COP">Pesos (COP)</option>
               <option value="USD">Dólares (USD)</option>
-            </select>
+            </Desplegable>
           </label>
         )}
       </div>
@@ -198,7 +200,7 @@ function FormActivo({ activo, alCerrar }: { activo: Activo | null; alCerrar: () 
           <div className="activos-doble">
             <label className="cd-stack" style={{ gap: 6 }}>
               <span style={etiqueta}>Fecha de compra</span>
-              <input
+              <CampoFecha
                 className="cd-input"
                 type="date"
                 max={hoyISO()}
@@ -249,7 +251,7 @@ function FormActivo({ activo, alCerrar }: { activo: Activo | null; alCerrar: () 
         </label>
         <label className="cd-stack" style={{ gap: 6 }}>
           <span style={etiqueta}>Vencimiento (opcional)</span>
-          <input
+          <CampoFecha
             className="cd-input"
             type="date"
             value={f.vencimiento}
@@ -327,7 +329,7 @@ function FormMovimiento({
         </label>
         <label className="cd-stack" style={{ gap: 6 }}>
           <span style={etiqueta}>Fecha</span>
-          <input
+          <CampoFecha
             className="cd-input"
             type="date"
             max={hoyISO()}
@@ -401,7 +403,7 @@ function FormValor({ activo, alCerrar }: { activo: Activo; alCerrar: () => void 
         </label>
         <label className="cd-stack" style={{ gap: 6 }}>
           <span style={etiqueta}>Fecha</span>
-          <input
+          <CampoFecha
             className="cd-input"
             type="date"
             max={hoyISO()}
@@ -569,7 +571,7 @@ function Evolucion() {
   const cada = Math.max(1, Math.ceil(puntos.length / 6));
   return (
     <section className="cd-card cd-stack" style={{ gap: 8 }}>
-      <h3 className="cd-card-title">Evolución del valor</h3>
+      <h2 className="cd-card-title">Evolución del valor</h2>
       <ZonaGrafico>
         <svg className="cd-chart" viewBox={`0 0 ${W} 200`} role="img" aria-label="Valor de tus activos mes a mes">
           <line className="grid" x1="44" x2={W} y1={y(max)} y2={y(max)} />
@@ -668,7 +670,7 @@ export function ActivosPage() {
               <span className="cd-delta-note kpi-nota">{k.nota}</span>
             </div>
           ))}
-          <div className="span-8 cd-stack" style={{ gap: 16 }}>
+          <div className="span-8 cd-stack" style={{ gap: "var(--gap-bento)" }}>
             <div className="activos-rejilla">
               {vivos.map((a) => (
                 <TarjetaActivo key={a.id} a={a} abrir={setDialogo} />
@@ -677,7 +679,7 @@ export function ActivosPage() {
             <Evolucion />
             {vendidos.length > 0 && (
               <>
-                <h3 className="cd-card-title">Vendidos</h3>
+                <h2 className="cd-card-title">Vendidos</h2>
                 <div className="activos-rejilla">
                   {vendidos.map((a) => (
                     <TarjetaActivo key={a.id} a={a} abrir={setDialogo} />
@@ -687,7 +689,7 @@ export function ActivosPage() {
             )}
           </div>
           <section className="cd-card cd-stack span-4" style={{ gap: 10, alignSelf: "start" }}>
-            <h3 className="cd-card-title">Asignación</h3>
+            <h2 className="cd-card-title">Asignación</h2>
             {d.asignacion.length === 0 && <span className="cd-delta-note">Sin activos con valor.</span>}
             <ul className="cd-catlist">
               {d.asignacion.map((c, i) => (

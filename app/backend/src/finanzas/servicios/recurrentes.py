@@ -307,7 +307,7 @@ def pagar(
         raise ErrorValidacion("Ese movimiento ya estaba confirmado")
     tx.estado = "confirmada"
     if fecha or fecha_modo != "programada":  # "programada": se conserva la fecha que tenía
-        tx.fecha = normalizar_fecha(fecha or hoy_bogota().isoformat())
+        tx.fecha = _con_hora(fecha) if fecha else normalizar_fecha(None)  # sin fecha: ahora, con la hora
     if monto:
         tx.monto = monto
     tx.actualizado_en = ahora()
@@ -320,6 +320,13 @@ def pagar(
     eventos = INVALIDA + ("cuentas", "presupuesto", "reportes") + (("creditos",) if tx.credito_id else ())
     uow.registrar(DominioCambio(eventos, "pagar", (tx.id,)))
     return tx
+
+
+def _con_hora(fecha: str) -> str:
+    """Una fecha de pago sin hora (solo el día, o a las 00:00) toma la hora actual de Bogotá."""
+    if len(fecha) == 10 or fecha[11:16] == "00:00":
+        return normalizar_fecha(f"{fecha[:10]}T{ahora()[11:19]}")
+    return normalizar_fecha(fecha)
 
 
 PASO_DIAS = {"semanal": 7, "quincenal": 15, "mensual": 30, "anual": 365}

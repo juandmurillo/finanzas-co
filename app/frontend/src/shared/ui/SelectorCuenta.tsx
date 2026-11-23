@@ -1,16 +1,16 @@
 /** Selector de cuenta con su logo, nombre y saldo pequeño debajo. */
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
 import type { Cuenta } from "@/shared/api/tipos";
 import { api } from "@/shared/lib/api";
 import { formatoCOP } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 
-import { Hoja } from "./Hoja";
+import { Desplegable } from "./Desplegable";
 import { Icono, type NombreIcono } from "./Icono";
+import { SimboloVista, tipoSimbolo } from "./Simbolo";
 
-const ICONO_TIPO: Record<string, NombreIcono> = {
+export const ICONO_TIPO: Record<string, NombreIcono> = {
   efectivo: "bolsa",
   ahorro: "meta",
   billetera: "cuentas",
@@ -19,6 +19,20 @@ const ICONO_TIPO: Record<string, NombreIcono> = {
 };
 
 export function LogoCuenta({ cuenta, tam = 36 }: { cuenta: Pick<Cuenta, "nombre" | "tipo" | "icono">; tam?: number }) {
+  if (cuenta.icono?.startsWith("data:image/")) {
+    return (
+      <span className="logo-cuenta logo-cuenta--imagen" style={{ width: tam, height: tam }}>
+        <img src={cuenta.icono} alt="" />
+      </span>
+    );
+  }
+  if (cuenta.icono && !cuenta.icono.startsWith("/") && tipoSimbolo(cuenta.icono) !== "vacio") {
+    return (
+      <span className="cd-kpi-ico" style={{ width: tam, height: tam, flex: "none" }} aria-hidden>
+        <SimboloVista valor={cuenta.icono} respaldo={ICONO_TIPO[cuenta.tipo] ?? "cuentas"} tam={tam * 0.6} />
+      </span>
+    );
+  }
   if (cuenta.icono?.startsWith("/")) {
     return (
       <span className="logo-cuenta" style={{ width: tam, height: tam, padding: tam < 24 ? 2 : 4 }}>
@@ -54,59 +68,30 @@ interface Props {
   titulo?: string;
 }
 
+/** Lista desplegable de cuentas (la misma `Desplegable` de toda la app): logo, nombre y saldo en cada opción. */
 export function SelectorCuenta({ cuentas, valor, alCambiar, excluir, id, titulo = "Cuenta" }: Props) {
-  const [abierto, setAbierto] = useState(false);
-  const actual = cuentas.find((c) => c.id === valor);
   return (
-    <>
-      <button
-        id={id}
-        type="button"
-        className="cd-input selector-disparador"
-        aria-haspopup="dialog"
-        onClick={() => setAbierto(true)}
-      >
-        {actual ? (
-          <>
-            <LogoCuenta cuenta={actual} tam={26} />
-            <span className="selector-texto">
-              {actual.nombre}
-              <small className="cd-delta-note cd-num"> {formatoCOP(actual.saldo)}</small>
+    <Desplegable
+      id={id}
+      className="cd-input selector-disparador selector-cuenta"
+      value={valor ?? ""}
+      placeholder="Elegir cuenta…"
+      aria-label={id ? undefined : titulo}
+      onChange={(e) => alCambiar(Number(e.target.value))}
+    >
+      {cuentas
+        .filter((c) => c.id !== excluir)
+        .map((c) => (
+          <option key={c.id} value={c.id}>
+            <span className="opcion-cuenta">
+              <LogoCuenta cuenta={c} tam={26} />
+              <span className="opcion-cuenta-texto">
+                {c.nombre}
+                <small className="cd-delta-note cd-num">{formatoCOP(c.saldo)}</small>
+              </span>
             </span>
-          </>
-        ) : (
-          <span className="selector-texto cd-muted">Elegir cuenta…</span>
-        )}
-        <span aria-hidden className="cd-muted">
-          ▾
-        </span>
-      </button>
-      {abierto && (
-        <Hoja titulo={titulo} onCerrar={() => setAbierto(false)}>
-          <div className="cd-stack" style={{ gap: 6 }} role="list">
-            {cuentas
-              .filter((c) => c.id !== excluir)
-              .map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  role="listitem"
-                  className={`selector-opcion ${c.id === valor ? "activa" : ""}`}
-                  onClick={() => {
-                    alCambiar(c.id);
-                    setAbierto(false);
-                  }}
-                >
-                  <LogoCuenta cuenta={c} />
-                  <span className="cd-stack" style={{ gap: 0, flex: 1, minWidth: 0 }}>
-                    <b style={{ fontSize: 14 }}>{c.nombre}</b>
-                    <small className="cd-delta-note cd-num">{formatoCOP(c.saldo)}</small>
-                  </span>
-                </button>
-              ))}
-          </div>
-        </Hoja>
-      )}
-    </>
+          </option>
+        ))}
+    </Desplegable>
   );
 }

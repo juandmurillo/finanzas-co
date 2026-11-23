@@ -13,13 +13,14 @@ import { fechaCorta, formatoCOP, mascaraMonto } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 import { TarjetaCargando } from "@/shared/ui/Estados";
 import { Hoja } from "@/shared/ui/Hoja";
-import { Icono } from "@/shared/ui/Icono";
+import { Icono, type NombreIcono } from "@/shared/ui/Icono";
 
-const SUGERENCIAS = [
-  { titulo: "¿En qué se me fue el dinero?", detalle: "este mes, por categoría" },
-  { titulo: "¿Qué crédito pago primero?", detalle: "si abono $100.000 extra al mes" },
-  { titulo: "¿Cómo voy con el presupuesto?", detalle: "y qué ajustar en lo que queda del mes" },
-  { titulo: "¿Cuándo me quedo sin saldo?", detalle: "con lo programado de los próximos 45 días" },
+import { Desplegable } from "@/shared/ui/Desplegable";
+const SUGERENCIAS: { titulo: string; detalle: string; icono: NombreIcono }[] = [
+  { titulo: "¿En qué se me fue el dinero?", detalle: "este mes, por categoría", icono: "categorias" },
+  { titulo: "¿Qué crédito pago primero?", detalle: "si abono $100.000 extra al mes", icono: "deudas" },
+  { titulo: "¿Cómo voy con el presupuesto?", detalle: "y qué ajustar en lo que queda del mes", icono: "presupuesto" },
+  { titulo: "¿Cuándo me quedo sin saldo?", detalle: "con lo programado de los próximos 45 días", icono: "calendario" },
 ];
 
 const NOMBRES_HERRAMIENTA: Record<string, string> = {
@@ -187,7 +188,7 @@ function Privacidad({ alCerrar }: { alCerrar: () => void }) {
         <>
           <label className="cd-stack" style={{ gap: 6 }}>
             <span className="cd-kpi-label">Proveedor</span>
-            <select
+            <Desplegable
               className="cd-input"
               value={p.id}
               onChange={(e) => {
@@ -201,7 +202,7 @@ function Privacidad({ alCerrar }: { alCerrar: () => void }) {
                   {x.nombre}
                 </option>
               ))}
-            </select>
+            </Desplegable>
           </label>
           <p className="cd-delta-note" style={{ margin: 0 }}>
             {p.privacidad}
@@ -379,10 +380,10 @@ export function AsistentePage() {
 
   return (
     <div className="chat">
-      <div className="chat-cabecera">
+      <div className="chat-cabecera cd-pagehead">
         <div>
-          <h1 style={{ margin: 0, fontSize: 22 }}>Asistente</h1>
-          <span className="cd-delta-note">Pregunta en tus palabras sobre tus finanzas. Responde con tus datos.</span>
+          <h1>Asistente</h1>
+          <p>Pregunta en tus palabras sobre tus finanzas. Responde con tus datos.</p>
         </div>
         <div className="cd-row" style={{ gap: 6 }}>
           <button
@@ -419,10 +420,22 @@ export function AsistentePage() {
               hago operaciones por ti.
             </p>
             <div className="chat-sugerencias">
-              {SUGERENCIAS.map((s) => (
+              {SUGERENCIAS.map((s, i) => (
                 <button key={s.titulo} type="button" onClick={() => enviar(`${s.titulo} (${s.detalle})`)}>
-                  <b>{s.titulo}</b>
-                  <span>{s.detalle}</span>
+                  <span
+                    className="chat-sugerencia-ico"
+                    style={{
+                      background: `color-mix(in srgb, var(--cat-${i + 1}) 18%, transparent)`,
+                      color: `var(--cat-${i + 1})`,
+                    }}
+                    aria-hidden
+                  >
+                    <Icono nombre={s.icono} pequeno />
+                  </span>
+                  <span className="chat-sugerencia-texto">
+                    <b>{s.titulo}</b>
+                    <span>{s.detalle}</span>
+                  </span>
                 </button>
               ))}
             </div>

@@ -1,12 +1,16 @@
-/** KPIs estratégicos de la revisión (fase 7, punto 9): 4 semáforos con meta y tendencia, y datos de apoyo. */
-import type { KpiRevision, KpisRevision } from "@/shared/api/tipos";
+/** KPIs estratégicos de la revisión (fase 7, punto 9): seis indicadores claros, sin gráficos dentro, y su
+ * tendencia de 6 meses en un gráfico aparte. */
+import type { KpiRevision, KpisRevision, RevisionMensual } from "@/shared/api/tipos";
+import { AreaSeries } from "@/shared/charts";
 import { formatoCOP, nombreMes, porcentaje } from "@/shared/lib/formato";
+import { CabeceraTarjeta, FilaMetricas, KpiCompacto, type SentidoDelta } from "@/shared/ui/Kpi";
+import type { NombreIcono } from "@/shared/ui/Icono";
 
-const ESTADOS: Record<NonNullable<KpiRevision["estado"]>, [string, string]> = {
-  bien: ["cd-badge--positive", "En meta"],
-  atencion: ["cd-badge--warning", "Cerca"],
-  alerta: ["cd-badge--negative", "Lejos de la meta"],
-  sin_datos: ["cd-badge--plain", "Sin datos"],
+const ESTADOS: Record<NonNullable<KpiRevision["estado"]>, [SentidoDelta, string]> = {
+  bien: ["mejora", "En meta"],
+  atencion: ["neutro", "Cerca"],
+  alerta: ["alerta", "Lejos de la meta"],
+  sin_datos: ["neutro", "Sin datos"],
 };
 
 export function valorKpi(k: Pick<KpiRevision, "valor" | "formato"> & { clave?: string }): string {
@@ -28,57 +32,124 @@ export function valorKpi(k: Pick<KpiRevision, "valor" | "formato"> & { clave?: s
   }
 }
 
-function Tendencia({ k, meses }: { k: KpiRevision; meses: string[] }) {
-  if (!k.tendencia) return null;
-  const valores = k.tendencia;
-  const maximo = Math.max(1e-9, ...valores.map((v) => Math.abs(v ?? 0)));
-  return (
-    <div className="cd-spark" style={{ height: 32, gap: 4 }} role="img" aria-label={`${k.nombre}, últimos 6 meses`}>
-      {valores.map((v, i) => (
-        <i
-          key={meses[i]}
-          className={v !== null && v < 0 ? "neg" : i === valores.length - 1 ? "on" : ""}
-          style={{ height: `${Math.max(8, (Math.abs(v ?? 0) / maximo) * 100)}%`, width: 10 }}
-          title={`${nombreMes(meses[i] ?? "")}: ${valorKpi({ valor: v, formato: k.formato, clave: k.clave })}`}
-        />
-      ))}
-    </div>
-  );
-}
+/** Título y texto en palabras simples para cada indicador principal. */
+const CLAROS: Record<string, { titulo: string; icono: NombreIcono; valor: (k: KpiRevision) => string; nota: string }> =
+  {
+    tasa_ahorro: {
+      titulo: "Ahorraste",
+      icono: "meta",
+      valor: (k) =>
+        k.valor === null
+          ? "—"
+          : k.valor < 0
+            ? k.valor < -1
+              ? valorKpi(k)
+              : "Gastaste más de lo que entró"
+            : `${porcentaje(k.valor, 0)} de lo que entró`,
+      nota: "meta: guardar al menos el 10 %",
+    },
+    carga_deuda: {
+      titulo: "Cuotas de deudas",
+      icono: "deudas",
+      valor: (k) => (k.valor === null ? "—" : `${porcentaje(k.valor, 0)} de tu ingreso`),
+      nota: "meta: máximo el 30 %",
+    },
+    cobertura_fijos: {
+      titulo: "Tu ingreso cubre los fijos",
+      icono: "recurrentes",
+      valor: (k) => (k.valor === null ? "—" : `${k.valor.toFixed(1).replace(".", ",")} veces`),
+      nota: "meta: 1,5 veces o más",
+    },
+    meses_colchon: {
+      titulo: "Colchón",
+      icono: "cuentas",
+      valor: (k) =>
+        k.valor === null ? "—" : `${k.valor.toFixed(1).replace(".", ",")} ${k.valor === 1 ? "mes" : "meses"}`,
+      nota: "de gastos con lo que tienes disponible · meta: 3",
+    },
+  };
 
-export function KpisEstrategicos({ kpis }: { kpis: KpisRevision }) {
+export function KpisEstrategicos({
+  kpis,
+  flujo,
+  mes,
+}: {
+  kpis: KpisRevision;
+  flujo: RevisionMensual["indicadores"][number];
+  mes: string;
+}) {
+  const presupuesto = kpis.secundarios.find((k) => k.clave === "presupuesto_cumplido");
+  const apoyo = kpis.secundarios.filter((k) => k.clave !== "presupuesto_cumplido");
+  const ahorro = kpis.principales.find((k) => k.clave === "tasa_ahorro");
+  const carga = kpis.principales.find((k) => k.clave === "carga_deuda");
+  const conTendencia = [
+    ahorro && { k: ahorro, color: "var(--positive)", nombre: "Ahorraste" },
+    carga && { k: carga, color: "var(--chart-2)", nombre: "Cuotas de deudas" },
+  ].filter((x): x is { k: KpiRevision; color: string; nombre: string } => Boolean(x?.k.tendencia));
   return (
     <>
-      <div className="cd-bento">
+      <div className="revision-kpis">
+        <KpiCompacto
+          inversa
+          etiqueta="Te quedó este mes"
+          icono="flujo"
+          valor={formatoCOP(flujo.actual, { signo: true })}
+          nota={`lo que entró menos lo que salió · tu promedio ${formatoCOP(flujo.promedio, { signo: true })}`}
+        />
         {kpis.principales.map((k) => {
-          const [clase, texto] = ESTADOS[k.estado ?? "sin_datos"];
+          const [sentido, texto] = ESTADOS[k.estado ?? "sin_datos"];
+          const claro = CLAROS[k.clave];
           return (
-            <section key={k.clave} className="cd-card cd-kpi span-3 cd-stack" style={{ gap: 8 }}>
-              <div className="cd-row" style={{ justifyContent: "space-between", gap: 6 }}>
-                <span className="cd-kpi-label">{k.nombre}</span>
-                <span className={`cd-badge ${clase}`}>{texto}</span>
-              </div>
-              <span className="cd-kpi-value cd-num">{valorKpi(k)}</span>
-              <span className="cd-delta-note">{k.texto_meta}</span>
-              <Tendencia k={k} meses={kpis.meses} />
-            </section>
+            <KpiCompacto
+              key={k.clave}
+              etiqueta={claro?.titulo ?? k.nombre}
+              icono={claro?.icono}
+              valor={claro ? claro.valor(k) : valorKpi(k)}
+              delta={{ valor: 0, sentido, texto }}
+              nota={claro?.nota ?? k.texto_meta}
+            />
           );
         })}
+        {presupuesto && (
+          <KpiCompacto
+            etiqueta="Presupuestos cumplidos"
+            icono="presupuesto"
+            valor={presupuesto.valor === null ? "—" : porcentaje(presupuesto.valor, 0)}
+            nota={presupuesto.detalle}
+          />
+        )}
       </div>
-      <section className="cd-card" aria-label="Datos de apoyo">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16 }}>
-          {kpis.secundarios.map((k) => (
-            <div key={k.clave} className="cd-stack" style={{ gap: 4 }}>
-              <span className="cd-delta-note">{k.nombre}</span>
-              <span className="cd-amt" style={{ fontSize: 20 }}>
-                {valorKpi(k)}
-              </span>
-              <span className="cd-delta-note">{k.detalle}</span>
-              <Tendencia k={k} meses={kpis.meses} />
-            </div>
-          ))}
-        </div>
-      </section>
+      <div className="cd-bento">
+        {conTendencia.length > 0 && (
+          <section className="cd-card span-7">
+            <CabeceraTarjeta titulo="Cómo vienes" rango={`últimos 6 meses hasta ${nombreMes(mes)}`} />
+            <AreaSeries
+              titulo="Ahorro y cuotas de deudas, últimos 6 meses"
+              alto={220}
+              fechas={kpis.meses.map((m) => `${m}-01`)}
+              rotulo={(f) => nombreMes(f.slice(0, 7))}
+              formato={(v) => porcentaje(v, 0)}
+              formatoEje={(v) => porcentaje(v, 0)}
+              series={conTendencia.map(({ k, color, nombre }) => ({
+                clave: k.clave,
+                nombre,
+                color,
+                valores: (k.tendencia ?? []).map((v) => Math.max(-1, v ?? 0)),
+              }))}
+            />
+          </section>
+        )}
+        <section
+          className={`cd-card revision-apoyo ${conTendencia.length > 0 ? "span-5" : "span-12"}`}
+          aria-label="Datos de apoyo"
+        >
+          <CabeceraTarjeta titulo="Datos de apoyo" rango={nombreMes(mes)} />
+          <FilaMetricas
+            etiqueta="Datos de apoyo"
+            metricas={apoyo.map((k) => ({ etiqueta: k.nombre, valor: valorKpi(k), nota: k.detalle }))}
+          />
+        </section>
+      </div>
     </>
   );
 }
