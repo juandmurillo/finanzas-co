@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import NotNullable, select
 from sqlalchemy.orm import Session
 
 from finanzas.dominio.errores import NoEncontrado
@@ -35,7 +35,8 @@ def _hijo(sesion: Session, padre_id: int | None, nombre: str, nivel: int, grupo:
     filtro = Categoria.padre_id.is_(None) if padre_id is None else Categoria.padre_id == padre_id
     categoria = sesion.scalar(select(Categoria).where(filtro, Categoria.nombre == nombre))
     if categoria is None:
-        hermanas = set(sesion.scalars(select(Categoria.color).where(filtro, Categoria.color.is_not(None))).all())
+        colores = select(NotNullable(Categoria.color)).where(filtro, Categoria.color.is_not(None))
+        hermanas = set(sesion.scalars(colores))
         icono, color = estilo_nueva(nombre, grupo, nivel, hermanas)
         categoria = Categoria(padre_id=padre_id, nivel=nivel, nombre=nombre, grupo=grupo, icono=icono, color=color)
         sesion.add(categoria)

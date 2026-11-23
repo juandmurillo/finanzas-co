@@ -118,9 +118,16 @@ def _desde_json(contenido: bytes, destino: Path) -> None:
         conexion.execute("PRAGMA foreign_keys = OFF")
         conexion.execute("BEGIN")
         conocidas = set(_tablas(conexion))
+        if "libro" in conocidas:
+            conexion.execute("DELETE FROM libro")
+            libros = tablas.get("libro")
+            if not isinstance(libros, list) or len(libros) != 1:
+                raise ErrorValidacion("La copia debe contener un libro")
         for tabla in conocidas:  # las migraciones siembran algunas filas: manda el archivo
             conexion.execute(f'DELETE FROM "{tabla}"')
-        for tabla, filas in tablas.items():
+        # Restaurar el libro al final mantiene la cola original durante la carga.
+        for tabla in sorted(tablas, key=lambda nombre: nombre == "libro"):
+            filas = tablas[tabla]
             if tabla not in conocidas:
                 raise ErrorValidacion(f"Tabla desconocida en el archivo: {tabla}")
             if not isinstance(filas, list):
@@ -170,16 +177,21 @@ def reemplazar(destino: Path, origen: Path | None) -> None:
         conexion.execute("PRAGMA defer_foreign_keys = ON")
         tablas = _tablas(conexion)
         try:
+            conexion.execute("DELETE FROM libro")
             for tabla in tablas:
                 conexion.execute(f'DELETE FROM "{tabla}"')
             if origen:
                 en_origen = set(_tablas(conexion, "origen"))
-                for tabla in tablas:
+                for tabla in sorted(tablas, key=lambda nombre: nombre == "libro"):
                     if tabla not in en_origen:
                         continue
                     comunes = set(_columnas(conexion, tabla, "origen"))
                     columnas = ", ".join(f'"{c}"' for c in _columnas(conexion, tabla) if c in comunes)
                     conexion.execute(f'INSERT INTO main."{tabla}" ({columnas}) SELECT {columnas} FROM origen."{tabla}"')
+                if not conexion.execute("SELECT 1 FROM libro").fetchone():
+                    raise ErrorValidacion("La copia debe contener un libro")
+            else:
+                conexion.execute("INSERT INTO libro (unico) VALUES (1)")
             if conexion.execute("PRAGMA main.foreign_key_check").fetchone():
                 raise ErrorValidacion("Los datos tienen referencias incoherentes; no se cambió nada")
             conexion.execute("COMMIT")

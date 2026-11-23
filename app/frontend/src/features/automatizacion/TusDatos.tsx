@@ -154,7 +154,7 @@ export function TusDatos() {
       <div>
         <h2 className="cd-card-title">Tus datos</h2>
         <p className="cd-delta-note" style={{ margin: "4px 0 0" }}>
-          Son tuyos y viven en este computador. Antes de cargar o borrar se guarda un respaldo automático.
+          Son tuyos y viven en este equipo. Antes de cargar o borrar se guarda un respaldo automático.
         </p>
       </div>
       <div className="datos-exportar">

@@ -204,3 +204,91 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Bandeja «Por revisar»: comparación de las dos versiones de un registro. */
+.cd-tabla-revision {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.cd-tabla-revision th,
+.cd-tabla-revision td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+}
+/* La etiqueta del campo nunca se parte; los valores reparten el resto. */
+.cd-tabla-revision th:first-child {
+  width: 1%;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+.cd-tabla-revision td {
+  width: 50%;
+}
+.cd-tabla-revision thead th {
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+.cd-tabla-revision tbody th {
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.cd-tabla-revision tbody th .cd-badge {
+  display: block;
+  width: max-content;
+  margin-top: var(--space-1);
+}
+.cd-tabla-revision td[data-cambio] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.cd-revision-opciones {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .cd-tabla-revision th,
+  .cd-tabla-revision td {
+    padding: var(--space-2);
+  }
+  /* En el celular las opciones van una debajo de otra, a todo el ancho. */
+  .cd-revision-opciones {
+    align-self: stretch;
+    flex-direction: column;
+    border-radius: var(--radius-md);
+  }
+  .cd-revision-opciones button {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+/* Unir este equipo a la cuenta: opciones con su explicación. */
+.cd-union-opciones {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  gap: var(--space-2);
+}
+.cd-union-opcion {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.cd-union-opcion:has(input:checked) {
+  border-color: var(--border-strong);
+  background: var(--card-raised);
+}
+.cd-union-opcion > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

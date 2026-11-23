@@ -1548,6 +1548,96 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/sync/ejecutar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ejecutar */
+    post: operations["ejecutar_api_v1_sync_ejecutar_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/sync/sesion/{clave}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Leer Sesion */
+    get: operations["leer_sesion_api_v1_sync_sesion__clave__get"];
+    /** Guardar Sesion */
+    put: operations["guardar_sesion_api_v1_sync_sesion__clave__put"];
+    post?: never;
+    /** Borrar Sesion */
+    delete: operations["borrar_sesion_api_v1_sync_sesion__clave__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/sync/estado": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Estado
+     * @description Lo que sigue solo en este equipo; se muestra antes de cerrar sesión.
+     */
+    get: operations["estado_api_v1_sync_estado_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/sync/revision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Revision */
+    get: operations["revision_api_v1_sync_revision_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/sync/revision/{rid}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Resolver */
+    post: operations["resolver_api_v1_sync_revision__rid__post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2234,6 +2324,29 @@ export interface components {
        */
       activa: boolean;
     };
+    /**
+     * Resolucion
+     * @description «local», «remoto» o «campos» para versiones; «dos» o «mismo» para posibles duplicados.
+     *
+     *     En «campos», por entidad: campo → «local» | «remoto». En «mismo»: campo → movimiento elegido.
+     */
+    Resolucion: {
+      /**
+       * Decision
+       * @enum {string}
+       */
+      decision: "local" | "remoto" | "campos" | "dos" | "mismo";
+      /** Campos */
+      campos?: {
+        [key: string]: {
+          [key: string]: "local" | "remoto";
+        };
+      };
+      /** Datos */
+      datos?: {
+        [key: string]: string;
+      };
+    };
     /** ResultadoImportacionOut */
     ResultadoImportacionOut: {
       /** Filas Leidas */
@@ -2253,6 +2366,8 @@ export interface components {
     };
     /** TransaccionCambios */
     TransaccionCambios: {
+      /** Cuenta Par Id */
+      cuenta_par_id?: number | null;
       /** Cuenta Id */
       cuenta_id?: number | null;
       /** Monto */
@@ -2400,6 +2515,11 @@ export interface components {
       input?: unknown;
       /** Context */
       ctx?: Record<string, never>;
+    };
+    /** ValorSesion */
+    ValorSesion: {
+      /** Valor */
+      valor: string;
     };
     /** ValoracionIn */
     ValoracionIn: {
@@ -2578,7 +2698,9 @@ export interface operations {
   crear_transaccion_api_v1_transacciones_post: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        "Idempotency-Key"?: string | null;
+      };
       path?: never;
       cookie?: never;
     };
@@ -2706,7 +2828,9 @@ export interface operations {
   crear_transferencia_api_v1_transferencias_post: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        "Idempotency-Key"?: string | null;
+      };
       path?: never;
       cookie?: never;
     };
@@ -5793,6 +5917,209 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["PrimerUsoIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ejecutar_api_v1_sync_ejecutar_post: {
+    parameters: {
+      query?: {
+        vincular?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: string;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  leer_sesion_api_v1_sync_sesion__clave__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clave: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  guardar_sesion_api_v1_sync_sesion__clave__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clave: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ValorSesion"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  borrar_sesion_api_v1_sync_sesion__clave__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        clave: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  estado_api_v1_sync_estado_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
+  revision_api_v1_sync_revision_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          }[];
+        };
+      };
+    };
+  };
+  resolver_api_v1_sync_revision__rid__post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        rid: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Resolucion"];
       };
     };
     responses: {

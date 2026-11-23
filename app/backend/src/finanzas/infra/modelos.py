@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
+from typing import Any
+
+from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from finanzas.infra.db import Base
@@ -24,6 +26,14 @@ ESTADOS_TX = ("confirmada", "pendiente", "por_revisar")
 
 def _en(valores: tuple[str, ...]) -> str:
     return "(" + ",".join(f"'{v}'" for v in valores) + ")"
+
+
+class ReciboCaptura(Base):
+    __tablename__ = "recibo_captura"
+
+    clave: Mapped[str] = mapped_column(String(36), primary_key=True)
+    huella: Mapped[str] = mapped_column(String(64))
+    respuesta: Mapped[Any] = mapped_column(JSON, nullable=True)
 
 
 class Cuenta(Base):
@@ -97,12 +107,14 @@ class Transaccion(Base):
         CheckConstraint("monto <> 0", name="ck_tx_monto"),
         CheckConstraint(f"estado IN {_en(ESTADOS_TX)}", name="ck_tx_estado"),
         Index("ix_tx_fecha", "fecha"),
+        Index("ux_tx_global", "id_global", unique=True),
         Index("ix_tx_cuenta_fecha", "cuenta_id", "fecha"),
         Index("ix_tx_categoria", "categoria_id", "fecha"),
         Index("ux_tx_huella", "huella", unique=True, sqlite_where=text("huella IS NOT NULL")),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    id_global: Mapped[str | None] = mapped_column(String(32))
     cuenta_id: Mapped[int] = mapped_column(ForeignKey("cuenta.id"))
     fecha: Mapped[str] = mapped_column(String(40))
     monto: Mapped[int] = mapped_column(Integer)

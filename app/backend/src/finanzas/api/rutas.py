@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from collections.abc import AsyncIterator
 from typing import Annotated, Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Header, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
 from finanzas.api.dependencias import bus_eventos, sesion_lectura, unidad_de_trabajo
@@ -28,13 +31,14 @@ from finanzas.dominio.errores import Conflicto, NoEncontrado
 from finanzas.dominio.eventos import DominioCambio
 from finanzas.infra import consultas
 from finanzas.infra.eventos import BusEventos
-from finanzas.infra.modelos import Cuenta, Transaccion
+from finanzas.infra.modelos import Cuenta, ReciboCaptura, Transaccion
 from finanzas.infra.uow import UnidadDeTrabajo
 from finanzas.servicios import importacion, transacciones
 
 router = APIRouter(prefix="/api/v1")
 Lectura = Annotated[Session, Depends(sesion_lectura)]
 Uow = Annotated[UnidadDeTrabajo, Depends(unidad_de_trabajo)]
+ClaveCaptura = Annotated[UUID | None, Header(alias="Idempotency-Key")]
 
 
 # ---------- Cuentas ----------
@@ -114,11 +118,32 @@ def _leer(uow: UnidadDeTrabajo, tx_id: int) -> dict[str, Any]:
     return consultas.a_dict(tx)
 
 
+def _reservar_captura(
+    sesion: Session, clave: UUID | None, datos: TransaccionIn | TransferenciaIn
+) -> ReciboCaptura | None:
+    if clave is None:
+        return None
+    contenido = json.dumps(datos.model_dump(), sort_keys=True).encode()
+    huella = hashlib.sha256(contenido).hexdigest()
+    # La reserva es la primera escritura. SQLite serializa incluso dos peticiones simultáneas con la misma clave.
+    sesion.execute(insert(ReciboCaptura).values(clave=str(clave), huella=huella).on_conflict_do_nothing())
+    recibo = sesion.get_one(ReciboCaptura, str(clave))
+    if recibo.huella != huella:
+        raise Conflicto("La clave de captura ya corresponde a otra operación")
+    return recibo
+
+
 @router.post("/transacciones", response_model=TransaccionOut, status_code=201, tags=["transacciones"])
-def crear_transaccion(datos: TransaccionIn, uow: Uow) -> dict[str, Any]:
+def crear_transaccion(datos: TransaccionIn, uow: Uow, clave: ClaveCaptura = None) -> dict[str, Any]:
     with uow:
+        recibo = _reservar_captura(uow.sesion, clave, datos)
+        if recibo and isinstance(recibo.respuesta, dict):
+            return recibo.respuesta
         tx = transacciones.registrar(uow, transacciones.DatosTransaccion(**datos.model_dump()))
-        return _leer(uow, tx.id)
+        respuesta = _leer(uow, tx.id)
+        if recibo:
+            recibo.respuesta = respuesta
+        return respuesta
 
 
 @router.get("/transacciones/{tx_id}", response_model=TransaccionOut, tags=["transacciones"])
@@ -144,13 +169,19 @@ def eliminar_transaccion(tx_id: int, uow: Uow) -> None:
 
 
 @router.post("/transferencias", response_model=list[TransaccionOut], status_code=201, tags=["transacciones"])
-def crear_transferencia(datos: TransferenciaIn, uow: Uow) -> list[dict[str, Any]]:
+def crear_transferencia(datos: TransferenciaIn, uow: Uow, clave: ClaveCaptura = None) -> list[dict[str, Any]]:
     with uow:
+        recibo = _reservar_captura(uow.sesion, clave, datos)
+        if recibo and isinstance(recibo.respuesta, list):
+            return recibo.respuesta
         salida, entrada = transacciones.transferir(
             uow, datos.origen_id, datos.destino_id, datos.monto, datos.fecha, datos.descripcion
         )
         uow.sesion.flush()
-        return [_leer(uow, salida.id), _leer(uow, entrada.id)]
+        respuesta = [_leer(uow, salida.id), _leer(uow, entrada.id)]
+        if recibo:
+            recibo.respuesta = respuesta
+        return respuesta
 
 
 # ---------- Categorías ----------

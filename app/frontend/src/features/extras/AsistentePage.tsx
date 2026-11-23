@@ -229,7 +229,7 @@ function Privacidad({ alCerrar }: { alCerrar: () => void }) {
                 onChange={(e) => setClave(e.target.value)}
               />
               <span className="cd-delta-note">
-                Se guarda solo en este computador, no viaja en tus copias y la app no la muestra de nuevo.{" "}
+                Se guarda solo en este equipo, no viaja en tus copias y la app no la muestra de nuevo.{" "}
                 {p.url_clave && (
                   <a className="cd-link" href={p.url_clave} target="_blank" rel="noreferrer">
                     Conseguir una clave
@@ -240,7 +240,7 @@ function Privacidad({ alCerrar }: { alCerrar: () => void }) {
           )}
           <p className="cd-delta-note" style={{ margin: 0 }}>
             {p.local
-              ? "Tu pregunta y los datos consultados se procesan en este computador."
+              ? "Tu pregunta y los datos consultados se procesan en este equipo."
               : `Al preguntar, tu pregunta y los datos que el asistente consulte salen hacia ${p.nombre}: totales en pesos y, si busca movimientos, hasta 15 descripciones.`}{" "}
             Nunca números de cuenta ni de crédito, ni nombres de personas. La IA no guarda ni borra nada: sus propuestas
             las revisas tú.

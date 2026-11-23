@@ -133,10 +133,12 @@ def registrar(uow: UnidadDeTrabajo, datos: DatosTransaccion) -> Transaccion:
 
 
 def editar(uow: UnidadDeTrabajo, tx_id: int, cambios: dict[str, object]) -> Transaccion:
+    uow.agrupar_cambios()
     tx = uow.sesion.get(Transaccion, tx_id)
     if tx is None:
         raise NoEncontrado(f"La transacción {tx_id} no existe")
     antes = _foto(tx)
+    cuenta_par = cambios.pop("cuenta_par_id", None)
     credito_anterior = tx.credito_id
     if "fecha" in cambios:
         cambios["fecha"] = normalizar_fecha(str(cambios["fecha"]))
@@ -144,6 +146,11 @@ def editar(uow: UnidadDeTrabajo, tx_id: int, cambios: dict[str, object]) -> Tran
         setattr(tx, campo, valor)
     _validar(uow.sesion, DatosTransaccion(tx.cuenta_id, tx.monto, tx.categoria_id))
     par = uow.sesion.get(Transaccion, tx.transferencia_id) if tx.transferencia_id is not None else None
+    if cuenta_par is not None:
+        if par is None or not isinstance(cuenta_par, int):
+            raise ErrorValidacion("Solo una transferencia tiene cuenta de destino")
+        obtener_cuenta(uow.sesion, cuenta_par)
+        par.cuenta_id = cuenta_par
     if par is not None:  # una transferencia se mueve entera: monto opuesto, misma fecha y descripción
         if "monto" in cambios:
             par.monto = -tx.monto
@@ -162,6 +169,7 @@ def editar(uow: UnidadDeTrabajo, tx_id: int, cambios: dict[str, object]) -> Tran
 
 def eliminar(uow: UnidadDeTrabajo, tx_id: int) -> None:
     """Borra la transacción; si es una transferencia, también su par."""
+    uow.agrupar_cambios()
     tx = uow.sesion.get(Transaccion, tx_id)
     if tx is None:
         raise NoEncontrado(f"La transacción {tx_id} no existe")
@@ -194,6 +202,7 @@ def transferir(
     categoria_id: int | None = None,
 ) -> tuple[Transaccion, Transaccion]:
     """Par enlazado de montos opuestos: no cuenta como ingreso ni gasto."""
+    uow.agrupar_cambios()
     if monto <= 0:
         raise ErrorValidacion("El monto a transferir debe ser positivo")
     if origen_id == destino_id:

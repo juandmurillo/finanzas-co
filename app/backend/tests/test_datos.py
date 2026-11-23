@@ -49,6 +49,10 @@ def test_exportar_json_y_volver_a_cargar_deja_lo_mismo(app: TestClient) -> None:
     assert r.status_code == 200
     assert r.json()["respaldo"]
     assert _saldos(app) == antes
+    restauradas = app.get("/api/v1/datos/exportar/json").json()["tablas"]["transaccion"]
+    assert {t["id"]: t["id_global"] for t in restauradas} == {
+        t["id"]: t["id_global"] for t in exportado.json()["tablas"]["transaccion"]
+    }
     assert app.get("/api/v1/sistema").json()["es_demo"] is True
 
 
@@ -60,11 +64,99 @@ def test_cargar_copia_sqlite(app: TestClient) -> None:
     assert _saldos(app) == antes
 
 
+def test_cola_conserva_identidad_tras_editar_borrar_y_restaurar(app: TestClient) -> None:
+    def tablas():
+        return app.get("/api/v1/datos/exportar/json").json()["tablas"]
+
+    antes = tablas()
+    tx = app.post("/api/v1/transacciones", json={"cuenta_id": 1, "monto": -100}).json()
+    ruta = f"/api/v1/transacciones/{tx['id']}"
+    assert app.patch(ruta, json={"nota": "corregido"}).status_code == 200
+    assert app.delete(ruta).status_code == 204
+    copia = app.get("/api/v1/datos/exportar/json").content
+    cambios = tablas()["cambio_pendiente"][len(antes["cambio_pendiente"]) :]
+    movimientos = [c for c in cambios if c["entidad"] == "transaccion"]
+    assert [c["accion"] for c in movimientos] == ["crear", "editar", "eliminar"]
+    assert len({c["entidad_id"] for c in movimientos}) == 1
+    assert len({c["operacion"] for c in movimientos}) == 3
+    assert {c["libro_id"] for c in movimientos} == {antes["libro"][0]["id_global"]}
+    original = tablas()
+    alta, edicion, baja = movimientos
+    assert alta["version_base"] is None
+    assert edicion["version_base"] == alta["operacion"]
+    assert baja["version_base"] == edicion["operacion"]
+    nota_borrada = next(
+        d for d in original["detalle_cambio"] if d["secuencia"] == baja["secuencia"] and d["campo"] == "nota"
+    )
+    assert (nota_borrada["antes"], nota_borrada["despues"]) == ("corregido", None)
+    assert _subir(app, "datos/cargar", copia).status_code == 200
+    assert tablas()["cambio_pendiente"] == original["cambio_pendiente"]
+    assert tablas()["detalle_cambio"] == original["detalle_cambio"]
+
+
+def test_dos_ediciones_desde_la_misma_copia_conservan_ambos_importes(app: TestClient) -> None:
+    creada = app.post("/api/v1/transacciones", json={"cuenta_id": 1, "monto": -48000}).json()
+    copia = app.get("/api/v1/datos/exportar/json").content
+    alta = json.loads(copia)["tablas"]["cambio_pendiente"][-1]
+    versiones = []
+    for monto in (-52000, -50000):
+        assert _subir(app, "datos/cargar", copia).status_code == 200
+        assert app.patch(f"/api/v1/transacciones/{creada['id']}", json={"monto": monto}).status_code == 200
+        tablas = app.get("/api/v1/datos/exportar/json").json()["tablas"]
+        cambio = tablas["cambio_pendiente"][-1]
+        assert cambio["version_base"] == alta["operacion"]
+        versiones.append(cambio["operacion"])
+        importe = next(
+            d for d in tablas["detalle_cambio"] if d["secuencia"] == cambio["secuencia"] and d["campo"] == "monto"
+        )
+        assert (importe["antes"], importe["despues"]) == (-48000, monto)
+    assert versiones[0] != versiones[1]
+
+
+def test_lotes_de_transferencia_y_referencias_globales(app: TestClient) -> None:
+    def tablas():
+        return app.get("/api/v1/datos/exportar/json").json()["tablas"]
+
+    inicial = tablas()
+    cursor = len(inicial["cambio_pendiente"])
+    cuentas = {c["id"]: c["id_global"] for c in inicial["cuenta"]}
+    origen, destino = list(cuentas)[:2]
+    respuesta = app.post("/api/v1/transferencias", json={"origen_id": origen, "destino_id": destino, "monto": 500})
+    assert respuesta.status_code == 201
+    salida, entrada = respuesta.json()
+    creado = tablas()
+    cambios = creado["cambio_pendiente"][cursor:]
+    (lote,) = {c["lote"] for c in cambios}
+    assert lote
+    secuencias = {c["secuencia"] for c in cambios if c["entidad"] == "transaccion"}
+    detalle = [d for d in creado["detalle_cambio"] if d["secuencia"] in secuencias]
+    assert {d["despues_global"] for d in detalle if d["campo"] == "cuenta_id"} == {cuentas[origen], cuentas[destino]}
+    pares = {t["id_global"] for t in creado["transaccion"] if t["id"] in (salida["id"], entrada["id"])}
+    assert {d["despues_global"] for d in detalle if d["campo"] == "transferencia_id" and d["despues"]} == pares
+    ruta = f"/api/v1/transacciones/{salida['id']}"
+    assert app.patch(ruta, json={"cuenta_id": destino, "cuenta_par_id": destino}).status_code == 400
+    assert tablas()["cambio_pendiente"] == creado["cambio_pendiente"]
+    assert app.patch(ruta, json={"cuenta_id": destino, "cuenta_par_id": origen, "monto": -600}).status_code == 200
+    editado = tablas()
+    (lote_edicion,) = {c["lote"] for c in editado["cambio_pendiente"][len(creado["cambio_pendiente"]) :]}
+    assert app.delete(ruta).status_code == 204
+    (lote_borrado,) = {c["lote"] for c in tablas()["cambio_pendiente"][len(editado["cambio_pendiente"]) :]}
+    assert len({lote, lote_edicion, lote_borrado}) == 3
+
+
 def test_json_de_una_version_anterior_se_migra(app: TestClient) -> None:
     datos = app.get("/api/v1/datos/exportar/json").json()
     datos["revision"] = "0009"
-    # Esa versión no tenía preferencias ni activos.
-    for tabla in ("preferencia", "activo", "activo_valoracion", "activo_movimiento"):
+    for tabla in ("transaccion", "cuenta", "categoria"):
+        for fila in datos["tablas"][tabla]:
+            del fila["id_global"]
+    del datos["tablas"]["libro"], datos["tablas"]["cambio_pendiente"], datos["tablas"]["detalle_cambio"]
+    del datos["tablas"]["acuse_lote"]
+    del datos["tablas"]["vinculo_sync"]
+    for tabla in ("revision_sync", "revision_entidad", "lote_retenido"):
+        del datos["tablas"][tabla]
+    # La copia de 0009 solo incluye tablas que existían en esa revisión.
+    for tabla in ("preferencia", "activo", "activo_valoracion", "activo_movimiento", "recibo_captura"):
         del datos["tablas"][tabla]
     for fila in datos["tablas"]["meta_objetivo"]:
         del fila["activo_id"]

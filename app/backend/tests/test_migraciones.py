@@ -44,6 +44,9 @@ def test_0002_conserva_etiquetas_y_pares_de_transferencia(tmp_path: Path) -> Non
     con = sqlite3.connect(ruta)
     pares = con.execute("SELECT id, transferencia_id FROM transaccion ORDER BY id").fetchall()
     etiquetas = con.execute("SELECT transaccion_id, etiqueta_id FROM transaccion_etiqueta").fetchall()
+    identidades = con.execute("SELECT id_global FROM transaccion").fetchall()
+    assert len(set(identidades)) == 3
+    assert all(len(clave) == 32 for (clave,) in identidades)
     fallas = con.execute("PRAGMA foreign_key_check").fetchall()
     con.close()
     assert pares == [(1, 2), (2, 1), (3, None)]

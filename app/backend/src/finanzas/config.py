@@ -12,6 +12,9 @@ RAIZ_REPO = Path(__file__).resolve().parents[4]
 
 
 class Config(BaseSettings):
+    sync_receptor: str | None = None
+    # Con `supabase+https://…` como receptor: la clave publicable del proyecto (nunca la secreta).
+    sync_apikey: str | None = None
     model_config = SettingsConfigDict(env_prefix="FINANZAS_", env_file=".env", extra="ignore")
 
     db_ruta: Path = RAIZ_REPO / "data" / "finanzas.db"

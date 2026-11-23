@@ -2,11 +2,14 @@
  * `app/backend/scripts/generar_fixture_humo.py` cuando cambia la API. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { arbolDeRutas } from "@/app/router";
 import { CapturaProvider, useCaptura } from "@/features/captura";
+import { CapturaRapida } from "@/features/captura/CapturaRapida";
+import type { PaginaTransacciones } from "@/shared/api/tipos";
+import { api } from "@/shared/lib/api";
 
 import datos from "./api-demo.json";
 
@@ -105,5 +108,30 @@ describe("prueba de humo", { timeout: 20_000 }, () => {
     boton.click();
     expect(await screen.findByLabelText(/Monto/i, undefined, { timeout: 5000 })).toBeInTheDocument();
     errores.mockRestore();
+  });
+
+  it("reintenta la captura con la misma clave y cierra al recibir el acuse", async () => {
+    const movimiento = (API["/transacciones"] as PaginaTransacciones).items[0];
+    if (!movimiento) throw new Error("La prueba necesita un movimiento de demostración");
+    const crear = vi.spyOn(api, "crearTransaccion")
+      .mockRejectedValueOnce(new TypeError("Respuesta perdida"))
+      .mockResolvedValueOnce(movimiento);
+    const cerrar = vi.fn();
+    try {
+      const cliente = new QueryClient({ defaultOptions: { mutations: { retryDelay: 5 } } });
+      render(
+        <QueryClientProvider client={cliente}>
+          <CapturaRapida tipoInicial="gasto" inicial={{ monto: "100", cuentaId: 1, categoriaId: 2 }} onCerrar={cerrar} />
+        </QueryClientProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /^Guardar$/ }));
+      expect(cerrar).not.toHaveBeenCalled();
+      await waitFor(() => expect(cerrar).toHaveBeenCalledOnce());
+      expect(crear).toHaveBeenCalledTimes(2);
+      expect(crear.mock.calls[0]?.[1]).toMatch(/^[a-f0-9]{32}$/);
+      expect(crear.mock.calls[1]).toEqual(crear.mock.calls[0]);
+    } finally {
+      crear.mockRestore();
+    }
   });
 });

@@ -79,6 +79,7 @@ class TransaccionIn(BaseModel):
 
 
 class TransaccionCambios(BaseModel):
+    cuenta_par_id: int | None = None
     cuenta_id: int | None = None
     monto: int | None = None
     categoria_id: int | None = None

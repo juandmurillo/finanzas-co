@@ -27,6 +27,57 @@ export type Grupo =
   | "transferencia"
   | "ajuste";
 
+/** Lo que sigue solo en este equipo (`/sync/estado`). */
+export interface EstadoSync {
+  vinculado: boolean;
+  titular: string | null;
+  /** Acciones registradas aquí que el receptor aún no confirmó. */
+  pendientes: number;
+  por_revisar: number;
+}
+
+/** Bandeja «Por revisar» de la sincronización (`/sync/revision`). */
+export type ValorRevision = string | number | null;
+
+export interface CampoEnRevision {
+  campo: string;
+  base: ValorRevision;
+  local: ValorRevision;
+  remoto: ValorRevision;
+  /** Cambió en los dos equipos: hay que elegir. */
+  ambos: boolean;
+}
+
+export interface EntidadEnRevision {
+  entidad: "cuenta" | "categoria" | "transaccion";
+  entidad_id: string;
+  titulo: string;
+  local_existe: boolean;
+  remoto_existe: boolean;
+  campos: CampoEnRevision[];
+}
+
+export interface MovimientoEnRevision {
+  id: string;
+  origen: "este_equipo" | "otro_equipo";
+  fecha: string;
+  monto: number;
+  cuenta: string;
+  descripcion: string;
+  nota: string;
+  categoria: string | null;
+}
+
+export type RevisionSync =
+  | { id: number; tipo: "version"; creada_en: string; entidades: EntidadEnRevision[] }
+  | { id: number; tipo: "duplicado"; creada_en: string; movimientos: [MovimientoEnRevision, MovimientoEnRevision] };
+
+export type DecisionRevision =
+  | { decision: "local" | "remoto" }
+  | { decision: "campos"; campos: Record<string, Record<string, "local" | "remoto">> }
+  | { decision: "dos" }
+  | { decision: "mismo"; datos: Record<string, string> };
+
 export interface MesFlujo {
   mes: string;
   /** Solo el grupo de ingresos; para mostrar «Ingresos» usa `ingresos_total`. */

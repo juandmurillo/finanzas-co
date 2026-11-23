@@ -8,6 +8,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { router } from "./app/router";
+import { iniciarSync } from "./shared/lib/syncCaudal";
 import { CapturaProvider } from "./features/captura";
 import { Avisos } from "./shared/ui/Avisos";
 import { intensidadActual } from "./shared/lib/movimiento";
@@ -18,10 +19,16 @@ intensidadActual(); // fija data-movimiento en <html> antes del primer render
 
 // Los datos se refrescan por eventos SSE; no hace falta refetch al volver a la ventana.
 const cliente = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 } },
+  // La API de loopback sigue disponible cuando el sistema indica que no hay internet.
+  defaultOptions: {
+    queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1, networkMode: "always" },
+    mutations: { networkMode: "always" },
+  },
 });
 
 const contenedor = document.getElementById("root");
+iniciarSync();
+window.addEventListener("caudal:sincronizado", () => void cliente.invalidateQueries());
 if (!contenedor) throw new Error("Falta #root en index.html");
 
 createRoot(contenedor).render(

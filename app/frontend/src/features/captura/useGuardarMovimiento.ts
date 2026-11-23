@@ -7,7 +7,8 @@ import { api } from "@/shared/lib/api";
 import { formatoCOP } from "@/shared/lib/formato";
 import { claves } from "@/shared/lib/queryKeys";
 
-type Peticion = { tipo: "movimiento"; datos: TransaccionNueva } | { tipo: "transferencia"; datos: Transferencia };
+export type Peticion =
+  { tipo: "movimiento"; datos: TransaccionNueva } | { tipo: "transferencia"; datos: Transferencia };
 
 function ajustarSaldos(cuentas: Cuenta[] | undefined, p: Peticion): Cuenta[] | undefined {
   if (!cuentas) return cuentas;
@@ -31,8 +32,9 @@ export function useGuardarMovimiento() {
   });
 
   return useMutation({
-    mutationFn: async (p: Peticion): Promise<Transaccion[]> =>
-      p.tipo === "movimiento" ? [await api.crearTransaccion(p.datos)] : api.transferir(p.datos),
+    mutationFn: async (p: Peticion & { clave: string }): Promise<Transaccion[]> =>
+      p.tipo === "movimiento" ? [await api.crearTransaccion(p.datos, p.clave)] : api.transferir(p.datos, p.clave),
+    retry: (intento, error) => intento === 0 && error instanceof TypeError,
     onMutate: async (p) => {
       await cliente.cancelQueries({ queryKey: claves.cuentas });
       const previas = cliente.getQueryData<Cuenta[]>(claves.cuentas);
@@ -41,7 +43,7 @@ export function useGuardarMovimiento() {
     },
     onError: (error, _p, contexto) => {
       cliente.setQueryData(claves.cuentas, contexto?.previas);
-      toast.error(`No se guardó: ${error.message}`);
+      toast.error(`No se pudo confirmar el guardado: ${error.message}`);
     },
     onSuccess: (creadas) => {
       const primera = creadas[0];

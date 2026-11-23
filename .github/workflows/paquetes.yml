@@ -1,0 +1,134 @@
+name: Paquetes
+# Construye el instalador de Windows y el APK/AAB de Android desde una etiqueta limpia (v1.2.3) o a mano.
+# La firma es opcional: sin los secretos los paquetes salen sin firmar (útiles para probar, no para distribuir).
+#   Windows: WINDOWS_PFX_BASE64, WINDOWS_PFX_PASSWORD (certificado de firma de código).
+#   Android: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD.
+# Con una etiqueta, crea un borrador de versión con los archivos: se revisa y se publica a mano.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      nombre: ${{ steps.v.outputs.nombre }}
+      codigo: ${{ steps.v.outputs.codigo }}
+    steps:
+      - id: v
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then nombre="${GITHUB_REF_NAME#v}"; else nombre="0.0.${GITHUB_RUN_NUMBER}"; fi
+          IFS=. read -r a b c <<< "${nombre%%-*}"
+          echo "nombre=$nombre" >> "$GITHUB_OUTPUT"
+          # versionCode creciente para Android: 1.2.3 → 10203.
+          echo "codigo=$(( a * 10000 + b * 100 + c ))" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    env:
+      TIENE_CERTIFICADO: ${{ secrets.WINDOWS_PFX_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+        working-directory: app/frontend
+      - name: Inno Setup
+        run: if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+      - name: Certificado de firma
+        if: env.TIENE_CERTIFICADO == 'true'
+        env:
+          PFX: ${{ secrets.WINDOWS_PFX_BASE64 }}
+        run: |
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\caudal.pfx", [Convert]::FromBase64String($env:PFX))
+          "CAUDAL_PFX=$env:RUNNER_TEMP\caudal.pfx" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Construir
+        env:
+          CAUDAL_PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASSWORD }}
+        run: app/escritorio/construir.ps1 -Version ${{ needs.version.outputs.nombre }}
+      - name: El instalador arranca la app sin Python ni Node
+        run: |
+          $instalador = Get-ChildItem app/escritorio/salida/Caudal-*-instalador.exe | Select-Object -First 1
+          Start-Process $instalador.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/CURRENTUSER' -Wait
+          $exe = "$env:LOCALAPPDATA\Programs\Caudal\Caudal.exe"
+          if (-not (Test-Path $exe)) { throw "No quedó instalado" }
+          $psi = New-Object System.Diagnostics.ProcessStartInfo $exe
+          $psi.UseShellExecute = $false
+          $psi.EnvironmentVariables["PATH"] = "C:\Windows\System32;C:\Windows"
+          $app = [System.Diagnostics.Process]::Start($psi)
+          $log = "$env:LOCALAPPDATA\Caudal\datos\escritorio.log"
+          for ($i = 0; $i -lt 60; $i++) { if ((Test-Path $log) -and (Select-String $log -Pattern "API en|no pudo" -Quiet)) { break }; Start-Sleep 1 }
+          Get-Content $log
+          Stop-Process -Id $app.Id -Force
+          if (-not (Select-String $log -Pattern "API en" -Quiet)) { throw "La app instalada no arrancó" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: caudal-windows
+          path: app/escritorio/salida/Caudal-*-instalador.exe
+
+  android:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      TIENE_LLAVE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      # Chaquopy usa un Python del sistema de la misma versión para instalar los paquetes.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci && npm run build
+        working-directory: app/frontend
+      - name: Llave de firma
+        if: env.TIENE_LLAVE == 'true'
+        env:
+          LLAVE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$LLAVE" | base64 -d > "$RUNNER_TEMP/caudal.jks"
+          echo "CAUDAL_KEYSTORE=$RUNNER_TEMP/caudal.jks" >> "$GITHUB_ENV"
+      - name: Construir
+        working-directory: android
+        env:
+          CAUDAL_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CAUDAL_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CAUDAL_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease bundleRelease \
+            -PcaudalVersion=${{ needs.version.outputs.nombre }} -PcaudalVersionCode=${{ needs.version.outputs.codigo }}
+      - name: Bibliotecas compatibles con páginas de 16 KB
+        run: python android/revisar_16kb.py android/app/build/outputs/apk/release/*.apk --abi arm64-v8a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: caudal-android
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+
+  borrador:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [version, windows, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: paquetes
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: Caudal ${{ needs.version.outputs.nombre }}
+          files: paquetes/**/*

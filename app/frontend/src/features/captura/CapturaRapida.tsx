@@ -23,7 +23,7 @@ import { useCapa } from "@/shared/lib/capas";
 
 import type { TipoMovimiento } from "./CapturaContexto";
 import { validar, type Borrador, type Errores } from "./modelo";
-import { useGuardarMovimiento } from "./useGuardarMovimiento";
+import { useGuardarMovimiento, type Peticion } from "./useGuardarMovimiento";
 
 import { CampoFecha } from "@/shared/ui/CampoFecha";
 const GRUPOS_POR_TIPO: Record<Exclude<TipoMovimiento, "transferencia">, string[]> = {
@@ -129,6 +129,8 @@ export function CapturaRapida({
   const [verSugerencias, setVerSugerencias] = useState(false);
   const [verMas, setVerMas] = useState(Boolean(edicion?.tx.nota));
   const guardar = useGuardarMovimiento();
+  const ultimoEnvio = useRef<{ contenido: string; clave: string } | null>(null);
+  const enviando = useRef(false);
 
   const cuentas = useQuery({ queryKey: claves.cuentas, queryFn: api.cuentas });
   const arbol = useQuery({ queryKey: claves.categorias, queryFn: api.categorias, staleTime: 60_000 });
@@ -220,10 +222,9 @@ export function CapturaRapida({
           fecha,
           descripcion,
           cuenta_id: origen_id,
+          ...(entrada && { cuenta_par_id: destino_id }),
           nota: b.nota,
         });
-        if (entrada && entrada.cuenta_id !== destino_id)
-          await api.editarTransaccion(entrada.id, { cuenta_id: destino_id });
         return;
       }
       const { cuenta_id, monto, categoria_id, fecha, descripcion, nota } = r.datos;
@@ -258,6 +259,7 @@ export function CapturaRapida({
   });
 
   const enviar = (seguir: boolean) => {
+    if (enviando.current) return;
     if (edicion) {
       editar.mutate(pendiente);
       return;
@@ -274,7 +276,7 @@ export function CapturaRapida({
     }
     // Mide RF-CA-05: ¿la categoría guardada es la que sugerimos?
     const origen = sugerida && categoriaFinal === sugerida.categoria_id ? "sugerida" : "usuario";
-    guardar.mutate(
+    const peticion: Peticion =
       r.tipo === "movimiento"
         ? {
             tipo: "movimiento",
@@ -289,12 +291,30 @@ export function CapturaRapida({
               }),
             },
           }
-        : { tipo: "transferencia", datos: r.datos },
+        : { tipo: "transferencia", datos: r.datos };
+    const contenido = JSON.stringify(peticion);
+    if (ultimoEnvio.current?.contenido !== contenido) {
+      // getRandomValues funciona también cuando se abre Caudal por HTTP en la red local.
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      const clave = Array.from(bytes, (n) => n.toString(16).padStart(2, "0")).join("");
+      ultimoEnvio.current = { contenido, clave };
+    }
+    enviando.current = true;
+    guardar.mutate(
+      { ...peticion, clave: ultimoEnvio.current.clave },
+      {
+        onSuccess: () => {
+          ultimoEnvio.current = null;
+          if (seguir) {
+            setB(borradorVacio(b.tipo, cuentaId));
+            montoRef.current?.focus();
+          } else onCerrar();
+        },
+        onSettled: () => {
+          enviando.current = false;
+        },
+      },
     );
-    if (seguir) {
-      setB(borradorVacio(b.tipo, cuentaId));
-      montoRef.current?.focus();
-    } else onCerrar();
   };
 
   const alEnviar = (e: FormEvent) => {
@@ -637,11 +657,16 @@ export function CapturaRapida({
                   </button>
                 )
               ) : (
-                <button type="button" className="cd-btn cd-btn--secondary" onClick={() => enviar(true)}>
+                <button
+                  type="button"
+                  className="cd-btn cd-btn--secondary"
+                  disabled={guardar.isPending}
+                  onClick={() => enviar(true)}
+                >
                   Guardar y otro
                 </button>
               )}
-              <button type="submit" className="cd-btn cd-btn--primary" disabled={editar.isPending}>
+              <button type="submit" className="cd-btn cd-btn--primary" disabled={editar.isPending || guardar.isPending}>
                 {!edicion
                   ? "Guardar"
                   : pendiente

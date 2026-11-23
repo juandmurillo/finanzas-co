@@ -22,6 +22,7 @@ from finanzas.api.rutas_extras import router as router_extras
 from finanzas.api.rutas_planeacion import router as router_planeacion
 from finanzas.api.rutas_reportes import router as router_reportes
 from finanzas.api.rutas_sistema import router as router_sistema
+from finanzas.api.rutas_sync import router as router_sync
 from finanzas.api.secreto import GuardiaSecreto
 from finanzas.config import Config, obtener_config
 from finanzas.dominio.errores import ErrorDominio
@@ -91,6 +92,7 @@ def crear_app(config: Config | None = None, db: BaseDatos | None = None, bus: Bu
     app.include_router(router_automatizacion)
     app.include_router(router_extras)
     app.include_router(router_sistema)
+    app.include_router(router_sync)
     if config.web_dir:
         servir_frontend(app, config.web_dir)
     return app

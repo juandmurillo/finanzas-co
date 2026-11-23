@@ -34,6 +34,8 @@ export const claves = {
   metas: ["metas"] as const,
   alertas: ["alertas"] as const,
   respaldos: ["respaldos"] as const,
+  revisionSync: ["sync", "revision"] as const,
+  estadoSync: ["sync", "estado"] as const,
   parametros: ["parametros"] as const,
   trm: (fecha: string) => ["parametros", "trm", fecha] as const,
   termometro: (anio: number) => ["reportes", "termometro", anio] as const,

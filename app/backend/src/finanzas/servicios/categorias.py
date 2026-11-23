@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from sqlalchemy import func, select, update
+from sqlalchemy import NotNullable, func, select, update
 
 from finanzas.dominio.errores import ErrorValidacion, NoEncontrado
 from finanzas.dominio.estilo_categorias import estilo_nueva
@@ -68,7 +68,7 @@ def crear(uow: UnidadDeTrabajo, padre_id: int, d: DatosCategoria) -> Categoria:
     # Sin color ni ícono elegidos: los sugeridos por el nombre (se pueden cambiar después).
     hermanas = set(
         uow.sesion.scalars(
-            select(Categoria.color).where(Categoria.padre_id == padre.id, Categoria.color.is_not(None))
+            select(NotNullable(Categoria.color)).where(Categoria.padre_id == padre.id, Categoria.color.is_not(None))
         ).all()
     )
     icono_sug, color_sug = estilo_nueva(d.nombre.strip(), padre.grupo, padre.nivel + 1, hermanas)

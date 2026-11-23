@@ -1,3 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
+from uuid import uuid4
+
+import pytest
 from fastapi.testclient import TestClient
 
 from finanzas.infra.eventos import BusEventos
@@ -37,6 +41,35 @@ def test_transferencia_no_afecta_flujo(cliente: TestClient) -> None:
     flujo = cliente.get("/api/v1/reportes/flujo").json()
     assert antes == []
     assert all(m["ingresos"] == 0 and m["gasto_vida"] == 0 and m["flujo_operativo"] == 0 for m in flujo)
+
+
+@pytest.mark.parametrize("transferencia", [False, True])
+def test_reintentos_concurrentes_de_captura(cliente: TestClient, transferencia: bool) -> None:
+    cuentas = _cuentas(cliente)
+    origen = cuentas["Nequi"]["id"]
+    ruta = "/api/v1/transferencias" if transferencia else "/api/v1/transacciones"
+    datos = (
+        {"origen_id": origen, "destino_id": cuentas["Ahorro"]["id"], "monto": 100}
+        if transferencia else {"cuenta_id": origen, "monto": -100}
+    )
+    headers = {"Idempotency-Key": str(uuid4())}
+    with ThreadPoolExecutor(2) as pool:
+        respuestas = list(pool.map(lambda _: cliente.post(ruta, json=datos, headers=headers), range(2)))
+    assert [r.status_code for r in respuestas] == [201, 201]
+    assert respuestas[0].json() == respuestas[1].json()
+    assert _cuentas(cliente)["Nequi"]["saldo"] == cuentas["Nequi"]["saldo"] - 100
+    assert cliente.post(ruta, json={**datos, "monto": 123}, headers=headers).status_code == 409
+    # Un gasto independiente del mismo importe cuenta como otra captura.
+    assert cliente.post(ruta, json=datos, headers={"Idempotency-Key": str(uuid4())}).status_code == 201
+    assert _cuentas(cliente)["Nequi"]["saldo"] == cuentas["Nequi"]["saldo"] - 200
+
+
+def test_reserva_se_revierte_si_falla_el_movimiento(cliente: TestClient) -> None:
+    headers = {"Idempotency-Key": str(uuid4())}
+    datos = {"cuenta_id": _cuentas(cliente)["Nequi"]["id"], "monto": 0}
+    ruta = "/api/v1/transacciones"
+    assert cliente.post(ruta, json=datos, headers=headers).status_code == 400
+    assert cliente.post(ruta, json={**datos, "monto": -100}, headers=headers).status_code == 201
 
 
 def test_borrar_transferencia_borra_el_par(cliente: TestClient) -> None:

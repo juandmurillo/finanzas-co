@@ -63,6 +63,9 @@ import type {
   Trm,
   GrupoPresupuestoIn,
   HistoricoPresupuesto,
+  DecisionRevision,
+  EstadoSync,
+  RevisionSync,
 } from "@/shared/api/tipos";
 
 const BASE = "/api/v1";
@@ -155,14 +158,22 @@ export const api = {
   editarCuenta: (id: number, datos: CuentaCambios) =>
     pedir<undefined>(`/cuentas/${id}`, { method: "PATCH", body: JSON.stringify(datos) }),
   transacciones: (f: FiltroTransacciones) => pedir<PaginaTransacciones>(`/transacciones${query(f)}`),
-  crearTransaccion: (datos: TransaccionNueva) =>
-    pedir<Transaccion>("/transacciones", { method: "POST", body: JSON.stringify(datos) }),
+  crearTransaccion: (datos: TransaccionNueva, clave: string) =>
+    pedir<Transaccion>("/transacciones", {
+      method: "POST",
+      headers: { "Idempotency-Key": clave },
+      body: JSON.stringify(datos),
+    }),
   editarTransaccion: (id: number, cambios: TransaccionCambios) =>
     pedir<Transaccion>(`/transacciones/${id}`, { method: "PATCH", body: JSON.stringify(cambios) }),
   transaccion: (id: number) => pedir<Transaccion>(`/transacciones/${id}`),
   eliminarTransaccion: (id: number) => pedir<undefined>(`/transacciones/${id}`, { method: "DELETE" }),
-  transferir: (datos: Transferencia) =>
-    pedir<Transaccion[]>("/transferencias", { method: "POST", body: JSON.stringify(datos) }),
+  transferir: (datos: Transferencia, clave: string) =>
+    pedir<Transaccion[]>("/transferencias", {
+      method: "POST",
+      headers: { "Idempotency-Key": clave },
+      body: JSON.stringify(datos),
+    }),
   categorias: () => pedir<CategoriaNodo[]>("/categorias"),
   sugerencias: (texto: string) => pedir<Sugerencia[]>(`/sugerencias${query({ texto })}`),
   categoriasFrecuentes: (tipo: "gasto" | "ingreso") =>
@@ -286,6 +297,10 @@ export const api = {
   estadoMeta: (id: number, estado: Meta["estado"]) =>
     pedir<undefined>(`/metas/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) }),
   alertas: () => pedir<Alerta[]>("/alertas"),
+  revisionSync: () => pedir<RevisionSync[]>("/sync/revision"),
+  estadoSync: () => pedir<EstadoSync>("/sync/estado"),
+  resolverRevision: (id: number, d: DecisionRevision) =>
+    pedir<undefined>(`/sync/revision/${id}`, { method: "POST", body: JSON.stringify(d) }),
   respaldos: () => pedir<Respaldo[]>("/respaldos"),
   respaldar: () => pedir<{ archivo: string | null }>("/respaldos", { method: "POST" }),
   restaurarRespaldo: (archivo: string) =>

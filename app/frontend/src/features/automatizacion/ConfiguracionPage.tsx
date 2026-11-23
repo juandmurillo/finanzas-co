@@ -3,6 +3,8 @@ import { useSistema } from "@/shared/lib/useSistema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearch } from "@tanstack/react-router";
 import { useId, useState } from "react";
+import { CuentaCaudal } from "./CuentaCaudal";
+import { PorRevisar } from "./PorRevisar";
 import { toast } from "sonner";
 
 import type { CondicionRegla, Regla, ReglaNueva } from "@/shared/api/tipos";
@@ -473,9 +475,10 @@ function Perfil() {
   );
 }
 
-type Seccion = "perfil" | "apariencia" | "reglas" | "datos" | "instalacion" | "legal";
+type Seccion = "perfil" | "cuenta" | "apariencia" | "reglas" | "datos" | "instalacion" | "legal";
 
 const SECCIONES: { id: Seccion; titulo: string; detalle: string; icono: NombreIcono }[] = [
+  { id: "cuenta", titulo: "Cuenta de Caudal", detalle: "Acceso por correo electrónico", icono: "persona" },
   { id: "perfil", titulo: "Perfil", detalle: "Nombre, contexto para el asistente y apuestas", icono: "persona" },
   { id: "apariencia", titulo: "Apariencia", detalle: "Modo, tema de color, estilo y animaciones", icono: "paleta" },
   {
@@ -519,6 +522,13 @@ function Instalacion() {
 
 function ContenidoSeccion({ seccion }: { seccion: Seccion }) {
   switch (seccion) {
+    case "cuenta":
+      return (
+        <>
+          <PorRevisar />
+          <CuentaCaudal />
+        </>
+      );
     case "legal":
       return (
         <div className="cd-stack config-legal" style={{ gap: "var(--space-4)" }}>

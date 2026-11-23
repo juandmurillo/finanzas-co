@@ -341,6 +341,25 @@
     ],
     "summary": "Crear Transaccion",
     "operationId": "crear_transaccion_api_v1_transacciones_post",
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "required": true,
      "content": {
@@ -508,15 +527,34 @@
     ],
     "summary": "Crear Transferencia",
     "operationId": "crear_transferencia_api_v1_transferencias_post",
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/TransferenciaIn"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "201": {
@@ -524,10 +562,10 @@
       "content": {
        "application/json": {
         "schema": {
+         "type": "array",
          "items": {
           "$ref": "#/components/schemas/TransaccionOut"
          },
-         "type": "array",
          "title": "Response Crear Transferencia Api V1 Transferencias Post"
         }
        }
@@ -4988,6 +5026,251 @@
      }
     }
    }
+  },
+  "/api/v1/sync/ejecutar": {
+   "post": {
+    "summary": "Ejecutar",
+    "operationId": "ejecutar_api_v1_sync_ejecutar_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vincular",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Vincular"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Ejecutar Api V1 Sync Ejecutar Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sync/sesion/{clave}": {
+   "get": {
+    "summary": "Leer Sesion",
+    "operationId": "leer_sesion_api_v1_sync_sesion__clave__get",
+    "parameters": [
+     {
+      "name": "clave",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^sb-[a-z0-9-]{1,80}$",
+       "title": "Clave"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "summary": "Guardar Sesion",
+    "operationId": "guardar_sesion_api_v1_sync_sesion__clave__put",
+    "parameters": [
+     {
+      "name": "clave",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^sb-[a-z0-9-]{1,80}$",
+       "title": "Clave"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ValorSesion"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Borrar Sesion",
+    "operationId": "borrar_sesion_api_v1_sync_sesion__clave__delete",
+    "parameters": [
+     {
+      "name": "clave",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^sb-[a-z0-9-]{1,80}$",
+       "title": "Clave"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sync/estado": {
+   "get": {
+    "summary": "Estado",
+    "description": "Lo que sigue solo en este equipo; se muestra antes de cerrar sesión.",
+    "operationId": "estado_api_v1_sync_estado_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Estado Api V1 Sync Estado Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sync/revision": {
+   "get": {
+    "summary": "Revision",
+    "operationId": "revision_api_v1_sync_revision_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "additionalProperties": true,
+          "type": "object"
+         },
+         "type": "array",
+         "title": "Response Revision Api V1 Sync Revision Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/sync/revision/{rid}": {
+   "post": {
+    "summary": "Resolver",
+    "operationId": "resolver_api_v1_sync_revision__rid__post",
+    "parameters": [
+     {
+      "name": "rid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Rid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Resolucion"
+       }
+      }
+     }
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -6871,6 +7154,48 @@
     ],
     "title": "ReglaIn"
    },
+   "Resolucion": {
+    "properties": {
+     "decision": {
+      "type": "string",
+      "enum": [
+       "local",
+       "remoto",
+       "campos",
+       "dos",
+       "mismo"
+      ],
+      "title": "Decision"
+     },
+     "campos": {
+      "additionalProperties": {
+       "additionalProperties": {
+        "type": "string",
+        "enum": [
+         "local",
+         "remoto"
+        ]
+       },
+       "type": "object"
+      },
+      "type": "object",
+      "title": "Campos"
+     },
+     "datos": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Datos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "decision"
+    ],
+    "title": "Resolucion",
+    "description": "«local», «remoto» o «campos» para versiones; «dos» o «mismo» para posibles duplicados.\n\nEn «campos», por entidad: campo → «local» | «remoto». En «mismo»: campo → movimiento elegido."
+   },
    "ResultadoImportacionOut": {
     "properties": {
      "filas_leidas": {
@@ -6916,6 +7241,17 @@
    },
    "TransaccionCambios": {
     "properties": {
+     "cuenta_par_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cuenta Par Id"
+     },
      "cuenta_id": {
       "anyOf": [
        {
@@ -7387,6 +7723,20 @@
     ],
     "title": "ValidationError"
    },
+   "ValorSesion": {
+    "properties": {
+     "valor": {
+      "type": "string",
+      "maxLength": 65536,
+      "title": "Valor"
+     }
+    },
+    "type": "object",
+    "required": [
+     "valor"
+    ],
+    "title": "ValorSesion"
+   },
    "ValoracionIn": {
     "properties": {
      "fecha": {
@@ -7405,6 +7755,12 @@
      "valor"
     ],
     "title": "ValoracionIn"
+   }
+  },
+  "securitySchemes": {
+   "HTTPBearer": {
+    "type": "http",
+    "scheme": "bearer"
    }
   }
  }

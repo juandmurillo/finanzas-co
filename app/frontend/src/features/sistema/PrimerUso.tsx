@@ -25,7 +25,7 @@ export function PrimerUso() {
         </div>
         <h1>Bienvenido a tus finanzas</h1>
         <p className="cd-delta-note" style={{ margin: 0 }}>
-          Todo se guarda en este computador. Nada sale de aquí salvo que actives el asistente.
+          Todo se guarda en este equipo. Nada sale de aquí salvo que actives el asistente.
         </p>
         <label className="cd-stack" style={{ gap: 6 }}>
           <span className="cd-kpi-label">¿Cómo te llamas? (opcional)</span>
