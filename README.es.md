@@ -1,10 +1,14 @@
-# Caudal · Finanzas
+# Vadeo · Finanzas
 
 [English](README.md) · **Español**
 
-Caudal es una app de finanzas personales para Colombia que funciona en tu computador. Lleva cuentas, presupuestos,
-deudas, activos e impuestos, y recalcula todo en vivo cada vez que registras un movimiento. Tus datos se quedan en tu
-equipo, en un archivo SQLite.
+Vadeo (antes Caudal) es una app de finanzas personales para Colombia que funciona en tu equipo. Lleva cuentas,
+presupuestos, deudas, activos e impuestos, y recalcula todo en vivo cada vez que registras un movimiento. Tus datos se
+quedan en tu equipo, en un archivo SQLite.
+
+**Descárgala para Windows y Android en [vadeo.pages.dev](https://vadeo.pages.dev)** (versión actual 1.3.0; los
+instaladores y sus huellas SHA-256 también están en [juandmurillo/vadeo](https://github.com/juandmurillo/vadeo/releases)).
+Este repositorio tiene el código fuente; partes del código y de la interfaz aún usan el nombre anterior, Caudal.
 
 > Las capturas y la demo usan datos **ficticios**: una persona inventada, generada con semilla fija.
 
@@ -31,7 +35,7 @@ tiene ingresos irregulares, créditos de consumo caros y pagos en efectivo o bil
 cosas en cualquier momento: cuánto tiene disponible de verdad, qué se vence pronto y qué deuda pagar primero. Y no
 debería entregar su historial financiero a un tercero para saberlo.
 
-Caudal responde esas preguntas con datos que registras en segundos, y los guarda todos en tu computador.
+Vadeo responde esas preguntas con datos que registras en segundos, y los guarda todos en tu equipo.
 
 ## Qué hace
 
@@ -47,7 +51,9 @@ Caudal responde esas preguntas con datos que registras en segundos, y los guarda
 - **Tus datos**: exporta en JSON, SQLite o Excel; carga con vista previa, restaura respaldos o borra todo.
 - **Asistente opcional** con tu propia clave: Gemini, Groq, OpenRouter, Claude u Ollama en tu computador. Solo propone
   borradores; tú revisas y confirmas.
-- **PWA instalable** y respaldos diarios.
+- **Sincronización entre equipos** (opcional, con cuenta): los cambios esperan sin conexión, revisas los conflictos y
+  eliges qué versión gana, y al unir un equipo nuevo puedes descargar, conservar o unir los libros.
+- **App de escritorio para Windows, app de Android**, PWA instalable y respaldos diarios.
 
 ## Arquitectura
 
@@ -97,8 +103,11 @@ Los registros completos están en [`docs/sistema/adr/`](docs/sistema/adr/) y el 
 - **Recálculo automático por eventos, no por sondeo.** Se eligieron eventos de dominio tras el commit más SSE, frente a
   WebSockets (no hace falta tráfico en dos sentidos), sondeo (gasta recursos y tiene retraso) y triggers SQL (frágiles
   y difíciles de probar).
-- **Local y de un solo usuario.** La API solo escucha en `127.0.0.1` y rechaza escrituras de otros orígenes y hosts. La
-  única llamada externa por defecto es la TRM en datos.gov.co.
+- **Local primero.** La API solo escucha en `127.0.0.1` y rechaza escrituras de otros orígenes y hosts. La única
+  llamada externa por defecto es la TRM en datos.gov.co; la sincronización es opcional.
+- **La sincronización pasa por un receptor estrecho.** Las tablas de Supabase solo se alcanzan con seguridad por filas
+  y funciones `SECURITY DEFINER` limitadas al usuario con sesión, y la sesión se guarda cifrada (DPAPI en Windows,
+  Android Keystore en Android).
 - **El asistente lee agregados y propone, nunca escribe.** Sus herramientas de «escritura» generan un borrador que abre
   el formulario de siempre. Las claves viven fuera de la base, así que no viajan en exportaciones ni respaldos.
 - **Ingresos y Gastos incluyen todo.** Se usa un solo par de totales en todas las pantallas, e Ingresos − Gastos
@@ -111,11 +120,14 @@ Los registros completos están en [`docs/sistema/adr/`](docs/sistema/adr/) y el 
 | Backend | Python 3.12+, FastAPI, SQLAlchemy 2, Alembic, SQLite |
 | Frontend | React 19, TypeScript, Vite, TanStack Query y Router, gráficos SVG propios |
 | Calidad | pytest, Hypothesis, ruff, mypy, Vitest, Testing Library, ESLint |
-| CI | GitHub Actions: backend, frontend y gitleaks |
+| Escritorio y móvil | pywebview, PyInstaller e Inno Setup (Windows); Chaquopy y WebView (Android) |
+| Sincronización | Supabase con seguridad por filas |
+| CI | GitHub Actions: backend, frontend y gitleaks; instalador, APK y AAB en cada etiqueta `v*` |
 
 ## Probarla
 
-Requisitos: [uv](https://docs.astral.sh/uv/) y Node 22 o superior.
+Para usar la app, descárgala en [vadeo.pages.dev](https://vadeo.pages.dev). Para correrla desde el código necesitas
+[uv](https://docs.astral.sh/uv/) y Node 22 o superior.
 
 ```bash
 git clone https://github.com/juandmurillo/finanzas-co.git
@@ -140,9 +152,10 @@ partes. Si tu red intercepta TLS, usa `uv --system-certs` y `NODE_OPTIONS=--use-
 
 ## Pruebas
 
-- **Backend: 140 pruebas** (pytest). Cubren reglas de dominio, flujos de la API contra una base temporal, migraciones,
-  exportar y volver a cargar, archivos dañados que se rechazan y el asistente con un transporte HTTP falso.
-- **Frontend: 37 pruebas** (Vitest). Incluyen una prueba de humo que monta las 15 rutas con datos demo.
+- **Backend: 199 pruebas** (pytest). Cubren reglas de dominio, flujos de la API contra una base temporal, migraciones,
+  exportar y volver a cargar, archivos dañados que se rechazan, el asistente con un transporte HTTP falso, la
+  sincronización, la unión de libros, la revisión de conflictos, la sesión cifrada y el arranque de escritorio.
+- **Frontend: 104 pruebas en 20 suites** (Vitest). Incluyen una prueba de humo que monta todas las rutas con datos demo.
 - Todas usan datos ficticios y ninguna llama a una API de pago.
 
 ```bash
@@ -165,16 +178,18 @@ No es asesoría financiera, tributaria ni legal. Verifica los valores vigentes (
 
 **Limitaciones de hoy**
 
-- Un solo usuario, sin inicio de sesión ni PIN, y sin versión alojada.
+- Sin PIN por ahora. La sincronización necesita una cuenta; sin ella, la app funciona en un solo equipo.
 - Solo Colombia: moneda, topes de renta y reglas de crédito. La interfaz está solo en español.
 - Sin sincronización bancaria. Los datos entran a mano o con un CSV exportado de Cashew.
-- En el celular funciona como PWA servida desde tu computador por la red local, no como app independiente.
+- Sin app para iOS, y todavía no está en Google Play ni en App Store. El instalador de Windows aún no tiene firma, así
+  que SmartScreen puede advertir antes de ejecutarlo.
 - La conversación del asistente no se guarda entre sesiones, y los niveles gratis de los modelos cambian sin aviso.
 - El patrimonio histórico es aproximado antes de que un crédito se registrara en la app.
 
 **Hoja de ruta**
 
-- App de Android independiente (APK) que funcione sin el computador.
+- Publicación en Google Play y App Store.
+- Instalador de Windows con firma de código.
 - Importación de CSV genérico con mapeo de columnas.
 - Bloqueo con PIN y respaldos cifrados.
 - Conversaciones del asistente guardadas.

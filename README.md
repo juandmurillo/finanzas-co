@@ -1,9 +1,14 @@
-# Caudal · Finanzas
+# Vadeo · Finanzas
 
 **English** · [Español](README.es.md)
 
-Caudal is a local-first personal finance app for Colombia. It tracks accounts, budgets, debts, assets and taxes, and
-recalculates everything live whenever you record a transaction. Your data stays on your machine, in a SQLite file.
+Vadeo (formerly Caudal) is a local-first personal finance app for Colombia. It tracks accounts, budgets, debts, assets
+and taxes, and recalculates everything live whenever you record a transaction. Your data stays on your device, in a
+SQLite file.
+
+**Download it for Windows and Android at [vadeo.pages.dev](https://vadeo.pages.dev)** (current version 1.3.0; installers
+and SHA-256 checksums are also in [juandmurillo/vadeo](https://github.com/juandmurillo/vadeo/releases)). This repository
+holds the source code; parts of the code and interface still use the old name, Caudal.
 
 > The screenshots and the demo use **fictional** data: an invented person, generated with a fixed seed.
 
@@ -32,7 +37,7 @@ consumer loans and cash or wallet payments. They need to know three things at an
 what is due next, and which debt to pay first. They also should not have to hand their financial history to a third
 party to find out.
 
-Caudal answers those questions from data you enter in seconds, and keeps all of it on your computer.
+Vadeo answers those questions from data you enter in seconds, and keeps all of it on your device.
 
 ## Features
 
@@ -50,7 +55,9 @@ Caudal answers those questions from data you enter in seconds, and keeps all of 
 - **Your data**: export to JSON, SQLite or Excel; import with a preview, restore backups, or delete everything.
 - **Optional assistant** with your own key: Gemini, Groq, OpenRouter, Claude, or Ollama on your machine. It only
   proposes drafts; you review and confirm.
-- **Installable PWA** and daily backups.
+- **Sync between devices** (optional, with an account): changes queue up offline, you review conflicts and choose
+  which version wins, and joining a new device lets you download, keep or merge books.
+- **Windows desktop app, Android app**, installable PWA and daily backups.
 
 ## Architecture
 
@@ -99,8 +106,11 @@ Full records are in [`docs/sistema/adr/`](docs/sistema/adr/) (in Spanish); the s
   fall out of sync with the transactions. A balance is corrected with an adjustment transaction, never edited.
 - **Automatic recalculation by events, not polling.** Domain events after commit plus SSE were chosen over WebSockets
   (no need for two-way traffic), polling (wasteful, laggy) and SQL triggers (fragile, hard to test).
-- **Local-first, single user.** The API listens only on `127.0.0.1` and rejects writes from other origins and hosts.
-  The only external call by default is the exchange rate from datos.gov.co.
+- **Local-first.** The API listens only on `127.0.0.1` and rejects writes from other origins and hosts. The only
+  external call by default is the exchange rate from datos.gov.co; sync is opt-in.
+- **Sync goes through a narrow receiver.** Supabase tables are reachable only through row-level security and
+  `SECURITY DEFINER` functions scoped to the signed-in user, and the session is stored encrypted (DPAPI on Windows,
+  Android Keystore on Android).
 - **The assistant can read aggregates and propose, never write.** Its "write" tools produce a draft that opens the
   regular form. Keys live outside the database, so they are not included in exports or backups.
 - **Income and Expenses mean everything.** One pair of totals is used on every screen, and Income − Expenses always
@@ -113,11 +123,14 @@ Full records are in [`docs/sistema/adr/`](docs/sistema/adr/) (in Spanish); the s
 | Backend | Python 3.12+, FastAPI, SQLAlchemy 2, Alembic, SQLite |
 | Frontend | React 19, TypeScript, Vite, TanStack Query and Router, hand-written SVG charts |
 | Quality | pytest, Hypothesis, ruff, mypy, Vitest, Testing Library, ESLint |
-| CI | GitHub Actions: backend, frontend and gitleaks |
+| Desktop and mobile | pywebview, PyInstaller and Inno Setup (Windows); Chaquopy and WebView (Android) |
+| Sync | Supabase with row-level security |
+| CI | GitHub Actions: backend, frontend and gitleaks; installer, APK and AAB built on `v*` tags |
 
 ## Run it
 
-Requirements: [uv](https://docs.astral.sh/uv/) and Node 22 or later.
+To use the app, download it from [vadeo.pages.dev](https://vadeo.pages.dev). To run it from source you need
+[uv](https://docs.astral.sh/uv/) and Node 22 or later.
 
 ```bash
 git clone https://github.com/juandmurillo/finanzas-co.git
@@ -142,9 +155,10 @@ If your network intercepts TLS, use `uv --system-certs` and `NODE_OPTIONS=--use-
 
 ## Tests
 
-- **Backend: 140 tests** (pytest). They cover domain rules, API flows against a temporary database, migrations,
-  import and export round trips, rejected malformed files, and the assistant with a fake HTTP transport.
-- **Frontend: 37 tests** (Vitest). They include a smoke test that mounts all 15 routes with demo data.
+- **Backend: 199 tests** (pytest). They cover domain rules, API flows against a temporary database, migrations,
+  import and export round trips, rejected malformed files, the assistant with a fake HTTP transport, sync, book merging,
+  conflict review, the encrypted session and the desktop launcher.
+- **Frontend: 104 tests in 20 suites** (Vitest). They include a smoke test that mounts every route with demo data.
 - All tests use fictional data and never call a paid API.
 
 ```bash
@@ -167,16 +181,18 @@ them.
 
 **Limitations today**
 
-- Single user, no login or PIN, and no hosted version.
+- No PIN yet. Sync needs an account; without one the app is single-device.
 - Colombia only: currency, tax thresholds and loan rules. The interface is in Spanish only.
 - No bank sync. Data comes from manual entry or a Cashew CSV export.
-- On a phone it runs as a PWA served from your computer over the local network, not as a standalone app.
+- No iOS app, and it is not on Google Play or the App Store yet. The Windows installer is not code-signed yet, so
+  SmartScreen may warn before running it.
 - The assistant's conversation is not saved between sessions, and free model tiers change without notice.
 - Historical net worth is approximate before a loan was registered in the app.
 
 **Roadmap**
 
-- Standalone Android app (APK) that works without the computer.
+- Google Play and App Store releases.
+- Code-signed Windows installer.
 - Generic CSV import with column mapping.
 - PIN lock and encrypted backups.
 - Saved assistant conversations.
